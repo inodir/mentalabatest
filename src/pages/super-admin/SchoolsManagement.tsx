@@ -46,6 +46,7 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
   FileSpreadsheet,
   CheckCircle2,
   XCircle,
+  User,
  } from "lucide-react";
  
  interface School {
@@ -63,6 +64,135 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
    avg_score?: number;
   initial_password?: string;
  }
+
+// Separate component for table row with password visibility
+function SchoolTableRow({
+  school,
+  onEdit,
+  onResetPassword,
+  onToggleActive,
+  copyToClipboard,
+}: {
+  school: School;
+  onEdit: (school: School) => void;
+  onResetPassword: (school: School) => void;
+  onToggleActive: (school: School) => void;
+  copyToClipboard: (text: string) => void;
+}) {
+  const [showCredentials, setShowCredentials] = useState(false);
+
+  return (
+    <TableRow>
+      <TableCell className="font-medium">{school.school_name}</TableCell>
+      <TableCell>
+        <div className="text-sm">
+          <div>{school.region}</div>
+          <div className="text-muted-foreground">{school.district}</div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <code className="rounded bg-muted px-1.5 py-0.5 text-sm">
+          {school.school_code}
+        </code>
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <User className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm">{school.admin_full_name}</span>
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+              {school.admin_login}
+            </code>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => copyToClipboard(school.admin_login)}
+              title="Login nusxalash"
+            >
+              <Copy className="h-3 w-3" />
+            </Button>
+          </div>
+          {school.initial_password && (
+            <div className="flex items-center gap-2">
+              <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
+                {showCredentials ? school.initial_password : "••••••••••••"}
+              </code>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => setShowCredentials(!showCredentials)}
+                title={showCredentials ? "Parolni yashirish" : "Parolni ko'rsatish"}
+              >
+                {showCredentials ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+              </Button>
+              {showCredentials && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => copyToClipboard(school.initial_password || "")}
+                  title="Parol nusxalash"
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          )}
+          {!school.initial_password && (
+            <span className="text-xs text-muted-foreground">Parol mavjud emas</span>
+          )}
+        </div>
+      </TableCell>
+      <TableCell className="text-center">{school.student_count}</TableCell>
+      <TableCell className="text-center">{school.test_count}</TableCell>
+      <TableCell className="text-center">{school.avg_score}</TableCell>
+      <TableCell>
+        <Badge variant={school.is_active ? "default" : "secondary"}>
+          {school.is_active ? "Faol" : "Nofaol"}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-1">
+          <Link to={`/super-admin/schools/${school.id}`}>
+            <Button variant="ghost" size="icon" title="Ko'rish">
+              <Eye className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onEdit(school)}
+            title="Tahrirlash"
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onResetPassword(school)}
+            title="Parolni yangilash"
+          >
+            <Key className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onToggleActive(school)}
+            title={school.is_active ? "O'chirish" : "Faollashtirish"}
+          >
+            <Power className={`h-4 w-4 ${school.is_active ? "text-destructive" : "text-success"}`} />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
  
  export default function SchoolsManagement() {
    const [schools, setSchools] = useState<School[]>([]);
@@ -847,102 +977,51 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
           </Select>
          </div>
  
-         {/* Table */}
-         <div className="rounded-lg border bg-card">
-           <Table>
-             <TableHeader>
-               <TableRow>
-                 <TableHead>Maktab</TableHead>
-                 <TableHead>Viloyat/Tuman</TableHead>
-                 <TableHead>Kod</TableHead>
-                 <TableHead>Admin</TableHead>
-                 <TableHead className="text-center">O'quvchilar</TableHead>
-                 <TableHead className="text-center">Testlar</TableHead>
-                 <TableHead className="text-center">O'rtacha ball</TableHead>
-                 <TableHead>Holat</TableHead>
-                 <TableHead className="text-right">Amallar</TableHead>
-               </TableRow>
-             </TableHeader>
-             <TableBody>
-               {loading ? (
-                 <TableRow>
-                   <TableCell colSpan={9} className="py-10 text-center">
-                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-                   </TableCell>
-                 </TableRow>
-               ) : filteredSchools.length === 0 ? (
-                 <TableRow>
-                   <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
-                     Maktablar topilmadi
-                   </TableCell>
-                 </TableRow>
-               ) : (
-                 filteredSchools.map((school) => (
-                   <TableRow key={school.id}>
-                     <TableCell className="font-medium">{school.school_name}</TableCell>
-                     <TableCell>
-                       <div className="text-sm">
-                         <div>{school.region}</div>
-                         <div className="text-muted-foreground">{school.district}</div>
-                       </div>
-                     </TableCell>
-                     <TableCell>
-                       <code className="rounded bg-muted px-1.5 py-0.5 text-sm">
-                         {school.school_code}
-                       </code>
-                     </TableCell>
-                     <TableCell>{school.admin_full_name}</TableCell>
-                     <TableCell className="text-center">{school.student_count}</TableCell>
-                     <TableCell className="text-center">{school.test_count}</TableCell>
-                     <TableCell className="text-center">{school.avg_score}</TableCell>
-                     <TableCell>
-                       <Badge variant={school.is_active ? "default" : "secondary"}>
-                         {school.is_active ? "Faol" : "Nofaol"}
-                       </Badge>
-                     </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Link to={`/super-admin/schools/${school.id}`}>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title="Ko'rish"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEditDialog(school)}
-                            title="Tahrirlash"
-                          >
-                            <Edit className="h-4 w-4" />
-                         </Button>
-                         <Button
-                           variant="ghost"
-                           size="icon"
-                           onClick={() => openResetPasswordDialog(school)}
-                           title="Parolni yangilash"
-                         >
-                           <Key className="h-4 w-4" />
-                         </Button>
-                         <Button
-                           variant="ghost"
-                           size="icon"
-                           onClick={() => handleToggleActive(school)}
-                           title={school.is_active ? "O'chirish" : "Faollashtirish"}
-                         >
-                           <Power className={`h-4 w-4 ${school.is_active ? "text-destructive" : "text-success"}`} />
-                         </Button>
-                       </div>
-                     </TableCell>
-                   </TableRow>
-                 ))
-               )}
-             </TableBody>
-           </Table>
-         </div>
+        {/* Table */}
+        <div className="rounded-lg border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Maktab</TableHead>
+                <TableHead>Viloyat/Tuman</TableHead>
+                <TableHead>Kod</TableHead>
+                <TableHead>Admin</TableHead>
+                <TableHead>Login / Parol</TableHead>
+                <TableHead className="text-center">O'quvchilar</TableHead>
+                <TableHead className="text-center">Testlar</TableHead>
+                <TableHead className="text-center">O'rtacha ball</TableHead>
+                <TableHead>Holat</TableHead>
+                <TableHead className="text-right">Amallar</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={10} className="py-10 text-center">
+                    <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                  </TableCell>
+                </TableRow>
+              ) : filteredSchools.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={10} className="py-10 text-center text-muted-foreground">
+                    Maktablar topilmadi
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredSchools.map((school) => (
+                  <SchoolTableRow
+                    key={school.id}
+                    school={school}
+                    onEdit={openEditDialog}
+                    onResetPassword={openResetPasswordDialog}
+                    onToggleActive={handleToggleActive}
+                    copyToClipboard={copyToClipboard}
+                  />
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
  
          {/* Edit Dialog */}
          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
