@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -15,21 +14,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useDTMUsers } from "@/hooks/useDTMUsers";
+import { DTMUsersFilters, DTMFilters, filterDTMUsers } from "@/components/dtm/DTMUsersFilters";
+import { SyncSchoolsDialog } from "@/components/dtm/SyncSchoolsDialog";
 import {
-  Search,
   RefreshCw,
   Settings,
   AlertCircle,
@@ -138,7 +131,6 @@ const FileButton = ({
 const UserDetailCard = ({ user }: { user: DTMUser }) => {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
-      {/* Personal Info */}
       <div className="space-y-2">
         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           Shaxsiy ma'lumotlar
@@ -159,7 +151,6 @@ const UserDetailCard = ({ user }: { user: DTMUser }) => {
         </div>
       </div>
 
-      {/* Location */}
       <div className="space-y-2">
         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           Manzil
@@ -179,7 +170,6 @@ const UserDetailCard = ({ user }: { user: DTMUser }) => {
         </div>
       </div>
 
-      {/* School */}
       <div className="space-y-2">
         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           Maktab
@@ -199,7 +189,6 @@ const UserDetailCard = ({ user }: { user: DTMUser }) => {
         </div>
       </div>
 
-      {/* Dates */}
       <div className="space-y-2">
         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           Sanalar
@@ -227,7 +216,7 @@ const UserDetailCard = ({ user }: { user: DTMUser }) => {
 export default function DTMUsers() {
   const navigate = useNavigate();
   const {
-    filteredUsers,
+    users,
     pageInfo,
     loading,
     error,
@@ -236,9 +225,15 @@ export default function DTMUsers() {
     setPage,
     setLimit,
     retry,
-    searchTerm,
-    setSearchTerm,
   } = useDTMUsers(50);
+
+  const [filters, setFilters] = useState<DTMFilters>({
+    searchTerm: "",
+    region: "all",
+    district: "all",
+    schoolCode: "all",
+    hasResult: "all",
+  });
 
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [sortColumn, setSortColumn] = useState<string>("created_at");
@@ -253,6 +248,10 @@ export default function DTMUsers() {
     }
   };
 
+  // Apply filters
+  const filteredUsers = filterDTMUsers(users, filters);
+
+  // Apply sorting
   const sortedUsers = [...filteredUsers].sort((a, b) => {
     let aVal = a[sortColumn];
     let bVal = b[sortColumn];
@@ -345,50 +344,36 @@ export default function DTMUsers() {
                   Jami: {pageInfo.totalCount.toLocaleString()}
                 </Badge>
               )}
+              {filteredUsers.length !== users.length && (
+                <Badge variant="outline" className="ml-2">
+                  Filtrlangan: {filteredUsers.length}
+                </Badge>
+              )}
             </p>
           </div>
 
-          <Button variant="outline" size="icon" onClick={retry} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          </Button>
+          <div className="flex items-center gap-2">
+            <SyncSchoolsDialog />
+            <Button variant="outline" size="icon" onClick={retry} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
-        <Card>
-          <CardContent className="py-4">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Ism, maktab kodi yoki telefon bo'yicha qidirish..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Ko'rsatish:</span>
-                <Select
-                  value={String(limit)}
-                  onValueChange={(val) => {
-                    setLimit(Number(val));
-                    setPage(0);
-                  }}
-                >
-                  <SelectTrigger className="w-[100px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <DTMUsersFilters
+          users={users}
+          filters={filters}
+          onFiltersChange={(newFilters) => {
+            setFilters(newFilters);
+            setPage(0);
+          }}
+          limit={limit}
+          onLimitChange={(newLimit) => {
+            setLimit(newLimit);
+            setPage(0);
+          }}
+        />
 
         {/* Users Table */}
         <Card>
@@ -478,7 +463,7 @@ export default function DTMUsers() {
                         <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                           <div className="flex flex-col items-center gap-2">
                             <UsersIcon className="h-8 w-8 opacity-50" />
-                            {searchTerm
+                            {filters.searchTerm || filters.region !== "all" || filters.hasResult !== "all"
                               ? "Qidiruv natijasi topilmadi"
                               : "Foydalanuvchilar topilmadi"}
                           </div>
