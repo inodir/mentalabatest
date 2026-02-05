@@ -27,21 +27,24 @@
  import { format } from "date-fns";
  import { useNavigate } from "react-router-dom";
  
- interface TestResult {
-   id: string;
-   student_id: string;
-   student_name: string;
-   test_date: string;
-   test_language: string;
-   subject1: string;
-   subject2: string;
-   score_subject1: number;
-   score_subject2: number;
-   total_score: number;
-   max_score: number;
-   has_certificate: boolean;
-   attempt_number: number;
- }
+interface TestResult {
+  id: string;
+  student_id: string;
+  student_name: string;
+  test_date: string;
+  test_language: string;
+  subject1: string;
+  subject2: string;
+  score_ona_tili: number;
+  score_matematika: number;
+  score_tarix: number;
+  score_subject1: number;
+  score_subject2: number;
+  total_score: number;
+  max_score: number;
+  has_certificate: boolean;
+  attempt_number: number;
+}
  
  export default function TestResults() {
    const { schoolId } = useAuth();
