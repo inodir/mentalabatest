@@ -454,9 +454,7 @@ export default function SchoolDetails() {
                     <TableHead>Test tili</TableHead>
                     <TableHead>1-fan</TableHead>
                     <TableHead>2-fan</TableHead>
-                    <TableHead>Sertifikat</TableHead>
                     <TableHead className="text-center">Testlar</TableHead>
-                    <TableHead className="text-center">O'rtacha</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
