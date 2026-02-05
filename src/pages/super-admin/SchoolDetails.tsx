@@ -252,6 +252,7 @@ export default function SchoolDetails() {
     const headers = [
       "Sana",
       "F.I.O.",
+      "Telefon",
       "Test tili",
       "Ona tili",
       "Matematika",
@@ -261,10 +262,12 @@ export default function SchoolDetails() {
       "2-fan",
       "Ball",
       "Jami",
+      "Sertifikat",
     ];
     const rows = filteredResults.map((r) => [
       format(new Date(r.test_date), "dd.MM.yyyy"),
       r.student_name,
+      r.student_phone,
       getLanguageLabel(r.test_language),
       r.score_ona_tili,
       r.score_matematika,
@@ -274,6 +277,7 @@ export default function SchoolDetails() {
       r.subject2,
       r.score_subject2,
       r.total_score,
+      r.has_certificate ? `${r.certificate_type} ${r.certificate_score || ""}` : "Yo'q",
     ]);
 
     const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
