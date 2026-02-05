@@ -109,29 +109,35 @@ interface TestResult {
      return TEST_LANGUAGES.find((l) => l.value === value)?.label || value;
    };
  
-   const handleExportCSV = () => {
-     const headers = [
-       "Sana",
-       "F.I.O.",
-       "Test tili",
-       "Fan 1",
-       "Ball 1",
-       "Fan 2",
-       "Ball 2",
-       "Jami ball",
-       "Til sertifikati",
-     ];
-     const rows = filteredResults.map((r) => [
-       format(new Date(r.test_date), "dd.MM.yyyy"),
-       r.student_name,
-       getLanguageLabel(r.test_language),
-       r.subject1,
-       r.score_subject1,
-       r.subject2,
-       r.score_subject2,
-       r.total_score,
-       r.has_certificate ? "Ha" : "Yo'q",
-     ]);
+    const handleExportCSV = () => {
+      const headers = [
+        "Sana",
+        "F.I.O.",
+        "Test tili",
+        "Ona tili",
+        "Matematika",
+        "Tarix",
+        "Fan 1",
+        "Ball 1",
+        "Fan 2",
+        "Ball 2",
+        "Jami ball",
+        "Til sertifikati",
+      ];
+      const rows = filteredResults.map((r) => [
+        format(new Date(r.test_date), "dd.MM.yyyy"),
+        r.student_name,
+        getLanguageLabel(r.test_language),
+        r.score_ona_tili,
+        r.score_matematika,
+        r.score_tarix,
+        r.subject1,
+        r.score_subject1,
+        r.subject2,
+        r.score_subject2,
+        r.total_score,
+        r.has_certificate ? "Ha" : "Yo'q",
+      ]);
  
      const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
      const blob = new Blob([csv], { type: "text/csv" });
