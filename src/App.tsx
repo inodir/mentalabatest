@@ -16,6 +16,7 @@ import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
 import SchoolsManagement from "./pages/super-admin/SchoolsManagement";
 import SchoolDetails from "./pages/super-admin/SchoolDetails";
 import Settings from "./pages/super-admin/Settings";
+import DTMUsers from "./pages/super-admin/DTMUsers";
 
 // School Admin pages
 import SchoolDashboard from "./pages/school/SchoolDashboard";
@@ -109,6 +110,14 @@ function AppRoutes() {
         element={
           <SuperAdminRoute>
             <Settings />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/users"
+        element={
+          <SuperAdminRoute>
+            <DTMUsers />
           </SuperAdminRoute>
         }
       />

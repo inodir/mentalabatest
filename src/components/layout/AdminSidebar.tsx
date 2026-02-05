@@ -23,6 +23,7 @@ import {
  
 const superAdminNavItems: NavItem[] = [
   { title: "Bosh sahifa", href: "/super-admin", icon: LayoutDashboard },
+  { title: "Foydalanuvchilar", href: "/super-admin/users", icon: Users },
   { title: "Maktablar", href: "/super-admin/schools", icon: School },
   { title: "Sozlamalar", href: "/super-admin/settings", icon: Settings },
 ];

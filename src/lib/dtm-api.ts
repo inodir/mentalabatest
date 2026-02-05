@@ -5,9 +5,24 @@ export interface DTMUser {
   id: string;
   full_name: string;
   school_code: string;
+  school_name?: string;
+  region?: string;
+  district?: string;
+  phone_number?: string;
   has_result: boolean;
   total_point: number | null;
+  ona_tili_ball?: number;
+  matematika_ball?: number;
+  tarix_ball?: number;
+  fan1_ball?: number;
+  fan2_ball?: number;
+  fan1_nomi?: string;
+  fan2_nomi?: string;
+  file_url?: string;
+  pdf_url?: string;
+  excel_url?: string;
   created_at: string;
+  updated_at?: string;
   [key: string]: unknown;
 }
 
