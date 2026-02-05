@@ -220,56 +220,53 @@ export default function TestResults() {
            </Button>
          </div>
  
-         {/* Filters */}
-         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-           <div className="relative sm:col-span-2 lg:col-span-1">
-             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-             <Input
-               placeholder="F.I.O. bo'yicha..."
-               value={searchTerm}
-               onChange={(e) => setSearchTerm(e.target.value)}
-               className="pl-9"
-             />
-           </div>
-           <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-             <SelectTrigger>
-               <SelectValue placeholder="Fan bo'yicha" />
-             </SelectTrigger>
-             <SelectContent>
-               <SelectItem value="all">Barcha fanlar</SelectItem>
-               {SUBJECTS.map((s) => (
-                 <SelectItem key={s} value={s}>
-                   {s}
-                 </SelectItem>
-               ))}
-             </SelectContent>
-           </Select>
-           <div className="space-y-1">
-             <Label className="text-xs">Sanadan</Label>
-             <Input
-               type="date"
-               value={dateFrom}
-               onChange={(e) => setDateFrom(e.target.value)}
-             />
-           </div>
-           <div className="space-y-1">
-             <Label className="text-xs">Sanagacha</Label>
-             <Input
-               type="date"
-               value={dateTo}
-               onChange={(e) => setDateTo(e.target.value)}
-             />
-           </div>
-           <div className="space-y-1">
-             <Label className="text-xs">Min ball</Label>
-             <Input
-               type="number"
-               placeholder="0"
-               value={minScore}
-               onChange={(e) => setMinScore(e.target.value)}
-             />
-           </div>
-         </div>
+        {/* Filters */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="F.I.O. bo'yicha..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={subject1Filter} onValueChange={setSubject1Filter}>
+            <SelectTrigger>
+              <SelectValue placeholder="1-fan bo'yicha" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha 1-fanlar</SelectItem>
+              {SUBJECTS.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={subject2Filter} onValueChange={setSubject2Filter}>
+            <SelectTrigger>
+              <SelectValue placeholder="2-fan bo'yicha" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha 2-fanlar</SelectItem>
+              {SUBJECTS.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="space-y-1">
+            <Label className="text-xs">Min ball</Label>
+            <Input
+              type="number"
+              placeholder="0"
+              value={minScore}
+              onChange={(e) => setMinScore(e.target.value)}
+            />
+          </div>
+        </div>
  
          {/* Table */}
          <div className="rounded-lg border bg-card">
