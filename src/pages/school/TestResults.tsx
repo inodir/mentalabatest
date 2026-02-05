@@ -128,20 +128,22 @@ interface TestResult {
       const headers = [
         "Sana",
         "F.I.O.",
+        "Telefon",
         "Test tili",
         "Ona tili",
         "Matematika",
         "Tarix",
-        "Fan 1",
-        "Ball 1",
-        "Fan 2",
-        "Ball 2",
+        "1-fan",
+        "Ball",
+        "2-fan",
+        "Ball",
         "Jami ball",
-        "Til sertifikati",
+        "Sertifikat",
       ];
       const rows = filteredResults.map((r) => [
         format(new Date(r.test_date), "dd.MM.yyyy"),
         r.student_name,
+        r.student_phone,
         getLanguageLabel(r.test_language),
         r.score_ona_tili,
         r.score_matematika,
@@ -151,7 +153,7 @@ interface TestResult {
         r.subject2,
         r.score_subject2,
         r.total_score,
-        r.has_certificate ? "Ha" : "Yo'q",
+        r.has_certificate ? `${r.certificate_type} ${r.certificate_score || ""}` : "Yo'q",
       ]);
  
      const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
