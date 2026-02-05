@@ -31,6 +31,7 @@ interface TestResult {
   id: string;
   student_id: string;
   student_name: string;
+  student_phone: string;
   test_date: string;
   test_language: string;
   subject1: string;
@@ -43,6 +44,8 @@ interface TestResult {
   total_score: number;
   max_score: number;
   has_certificate: boolean;
+  certificate_type: string | null;
+  certificate_score: string | null;
   attempt_number: number;
 }
  
@@ -66,33 +69,45 @@ interface TestResult {
  
    const fetchResults = async () => {
      try {
-       // First get students for this school
-       const { data: students } = await supabase
-         .from("students")
-         .select("id, full_name, has_language_certificate")
-         .eq("school_id", schoolId);
- 
-       const studentIds = students?.map((s) => s.id) || [];
-       const studentMap = new Map(
-         students?.map((s) => [s.id, { name: s.full_name, hasCert: s.has_language_certificate }]) || []
-       );
- 
-       // Get test results
-       const { data, error } = await supabase
-         .from("test_results")
-         .select("*")
-         .in("student_id", studentIds.length > 0 ? studentIds : ["00000000-0000-0000-0000-000000000000"])
-         .order("test_date", { ascending: false });
- 
-       if (error) throw error;
- 
-       const resultsWithNames = (data || []).map((r) => ({
-         ...r,
-         student_name: studentMap.get(r.student_id)?.name || "Noma'lum",
-         has_certificate: studentMap.get(r.student_id)?.hasCert || false,
-       }));
- 
-       setResults(resultsWithNames);
+      // First get students for this school
+        const { data: students } = await supabase
+          .from("students")
+          .select("id, full_name, phone_number, has_language_certificate, certificate_type, certificate_score")
+          .eq("school_id", schoolId);
+
+        const studentIds = students?.map((s) => s.id) || [];
+        const studentMap = new Map(
+          students?.map((s) => [s.id, { 
+            name: s.full_name, 
+            phone: s.phone_number,
+            hasCert: s.has_language_certificate,
+            certType: s.certificate_type,
+            certScore: s.certificate_score,
+          }]) || []
+        );
+
+        // Get test results
+        const { data, error } = await supabase
+          .from("test_results")
+          .select("*")
+          .in("student_id", studentIds.length > 0 ? studentIds : ["00000000-0000-0000-0000-000000000000"])
+          .order("test_date", { ascending: false });
+
+        if (error) throw error;
+
+        const resultsWithNames = (data || []).map((r) => {
+          const studentInfo = studentMap.get(r.student_id);
+          return {
+            ...r,
+            student_name: studentInfo?.name || "Noma'lum",
+            student_phone: studentInfo?.phone || "",
+            has_certificate: studentInfo?.hasCert || false,
+            certificate_type: studentInfo?.certType || null,
+            certificate_score: studentInfo?.certScore || null,
+          };
+        });
+
+        setResults(resultsWithNames);
      } catch (error) {
        console.error("Error fetching results:", error);
        toast({
@@ -113,20 +128,22 @@ interface TestResult {
       const headers = [
         "Sana",
         "F.I.O.",
+        "Telefon",
         "Test tili",
         "Ona tili",
         "Matematika",
         "Tarix",
-        "Fan 1",
-        "Ball 1",
-        "Fan 2",
-        "Ball 2",
+        "1-fan",
+        "Ball",
+        "2-fan",
+        "Ball",
         "Jami ball",
-        "Til sertifikati",
+        "Sertifikat",
       ];
       const rows = filteredResults.map((r) => [
         format(new Date(r.test_date), "dd.MM.yyyy"),
         r.student_name,
+        r.student_phone,
         getLanguageLabel(r.test_language),
         r.score_ona_tili,
         r.score_matematika,
@@ -136,7 +153,7 @@ interface TestResult {
         r.subject2,
         r.score_subject2,
         r.total_score,
-        r.has_certificate ? "Ha" : "Yo'q",
+        r.has_certificate ? `${r.certificate_type} ${r.certificate_score || ""}` : "Yo'q",
       ]);
  
      const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
@@ -234,13 +251,14 @@ interface TestResult {
                 <TableRow>
                   <TableHead>Sana</TableHead>
                   <TableHead>F.I.O.</TableHead>
+                  <TableHead>Telefon</TableHead>
                   <TableHead>Test tili</TableHead>
-                  <TableHead>Ona tili (M)</TableHead>
-                  <TableHead>Matematika (M)</TableHead>
-                  <TableHead>Tarix (M)</TableHead>
+                  <TableHead>Ona tili</TableHead>
+                  <TableHead>Matematika</TableHead>
+                  <TableHead>Tarix</TableHead>
                   <TableHead>1-fan (ball)</TableHead>
                   <TableHead>2-fan (ball)</TableHead>
-                  <TableHead>Jami ball</TableHead>
+                  <TableHead>Jami</TableHead>
                   <TableHead>Sertifikat</TableHead>
                   <TableHead className="text-right">Amallar</TableHead>
                 </TableRow>
@@ -248,13 +266,13 @@ interface TestResult {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="py-10 text-center">
+                    <TableCell colSpan={12} className="py-10 text-center">
                       <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                     </TableCell>
                   </TableRow>
                 ) : filteredResults.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={12} className="py-10 text-center text-muted-foreground">
                       Natijalar topilmadi
                     </TableCell>
                   </TableRow>
@@ -268,6 +286,7 @@ interface TestResult {
                        </div>
                      </TableCell>
                       <TableCell className="font-medium">{result.student_name}</TableCell>
+                      <TableCell>{result.student_phone}</TableCell>
                       <TableCell>{getLanguageLabel(result.test_language)}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{result.score_ona_tili}</Badge>
@@ -298,9 +317,14 @@ interface TestResult {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={result.has_certificate ? "default" : "secondary"}>
-                          {result.has_certificate ? "Ha" : "Yo'q"}
-                        </Badge>
+                        {result.has_certificate ? (
+                          <Badge variant="default" className="bg-success">
+                            {result.certificate_type}{" "}
+                            {result.certificate_score && `(${result.certificate_score})`}
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">Yo'q</Badge>
+                        )}
                       </TableCell>
                      <TableCell className="text-right">
                        <Button

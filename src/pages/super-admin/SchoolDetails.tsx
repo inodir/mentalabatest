@@ -66,6 +66,10 @@ interface TestResult {
   id: string;
   student_id: string;
   student_name: string;
+  student_phone: string;
+  has_certificate: boolean;
+  certificate_type: string | null;
+  certificate_score: string | null;
   test_date: string;
   test_language: string;
   subject1: string;
@@ -127,7 +131,13 @@ export default function SchoolDetails() {
 
       const studentIds = studentsData?.map((s) => s.id) || [];
       const studentMap = new Map(
-        studentsData?.map((s) => [s.id, s.full_name]) || []
+        studentsData?.map((s) => [s.id, {
+          name: s.full_name,
+          phone: s.phone_number,
+          has_certificate: s.has_language_certificate,
+          certificate_type: s.certificate_type,
+          certificate_score: s.certificate_score,
+        }]) || []
       );
 
       // Fetch all test results for this school's students
@@ -139,10 +149,17 @@ export default function SchoolDetails() {
           .in("student_id", studentIds)
           .order("test_date", { ascending: false });
 
-        allTestResults = (resultsData || []).map((r) => ({
-          ...r,
-          student_name: studentMap.get(r.student_id) || "Noma'lum",
-        }));
+        allTestResults = (resultsData || []).map((r) => {
+          const studentInfo = studentMap.get(r.student_id);
+          return {
+            ...r,
+            student_name: studentInfo?.name || "Noma'lum",
+            student_phone: studentInfo?.phone || "",
+            has_certificate: studentInfo?.has_certificate || false,
+            certificate_type: studentInfo?.certificate_type || null,
+            certificate_score: studentInfo?.certificate_score || null,
+          };
+        });
       }
 
       setTestResults(allTestResults);
@@ -235,6 +252,7 @@ export default function SchoolDetails() {
     const headers = [
       "Sana",
       "F.I.O.",
+      "Telefon",
       "Test tili",
       "Ona tili",
       "Matematika",
@@ -244,10 +262,12 @@ export default function SchoolDetails() {
       "2-fan",
       "Ball",
       "Jami",
+      "Sertifikat",
     ];
     const rows = filteredResults.map((r) => [
       format(new Date(r.test_date), "dd.MM.yyyy"),
       r.student_name,
+      r.student_phone,
       getLanguageLabel(r.test_language),
       r.score_ona_tili,
       r.score_matematika,
@@ -257,6 +277,7 @@ export default function SchoolDetails() {
       r.subject2,
       r.score_subject2,
       r.total_score,
+      r.has_certificate ? `${r.certificate_type} ${r.certificate_score || ""}` : "Yo'q",
     ]);
 
     const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
@@ -368,7 +389,7 @@ export default function SchoolDetails() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.avgScore}/500</div>
+              <div className="text-2xl font-bold">{stats.avgScore}/189</div>
             </CardContent>
           </Card>
         </div>
@@ -512,6 +533,7 @@ export default function SchoolDetails() {
                   <TableRow>
                     <TableHead>Sana</TableHead>
                     <TableHead>F.I.O.</TableHead>
+                    <TableHead>Telefon</TableHead>
                     <TableHead>Test tili</TableHead>
                     <TableHead className="text-center">Ona tili</TableHead>
                     <TableHead className="text-center">Matematika</TableHead>
@@ -519,12 +541,13 @@ export default function SchoolDetails() {
                     <TableHead>1-fan (ball)</TableHead>
                     <TableHead>2-fan (ball)</TableHead>
                     <TableHead className="text-center">Jami</TableHead>
+                    <TableHead>Sertifikat</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredResults.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8">
+                      <TableCell colSpan={11} className="text-center py-8">
                         <p className="text-muted-foreground">Natijalar topilmadi</p>
                       </TableCell>
                     </TableRow>
@@ -540,6 +563,7 @@ export default function SchoolDetails() {
                         <TableCell className="font-medium">
                           {result.student_name}
                         </TableCell>
+                        <TableCell>{result.student_phone}</TableCell>
                         <TableCell>
                           <Badge variant="outline">
                             {getLanguageLabel(result.test_language)}
@@ -576,6 +600,16 @@ export default function SchoolDetails() {
                           >
                             {result.total_score}/{result.max_score}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {result.has_certificate ? (
+                            <Badge variant="default" className="bg-success">
+                              {result.certificate_type}{" "}
+                              {result.certificate_score && `(${result.certificate_score})`}
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">Yo'q</Badge>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
