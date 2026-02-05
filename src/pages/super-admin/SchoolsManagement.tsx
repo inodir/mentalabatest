@@ -1,5 +1,6 @@
- import { useEffect, useState } from "react";
- import { AdminLayout } from "@/components/layout/AdminLayout";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { AdminLayout } from "@/components/layout/AdminLayout";
  import { Button } from "@/components/ui/button";
  import { Input } from "@/components/ui/input";
  import {
@@ -873,15 +874,24 @@
                          {school.is_active ? "Faol" : "Nofaol"}
                        </Badge>
                      </TableCell>
-                     <TableCell className="text-right">
-                       <div className="flex justify-end gap-1">
-                         <Button
-                           variant="ghost"
-                           size="icon"
-                           onClick={() => openEditDialog(school)}
-                           title="Tahrirlash"
-                         >
-                           <Edit className="h-4 w-4" />
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Link to={`/super-admin/schools/${school.id}`}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Ko'rish"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditDialog(school)}
+                            title="Tahrirlash"
+                          >
+                            <Edit className="h-4 w-4" />
                          </Button>
                          <Button
                            variant="ghost"
