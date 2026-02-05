@@ -478,32 +478,8 @@ export default function SchoolDetails() {
                         </TableCell>
                         <TableCell>{student.subject1}</TableCell>
                         <TableCell>{student.subject2}</TableCell>
-                        <TableCell>
-                          {student.has_language_certificate ? (
-                            <Badge variant="default" className="bg-success">
-                              {student.certificate_type}{" "}
-                              {student.certificate_score &&
-                                `(${student.certificate_score})`}
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">Yo'q</Badge>
-                          )}
-                        </TableCell>
                         <TableCell className="text-center">
                           {student.test_count}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span
-                            className={
-                              (student.avg_score || 0) >= 350
-                                ? "text-success font-medium"
-                                : (student.avg_score || 0) >= 250
-                                ? "text-warning font-medium"
-                                : ""
-                            }
-                          >
-                            {student.avg_score || "-"}
-                          </span>
                         </TableCell>
                       </TableRow>
                     ))
