@@ -3,16 +3,17 @@
  import { cn } from "@/lib/utils";
  import { Button } from "@/components/ui/button";
  import { useAuth } from "@/hooks/useAuth";
- import {
-   LayoutDashboard,
-   School,
-   Users,
-   FileText,
-   LogOut,
-   ChevronLeft,
-   ChevronRight,
-   GraduationCap,
- } from "lucide-react";
+import {
+  LayoutDashboard,
+  School,
+  Users,
+  FileText,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  GraduationCap,
+  Settings,
+} from "lucide-react";
  
  interface NavItem {
    title: string;
@@ -20,10 +21,11 @@
    icon: React.ElementType;
  }
  
- const superAdminNavItems: NavItem[] = [
-   { title: "Bosh sahifa", href: "/super-admin", icon: LayoutDashboard },
-   { title: "Maktablar", href: "/super-admin/schools", icon: School },
- ];
+const superAdminNavItems: NavItem[] = [
+  { title: "Bosh sahifa", href: "/super-admin", icon: LayoutDashboard },
+  { title: "Maktablar", href: "/super-admin/schools", icon: School },
+  { title: "Sozlamalar", href: "/super-admin/settings", icon: Settings },
+];
  
  const schoolAdminNavItems: NavItem[] = [
    { title: "Bosh sahifa", href: "/school", icon: LayoutDashboard },
