@@ -66,6 +66,10 @@ interface TestResult {
   id: string;
   student_id: string;
   student_name: string;
+  student_phone: string;
+  has_certificate: boolean;
+  certificate_type: string | null;
+  certificate_score: string | null;
   test_date: string;
   test_language: string;
   subject1: string;
