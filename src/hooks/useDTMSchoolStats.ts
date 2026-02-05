@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { getApiSettings, fetchAllDTMUsers, DTMUser } from "@/lib/dtm-api";
+import { getApiSettings, fetchAllDTMUsers, DTMUser, getCachedData, setCachedData, clearDTMCache } from "@/lib/dtm-api";
 
 export interface DTMSchoolStats {
   school_code: string;
@@ -12,15 +12,62 @@ interface UseDTMSchoolStatsResult {
   stats: Map<string, DTMSchoolStats>;
   loading: boolean;
   error: string | null;
-  refresh: () => void;
+  refresh: (forceRefresh?: boolean) => void;
+  lastUpdated: Date | null;
+}
+
+// Cache key for school stats
+const SCHOOL_STATS_CACHE_KEY = "dtm_school_stats";
+const CACHE_TTL = 60 * 1000; // 1 minute
+
+interface CachedSchoolStats {
+  stats: [string, DTMSchoolStats][];
+  timestamp: number;
+}
+
+function getLocalCachedStats(): Map<string, DTMSchoolStats> | null {
+  try {
+    const cached = localStorage.getItem(SCHOOL_STATS_CACHE_KEY);
+    if (!cached) return null;
+    
+    const parsed: CachedSchoolStats = JSON.parse(cached);
+    if (Date.now() - parsed.timestamp > CACHE_TTL) {
+      localStorage.removeItem(SCHOOL_STATS_CACHE_KEY);
+      return null;
+    }
+    
+    return new Map(parsed.stats);
+  } catch {
+    return null;
+  }
+}
+
+function setLocalCachedStats(stats: Map<string, DTMSchoolStats>): void {
+  const data: CachedSchoolStats = {
+    stats: Array.from(stats.entries()),
+    timestamp: Date.now(),
+  };
+  localStorage.setItem(SCHOOL_STATS_CACHE_KEY, JSON.stringify(data));
 }
 
 export function useDTMSchoolStats(): UseDTMSchoolStatsResult {
   const [stats, setStats] = useState<Map<string, DTMSchoolStats>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const calculateStats = useCallback(async () => {
+  const calculateStats = useCallback(async (forceRefresh: boolean = false) => {
+    // Check local cache first
+    if (!forceRefresh) {
+      const cachedStats = getLocalCachedStats();
+      if (cachedStats && cachedStats.size > 0) {
+        setStats(cachedStats);
+        setLoading(false);
+        setLastUpdated(new Date());
+        return;
+      }
+    }
+
     setLoading(true);
     setError(null);
 
@@ -32,7 +79,12 @@ export function useDTMSchoolStats(): UseDTMSchoolStatsResult {
     }
 
     try {
-      const { entities } = await fetchAllDTMUsers(settings);
+      // Clear cache if force refresh
+      if (forceRefresh) {
+        clearDTMCache();
+      }
+
+      const { entities } = await fetchAllDTMUsers(settings, undefined, forceRefresh);
       
       // Group by school_code
       const schoolMap = new Map<string, DTMUser[]>();
@@ -68,6 +120,8 @@ export function useDTMSchoolStats(): UseDTMSchoolStatsResult {
       });
 
       setStats(statsMap);
+      setLocalCachedStats(statsMap);
+      setLastUpdated(new Date());
     } catch (err) {
       console.error("Error fetching DTM stats:", err);
       setError("Ma'lumotlarni yuklashda xatolik");
@@ -85,5 +139,6 @@ export function useDTMSchoolStats(): UseDTMSchoolStatsResult {
     loading,
     error,
     refresh: calculateStats,
+    lastUpdated,
   };
 }

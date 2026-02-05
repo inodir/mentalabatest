@@ -109,13 +109,27 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
      return { error: error as Error | null };
    };
  
-   const signOut = async () => {
-     await supabase.auth.signOut();
-     setUser(null);
-     setSession(null);
-     setRole(null);
-     setSchoolId(null);
-   };
+  const signOut = async () => {
+    // Clear cached data on logout to prevent stale data for next user
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (
+        key.startsWith("school_dashboard_") || 
+        key === "dtm_school_stats" ||
+        key === "dtm_api_settings"
+      )) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setRole(null);
+    setSchoolId(null);
+  };
  
    return (
      <AuthContext.Provider
