@@ -56,6 +56,48 @@ export interface DashboardStats {
   loadedCount?: number;
 }
 
+// Cache configuration
+const CACHE_TTL = 60 * 1000; // 1 minute cache
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+// Cache storage
+const dtmCache: {
+  users?: CacheEntry<{ entities: DTMUser[]; totalCount: number }>;
+  stats?: CacheEntry<DashboardStats>;
+} = {};
+
+// Get cached data if valid
+export function getCachedData<T>(key: keyof typeof dtmCache): T | null {
+  const entry = dtmCache[key] as CacheEntry<T> | undefined;
+  if (!entry) return null;
+  
+  if (Date.now() - entry.timestamp > CACHE_TTL) {
+    // Cache expired
+    delete dtmCache[key];
+    return null;
+  }
+  
+  return entry.data;
+}
+
+// Set cache data
+export function setCachedData<T>(key: keyof typeof dtmCache, data: T): void {
+  (dtmCache as Record<string, CacheEntry<T>>)[key] = {
+    data,
+    timestamp: Date.now(),
+  };
+}
+
+// Clear all cache
+export function clearDTMCache(): void {
+  delete dtmCache.users;
+  delete dtmCache.stats;
+}
+
 // Get API settings from localStorage
 export function getApiSettings(): DTMApiSettings | null {
   const settings = localStorage.getItem("dtm_api_settings");
@@ -157,11 +199,21 @@ export function calculateStats(
   };
 }
 
-// Fetch all users for accurate mode with parallel requests
+// Fetch all users for accurate mode with parallel requests (with caching)
 export async function fetchAllDTMUsers(
   settings: DTMApiSettings,
-  onProgress?: (loaded: number, total: number) => void
+  onProgress?: (loaded: number, total: number) => void,
+  forceRefresh: boolean = false
 ): Promise<{ entities: DTMUser[]; totalCount: number }> {
+  // Check cache first
+  if (!forceRefresh) {
+    const cached = getCachedData<{ entities: DTMUser[]; totalCount: number }>("users");
+    if (cached) {
+      onProgress?.(cached.entities.length, cached.totalCount);
+      return cached;
+    }
+  }
+
   const limit = 100;
   const concurrency = 5; // Parallel requests count
 
@@ -173,7 +225,9 @@ export async function fetchAllDTMUsers(
   onProgress?.(allEntities.length, totalCount);
 
   if (allEntities.length >= totalCount) {
-    return { entities: allEntities, totalCount };
+    const result = { entities: allEntities, totalCount };
+    setCachedData("users", result);
+    return result;
   }
 
   // Calculate remaining pages
@@ -196,5 +250,7 @@ export async function fetchAllDTMUsers(
     onProgress?.(Math.min(allEntities.length, totalCount), totalCount);
   }
 
-  return { entities: allEntities, totalCount };
+  const result = { entities: allEntities, totalCount };
+  setCachedData("users", result);
+  return result;
 }

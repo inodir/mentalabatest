@@ -845,7 +845,7 @@ export default function SchoolsManagement() {
             <Button 
               variant="outline" 
               size="icon" 
-              onClick={refreshDTMStats} 
+              onClick={() => refreshDTMStats(true)} 
               disabled={dtmStatsLoading}
               title="DTM statistikasini yangilash"
             >
