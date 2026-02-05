@@ -89,7 +89,6 @@ export default function SchoolDetails() {
   const [searchTerm, setSearchTerm] = useState("");
   const [resultsSearchTerm, setResultsSearchTerm] = useState("");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
-  const [certificateFilter, setCertificateFilter] = useState<string>("all");
   const { toast } = useToast();
 
   // Stats
