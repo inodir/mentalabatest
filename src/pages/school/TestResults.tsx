@@ -49,23 +49,24 @@ interface TestResult {
   attempt_number: number;
 }
  
- export default function TestResults() {
-   const { schoolId } = useAuth();
-   const navigate = useNavigate();
-   const [results, setResults] = useState<TestResult[]>([]);
-   const [loading, setLoading] = useState(true);
-   const [searchTerm, setSearchTerm] = useState("");
-   const [subjectFilter, setSubjectFilter] = useState<string>("all");
-   const [dateFrom, setDateFrom] = useState("");
-   const [dateTo, setDateTo] = useState("");
-   const [minScore, setMinScore] = useState("");
-   const { toast } = useToast();
- 
-   useEffect(() => {
-     if (schoolId) {
-       fetchResults();
-     }
-   }, [schoolId]);
+export default function TestResults() {
+  const { schoolId } = useAuth();
+  const navigate = useNavigate();
+  const [results, setResults] = useState<TestResult[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [subject1Filter, setSubject1Filter] = useState<string>("all");
+  const [subject2Filter, setSubject2Filter] = useState<string>("all");
+  const [minScore, setMinScore] = useState("");
+  const [sortColumn, setSortColumn] = useState<string>("test_date");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (schoolId) {
+      fetchResults();
+    }
+  }, [schoolId]);
  
    const fetchResults = async () => {
      try {
