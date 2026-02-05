@@ -245,20 +245,20 @@ interface TestResult {
                   <TableHead className="text-right">Amallar</TableHead>
                 </TableRow>
               </TableHeader>
-             <TableBody>
-               {loading ? (
-                 <TableRow>
-                   <TableCell colSpan={8} className="py-10 text-center">
-                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-                   </TableCell>
-                 </TableRow>
-               ) : filteredResults.length === 0 ? (
-                 <TableRow>
-                   <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
-                     Natijalar topilmadi
-                   </TableCell>
-                 </TableRow>
-               ) : (
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={11} className="py-10 text-center">
+                      <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                    </TableCell>
+                  </TableRow>
+                ) : filteredResults.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={11} className="py-10 text-center text-muted-foreground">
+                      Natijalar topilmadi
+                    </TableCell>
+                  </TableRow>
+                ) : (
                  filteredResults.map((result) => (
                    <TableRow key={result.id}>
                      <TableCell>
