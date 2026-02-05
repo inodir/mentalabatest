@@ -267,32 +267,41 @@ interface TestResult {
                          {format(new Date(result.test_date), "dd.MM.yyyy")}
                        </div>
                      </TableCell>
-                     <TableCell className="font-medium">{result.student_name}</TableCell>
-                     <TableCell>{getLanguageLabel(result.test_language)}</TableCell>
-                     <TableCell>
-                       {result.subject1}{" "}
-                       <Badge variant="outline" className="ml-1">
-                         {result.score_subject1}
-                       </Badge>
-                     </TableCell>
-                     <TableCell>
-                       {result.subject2}{" "}
-                       <Badge variant="outline" className="ml-1">
-                         {result.score_subject2}
-                       </Badge>
-                     </TableCell>
-                     <TableCell>
-                       <Badge
-                         variant={result.total_score >= result.max_score * 0.7 ? "default" : "secondary"}
-                       >
-                         {result.total_score}/{result.max_score}
-                       </Badge>
-                     </TableCell>
-                     <TableCell>
-                       <Badge variant={result.has_certificate ? "default" : "secondary"}>
-                         {result.has_certificate ? "Ha" : "Yo'q"}
-                       </Badge>
-                     </TableCell>
+                      <TableCell className="font-medium">{result.student_name}</TableCell>
+                      <TableCell>{getLanguageLabel(result.test_language)}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{result.score_ona_tili}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{result.score_matematika}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{result.score_tarix}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {result.subject1}{" "}
+                        <Badge variant="outline" className="ml-1">
+                          {result.score_subject1}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {result.subject2}{" "}
+                        <Badge variant="outline" className="ml-1">
+                          {result.score_subject2}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={result.total_score >= result.max_score * 0.7 ? "default" : "secondary"}
+                        >
+                          {result.total_score}/{result.max_score}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={result.has_certificate ? "default" : "secondary"}>
+                          {result.has_certificate ? "Ha" : "Yo'q"}
+                        </Badge>
+                      </TableCell>
                      <TableCell className="text-right">
                        <Button
                          variant="ghost"

@@ -246,26 +246,38 @@ interface TestResult {
                          </p>
                        </div>
                      </div>
-                     <div className="flex flex-wrap items-center gap-4">
-                       <div className="text-center">
-                         <p className="text-xs text-muted-foreground">{result.subject1}</p>
-                         <Badge variant="outline">{result.score_subject1}</Badge>
-                       </div>
-                       <div className="text-center">
-                         <p className="text-xs text-muted-foreground">{result.subject2}</p>
-                         <Badge variant="outline">{result.score_subject2}</Badge>
-                       </div>
-                       <div className="text-center">
-                         <p className="text-xs text-muted-foreground">Jami</p>
-                         <Badge
-                           variant={
-                             result.total_score >= result.max_score * 0.7 ? "default" : "secondary"
-                           }
-                         >
-                           {result.total_score}/{result.max_score}
-                         </Badge>
-                       </div>
-                     </div>
+                    <div className="flex flex-wrap items-center gap-4">
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Ona tili</p>
+                        <Badge variant="outline">{result.score_ona_tili}</Badge>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Matematika</p>
+                        <Badge variant="outline">{result.score_matematika}</Badge>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Tarix</p>
+                        <Badge variant="outline">{result.score_tarix}</Badge>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">{result.subject1}</p>
+                        <Badge variant="outline">{result.score_subject1}</Badge>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">{result.subject2}</p>
+                        <Badge variant="outline">{result.score_subject2}</Badge>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Jami</p>
+                        <Badge
+                          variant={
+                            result.total_score >= result.max_score * 0.7 ? "default" : "secondary"
+                          }
+                        >
+                          {result.total_score}/{result.max_score}
+                        </Badge>
+                      </div>
+                    </div>
                    </div>
                  ))}
                </div>
