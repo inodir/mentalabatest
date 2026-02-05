@@ -442,16 +442,6 @@ export default function SchoolDetails() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={certificateFilter} onValueChange={setCertificateFilter}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Sertifikat" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Barchasi</SelectItem>
-                  <SelectItem value="yes">Sertifikat bor</SelectItem>
-                  <SelectItem value="no">Sertifikat yo'q</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             {/* Students Table */}
