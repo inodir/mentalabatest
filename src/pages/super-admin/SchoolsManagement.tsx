@@ -133,6 +133,7 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
         school_code: row.kod || row.school_code || row.maktab_kodi || "",
         admin_full_name: row.admin_fio || row.admin_full_name || row.admin || "",
         admin_login: row.login || row.admin_login || "",
+        password: row.parol || row.password || "",
       }));
       
       const { data, error } = await supabase.functions.invoke("bulk-create-schools", {
