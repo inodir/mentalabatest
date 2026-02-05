@@ -495,14 +495,22 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
      setIsResetPasswordDialogOpen(true);
    };
  
-   const filteredSchools = schools.filter((school) => {
-     const matchesSearch =
-       school.school_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       school.school_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       school.district.toLowerCase().includes(searchTerm.toLowerCase());
-     const matchesRegion = regionFilter === "all" || school.region === regionFilter;
-     return matchesSearch && matchesRegion;
-   });
+  // Get unique districts based on selected region
+  const availableDistricts = [...new Set(
+    schools
+      .filter(s => regionFilter === "all" || s.region === regionFilter)
+      .map(s => s.district)
+  )].sort();
+
+  const filteredSchools = schools.filter((school) => {
+    const matchesSearch =
+      school.school_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      school.school_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      school.district.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRegion = regionFilter === "all" || school.region === regionFilter;
+    const matchesDistrict = districtFilter === "all" || school.district === districtFilter;
+    return matchesSearch && matchesRegion && matchesDistrict;
+  });
  
    return (
      <AdminLayout variant="super">
