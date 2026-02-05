@@ -186,34 +186,38 @@ interface TestResult {
            <CardHeader>
              <CardTitle>O'quvchi ma'lumotlari</CardTitle>
            </CardHeader>
-           <CardContent>
-             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-               <div>
-                 <p className="text-sm text-muted-foreground">Test tili</p>
-                 <p className="font-medium">{getLanguageLabel(student.test_language)}</p>
-               </div>
-               <div>
-                 <p className="text-sm text-muted-foreground">1-fan</p>
-                 <p className="font-medium">{student.subject1}</p>
-               </div>
-               <div>
-                 <p className="text-sm text-muted-foreground">2-fan</p>
-                 <p className="font-medium">{student.subject2}</p>
-               </div>
-               <div>
-                 <p className="text-sm text-muted-foreground">Til sertifikati</p>
-                 <p className="font-medium">
-                   {student.has_language_certificate ? (
-                     <Badge>
-                       {student.certificate_type} {student.certificate_score && `(${student.certificate_score})`}
-                     </Badge>
-                   ) : (
-                     <Badge variant="secondary">Yo'q</Badge>
-                   )}
-                 </p>
-               </div>
-             </div>
-           </CardContent>
+            <CardContent>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Test tili</p>
+                  <p className="font-medium">{getLanguageLabel(student.test_language)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Majburiy fanlar</p>
+                  <p className="font-medium text-xs">Ona tili, Matematika, Tarix</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">1-fan (tanlangan)</p>
+                  <p className="font-medium">{student.subject1}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">2-fan (tanlangan)</p>
+                  <p className="font-medium">{student.subject2}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Til sertifikati</p>
+                  <p className="font-medium">
+                    {student.has_language_certificate ? (
+                      <Badge>
+                        {student.certificate_type} {student.certificate_score && `(${student.certificate_score})`}
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">Yo'q</Badge>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
          </Card>
  
          {/* Test History */}
