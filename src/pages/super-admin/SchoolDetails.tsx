@@ -460,7 +460,7 @@ export default function SchoolDetails() {
                 <TableBody>
                   {filteredStudents.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8">
+                      <TableCell colSpan={6} className="text-center py-8">
                         <p className="text-muted-foreground">O'quvchilar topilmadi</p>
                       </TableCell>
                     </TableRow>
