@@ -558,7 +558,7 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
                       Shablon yuklab olish
                     </Button>
                     <p className="text-xs text-muted-foreground">
-                      CSV ustunlari: viloyat, tuman, maktab_nomi, kod, admin_fio, login
+                      CSV ustunlari: viloyat, tuman, maktab_nomi, kod, admin_fio, login, parol (ixtiyoriy)
                     </p>
                   </div>
                 )}
