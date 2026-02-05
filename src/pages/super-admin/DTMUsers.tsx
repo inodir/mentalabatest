@@ -27,12 +27,10 @@ import {
   Settings,
   AlertCircle,
   FileText,
-  FileSpreadsheet,
   ChevronLeft,
   ChevronRight,
   Users as UsersIcon,
   Phone,
-  MapPin,
   School,
   Calendar,
   Award,
@@ -46,7 +44,7 @@ import {
   Download,
   Eye,
 } from "lucide-react";
-import { DTMUser } from "@/lib/dtm-api";
+import { DTMUser, DTMTestResults } from "@/lib/dtm-api";
 
 // Subject score display component
 const SubjectScore = ({ 
@@ -93,15 +91,14 @@ const FileButton = ({
   label 
 }: { 
   url?: string; 
-  type: "pdf" | "excel" | "file";
+  type: "test" | "result";
   label: string;
 }) => {
   if (!url) return null;
 
   const config = {
-    pdf: { icon: FileText, className: "text-destructive hover:bg-destructive/10" },
-    excel: { icon: FileSpreadsheet, className: "text-success hover:bg-success/10" },
-    file: { icon: Download, className: "text-primary hover:bg-primary/10" },
+    test: { icon: FileText, className: "text-primary hover:bg-primary/10", variant: "default" as const },
+    result: { icon: Download, className: "text-success hover:bg-success/10", variant: "success" as const },
   };
 
   const { icon: Icon, className } = config[type];
@@ -114,9 +111,10 @@ const FileButton = ({
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className={`inline-flex items-center justify-center h-8 w-8 rounded-md transition-colors ${className}`}
+            className={`inline-flex items-center justify-center gap-1 px-2 py-1 rounded-md transition-colors ${className} border text-xs font-medium`}
           >
-            <Icon className="h-4 w-4" />
+            <Icon className="h-3 w-3" />
+            <span>{type === "test" ? "Test" : "Natija"}</span>
           </a>
         </TooltipTrigger>
         <TooltipContent>
@@ -124,6 +122,63 @@ const FileButton = ({
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
+  );
+};
+
+// Render test results scores
+const TestResultsScores = ({ testResults }: { testResults?: DTMTestResults }) => {
+  if (!testResults) {
+    return <span className="text-muted-foreground text-xs">—</span>;
+  }
+
+  const getMandatoryScore = (name: string) => {
+    return testResults.mandatory?.find(m => m.name.toLowerCase().includes(name.toLowerCase()))?.point;
+  };
+
+  const onaTiliScore = getMandatoryScore("ona tili");
+  const mathScore = getMandatoryScore("matematika");
+  const tarixScore = getMandatoryScore("tarix");
+
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-1">
+      <SubjectScore 
+        label="Ona tili" 
+        score={onaTiliScore} 
+        maxScore={11} 
+        icon={BookOpen} 
+      />
+      <SubjectScore 
+        label="Matematika" 
+        score={mathScore} 
+        maxScore={11} 
+        icon={Calculator} 
+      />
+      <SubjectScore 
+        label="Tarix" 
+        score={tarixScore} 
+        maxScore={11} 
+        icon={History} 
+      />
+      {testResults.primary && (
+        <SubjectScore 
+          label={testResults.primary.name} 
+          score={testResults.primary.point} 
+          maxScore={93} 
+          icon={Beaker} 
+        />
+      )}
+      {testResults.secondary && (
+        <SubjectScore 
+          label={testResults.secondary.name} 
+          score={testResults.secondary.point} 
+          maxScore={63} 
+          icon={GraduationCap} 
+        />
+      )}
+      {!onaTiliScore && !mathScore && !tarixScore && !testResults.primary && !testResults.secondary && (
+        <span className="text-muted-foreground text-xs">—</span>
+      )}
+    </div>
   );
 };
 
@@ -140,31 +195,12 @@ const UserDetailCard = ({ user }: { user: DTMUser }) => {
             <GraduationCap className="h-4 w-4 text-primary" />
             <span className="font-medium truncate">{user.full_name || "—"}</span>
           </div>
-          {user.phone_number && (
+          {user.phone && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Phone className="h-3 w-3" />
-              <a href={`tel:${user.phone_number}`} className="hover:text-primary">
-                {user.phone_number}
+              <a href={`tel:${user.phone}`} className="hover:text-primary">
+                {user.phone}
               </a>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-          Manzil
-        </h4>
-        <div className="space-y-1">
-          {user.region && (
-            <div className="flex items-center gap-2 text-sm">
-              <MapPin className="h-3 w-3 text-muted-foreground" />
-              <span>{user.region}</span>
-            </div>
-          )}
-          {user.district && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground pl-5">
-              <span>{user.district}</span>
             </div>
           )}
         </div>
@@ -181,9 +217,9 @@ const UserDetailCard = ({ user }: { user: DTMUser }) => {
               {user.school_code || "—"}
             </Badge>
           </div>
-          {user.school_name && (
+          {user.district && (
             <p className="text-xs text-muted-foreground pl-5 truncate">
-              {user.school_name}
+              {user.district}
             </p>
           )}
         </div>
@@ -191,22 +227,37 @@ const UserDetailCard = ({ user }: { user: DTMUser }) => {
 
       <div className="space-y-2">
         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-          Sanalar
+          Test natijalari
+        </h4>
+        <div className="space-y-1">
+          {user.test_results?.primary && (
+            <div className="text-xs">
+              <span className="text-muted-foreground">Asosiy fan: </span>
+              <span className="font-medium">{user.test_results.primary.name}</span>
+              <Badge variant="secondary" className="ml-1">{user.test_results.primary.point}</Badge>
+            </div>
+          )}
+          {user.test_results?.secondary && (
+            <div className="text-xs">
+              <span className="text-muted-foreground">Ikkinchi fan: </span>
+              <span className="font-medium">{user.test_results.secondary.name}</span>
+              <Badge variant="secondary" className="ml-1">{user.test_results.secondary.point}</Badge>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          Sana
         </h4>
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-sm">
             <Calendar className="h-3 w-3 text-muted-foreground" />
             <span className="text-xs">
-              Yaratilgan: {user.created_at ? new Date(user.created_at).toLocaleDateString("uz-UZ") : "—"}
+              {user.created_at ? new Date(user.created_at).toLocaleDateString("uz-UZ") : "—"}
             </span>
           </div>
-          {user.updated_at && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground pl-5">
-              <span className="text-xs">
-                Yangilangan: {new Date(user.updated_at).toLocaleDateString("uz-UZ")}
-              </span>
-            </div>
-          )}
         </div>
       </div>
     </div>
@@ -229,13 +280,11 @@ export default function DTMUsers() {
 
   const [filters, setFilters] = useState<DTMFilters>({
     searchTerm: "",
-    region: "all",
-    district: "all",
     schoolCode: "all",
     hasResult: "all",
   });
 
-  const [expandedUser, setExpandedUser] = useState<string | null>(null);
+  const [expandedUser, setExpandedUser] = useState<number | null>(null);
   const [sortColumn, setSortColumn] = useState<string>("created_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
@@ -253,23 +302,32 @@ export default function DTMUsers() {
 
   // Apply sorting
   const sortedUsers = [...filteredUsers].sort((a, b) => {
-    let aVal = a[sortColumn];
-    let bVal = b[sortColumn];
+    let aVal: string | number | boolean | null = null;
+    let bVal: string | number | boolean | null = null;
 
-    if (aVal == null) aVal = "";
-    if (bVal == null) bVal = "";
-
-    if (sortColumn === "created_at" || sortColumn === "updated_at") {
-      aVal = new Date(aVal as string).getTime();
-      bVal = new Date(bVal as string).getTime();
+    if (sortColumn === "created_at") {
+      aVal = a.created_at ? new Date(a.created_at).getTime() : 0;
+      bVal = b.created_at ? new Date(b.created_at).getTime() : 0;
+    } else if (sortColumn === "total_point") {
+      aVal = a.total_point ?? 0;
+      bVal = b.total_point ?? 0;
+    } else if (sortColumn === "has_result") {
+      aVal = a.has_result ? 1 : 0;
+      bVal = b.has_result ? 1 : 0;
+    } else if (sortColumn === "full_name") {
+      aVal = a.full_name?.toLowerCase() || "";
+      bVal = b.full_name?.toLowerCase() || "";
+    } else if (sortColumn === "school_code") {
+      aVal = a.school_code?.toLowerCase() || "";
+      bVal = b.school_code?.toLowerCase() || "";
     }
 
     if (typeof aVal === "number" && typeof bVal === "number") {
       return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
     }
 
-    const aStr = String(aVal).toLowerCase();
-    const bStr = String(bVal).toLowerCase();
+    const aStr = String(aVal || "");
+    const bStr = String(bVal || "");
     return sortDirection === "asc"
       ? aStr.localeCompare(bStr)
       : bStr.localeCompare(aStr);
@@ -463,7 +521,7 @@ export default function DTMUsers() {
                         <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                           <div className="flex flex-col items-center gap-2">
                             <UsersIcon className="h-8 w-8 opacity-50" />
-                            {filters.searchTerm || filters.region !== "all" || filters.hasResult !== "all"
+                            {filters.searchTerm || filters.schoolCode !== "all" || filters.hasResult !== "all"
                               ? "Qidiruv natijasi topilmadi"
                               : "Foydalanuvchilar topilmadi"}
                           </div>
@@ -473,7 +531,7 @@ export default function DTMUsers() {
                       sortedUsers.map((user, index) => (
                         <>
                           <TableRow 
-                            key={user.id || index}
+                            key={user.id}
                             className={expandedUser === user.id ? "bg-muted/30" : ""}
                           >
                             <TableCell className="text-muted-foreground font-mono text-xs">
@@ -484,37 +542,28 @@ export default function DTMUsers() {
                                 <p className="font-medium truncate max-w-[200px]">
                                   {user.full_name || "—"}
                                 </p>
-                                {(user.region || user.district) && (
+                                {user.district && (
                                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    <MapPin className="h-3 w-3" />
                                     <span className="truncate max-w-[180px]">
-                                      {user.region}
-                                      {user.district && `, ${user.district}`}
+                                      {user.district}
                                     </span>
                                   </div>
                                 )}
                               </div>
                             </TableCell>
                             <TableCell>
-                              <div className="space-y-1">
-                                <Badge variant="outline" className="font-mono">
-                                  {user.school_code || "—"}
-                                </Badge>
-                                {user.school_name && (
-                                  <p className="text-xs text-muted-foreground truncate max-w-[120px]">
-                                    {user.school_name}
-                                  </p>
-                                )}
-                              </div>
+                              <Badge variant="outline" className="font-mono">
+                                {user.school_code || "—"}
+                              </Badge>
                             </TableCell>
                             <TableCell>
-                              {user.phone_number ? (
+                              {user.phone ? (
                                 <a
-                                  href={`tel:${user.phone_number}`}
+                                  href={`tel:${user.phone}`}
                                   className="inline-flex items-center gap-1 text-primary hover:underline text-sm"
                                 >
                                   <Phone className="h-3 w-3" />
-                                  {user.phone_number}
+                                  {user.phone}
                                 </a>
                               ) : (
                                 <span className="text-muted-foreground">—</span>
@@ -534,42 +583,7 @@ export default function DTMUsers() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <div className="flex flex-wrap items-center justify-center gap-1">
-                                <SubjectScore 
-                                  label="Ona tili" 
-                                  score={user.ona_tili_ball} 
-                                  maxScore={11} 
-                                  icon={BookOpen} 
-                                />
-                                <SubjectScore 
-                                  label="Matematika" 
-                                  score={user.matematika_ball} 
-                                  maxScore={11} 
-                                  icon={Calculator} 
-                                />
-                                <SubjectScore 
-                                  label="Tarix" 
-                                  score={user.tarix_ball} 
-                                  maxScore={11} 
-                                  icon={History} 
-                                />
-                                <SubjectScore 
-                                  label={user.fan1_nomi || "1-fan"} 
-                                  score={user.fan1_ball} 
-                                  maxScore={93} 
-                                  icon={Beaker} 
-                                />
-                                <SubjectScore 
-                                  label={user.fan2_nomi || "2-fan"} 
-                                  score={user.fan2_ball} 
-                                  maxScore={63} 
-                                  icon={GraduationCap} 
-                                />
-                                {!user.ona_tili_ball && !user.matematika_ball && !user.tarix_ball && 
-                                 !user.fan1_ball && !user.fan2_ball && (
-                                  <span className="text-muted-foreground text-xs">—</span>
-                                )}
-                              </div>
+                              <TestResultsScores testResults={user.test_results} />
                             </TableCell>
                             <TableCell className="text-center">
                               {user.total_point != null ? (
@@ -591,10 +605,17 @@ export default function DTMUsers() {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center justify-center gap-1">
-                                <FileButton url={user.pdf_url} type="pdf" label="PDF yuklab olish" />
-                                <FileButton url={user.excel_url} type="excel" label="Excel yuklab olish" />
-                                <FileButton url={user.file_url} type="file" label="Fayl yuklab olish" />
-                                {!user.pdf_url && !user.excel_url && !user.file_url && (
+                                <FileButton 
+                                  url={user.test_file_url} 
+                                  type="test" 
+                                  label="Test faylini yuklab olish" 
+                                />
+                                <FileButton 
+                                  url={user.test_result_file_url} 
+                                  type="result" 
+                                  label="Natija faylini yuklab olish" 
+                                />
+                                {!user.test_file_url && !user.test_result_file_url && (
                                   <span className="text-muted-foreground text-xs">—</span>
                                 )}
                               </div>

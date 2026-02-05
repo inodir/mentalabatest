@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { DTMUser } from "@/lib/dtm-api";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -9,14 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, MapPin, School, CheckCircle2, Filter, X } from "lucide-react";
+import { Search, School, CheckCircle2, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DTMUser } from "@/lib/dtm-api";
 
 export interface DTMFilters {
   searchTerm: string;
-  region: string;
-  district: string;
   schoolCode: string;
   hasResult: string;
 }
@@ -37,50 +35,29 @@ export function DTMUsersFilters({
   onLimitChange,
 }: DTMUsersFiltersProps) {
   // Extract unique values for dropdowns
-  const { regions, districts, schoolCodes } = useMemo(() => {
-    const regionsSet = new Set<string>();
-    const districtsSet = new Set<string>();
+  const schoolCodes = useMemo(() => {
     const schoolCodesSet = new Set<string>();
 
     users.forEach((user) => {
-      if (user.region) regionsSet.add(user.region);
-      if (user.district) districtsSet.add(user.district);
       if (user.school_code) schoolCodesSet.add(user.school_code);
     });
 
-    return {
-      regions: [...regionsSet].sort(),
-      districts: [...districtsSet]
-        .filter((d) => !filters.region || users.some(u => u.region === filters.region && u.district === d))
-        .sort(),
-      schoolCodes: [...schoolCodesSet].sort(),
-    };
-  }, [users, filters.region]);
+    return [...schoolCodesSet].sort();
+  }, [users]);
 
   const updateFilter = (key: keyof DTMFilters, value: string) => {
-    const newFilters = { ...filters, [key]: value };
-    
-    // Reset dependent filters
-    if (key === "region") {
-      newFilters.district = "all";
-    }
-    
-    onFiltersChange(newFilters);
+    onFiltersChange({ ...filters, [key]: value });
   };
 
   const clearFilters = () => {
     onFiltersChange({
       searchTerm: "",
-      region: "all",
-      district: "all",
       schoolCode: "all",
       hasResult: "all",
     });
   };
 
   const activeFiltersCount = [
-    filters.region !== "all",
-    filters.district !== "all",
     filters.schoolCode !== "all",
     filters.hasResult !== "all",
   ].filter(Boolean).length;
@@ -124,46 +101,6 @@ export function DTMUsersFilters({
             <Filter className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium">Filterlar:</span>
           </div>
-
-          {/* Region filter */}
-          <Select value={filters.region} onValueChange={(v) => updateFilter("region", v)}>
-            <SelectTrigger className="w-[180px]">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                <SelectValue placeholder="Viloyat" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Barcha viloyatlar</SelectItem>
-              {regions.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {r}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* District filter */}
-          <Select 
-            value={filters.district} 
-            onValueChange={(v) => updateFilter("district", v)}
-            disabled={filters.region === "all"}
-          >
-            <SelectTrigger className="w-[180px]">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                <SelectValue placeholder="Tuman" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Barcha tumanlar</SelectItem>
-              {districts.map((d) => (
-                <SelectItem key={d} value={d}>
-                  {d}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
 
           {/* School filter */}
           <Select value={filters.schoolCode} onValueChange={(v) => updateFilter("schoolCode", v)}>
@@ -223,19 +160,8 @@ export function filterDTMUsers(users: DTMUser[], filters: DTMFilters): DTMUser[]
       const matchesSearch =
         user.full_name?.toLowerCase().includes(term) ||
         user.school_code?.toLowerCase().includes(term) ||
-        user.school_name?.toLowerCase().includes(term) ||
-        user.phone_number?.includes(term);
+        user.phone?.includes(term);
       if (!matchesSearch) return false;
-    }
-
-    // Region filter
-    if (filters.region !== "all" && user.region !== filters.region) {
-      return false;
-    }
-
-    // District filter
-    if (filters.district !== "all" && user.district !== filters.district) {
-      return false;
     }
 
     // School code filter

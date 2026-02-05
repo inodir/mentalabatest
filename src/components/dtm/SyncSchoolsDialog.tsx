@@ -38,8 +38,6 @@ import {
 
 interface UniqueSchool {
   school_code: string;
-  school_name: string;
-  region: string;
   district: string;
   userCount: number;
 }
@@ -75,15 +73,11 @@ export function SyncSchoolsDialog({ onSyncComplete }: SyncSchoolsDialogProps) {
       const existing = schoolMap.get(user.school_code);
       if (existing) {
         existing.userCount++;
-        // Update name/region/district if available
-        if (!existing.school_name && user.school_name) existing.school_name = user.school_name;
-        if (!existing.region && user.region) existing.region = user.region;
+        // Update district if available
         if (!existing.district && user.district) existing.district = user.district;
       } else {
         schoolMap.set(user.school_code, {
           school_code: user.school_code,
-          school_name: user.school_name || "",
-          region: user.region || "",
           district: user.district || "",
           userCount: 1,
         });
@@ -153,9 +147,9 @@ export function SyncSchoolsDialog({ onSyncComplete }: SyncSchoolsDialogProps) {
     try {
       // Prepare schools data for bulk create
       const schoolsToCreate = newSchools.map((s) => ({
-        region: s.region || "Noma'lum",
+        region: "Noma'lum",
         district: s.district || "Noma'lum",
-        school_name: s.school_name || `Maktab ${s.school_code}`,
+        school_name: `Maktab ${s.school_code}`,
         school_code: s.school_code,
         admin_full_name: `Admin ${s.school_code}`,
         admin_login: s.school_code.toLowerCase().replace(/[^a-z0-9]/g, ""),
@@ -287,8 +281,6 @@ export function SyncSchoolsDialog({ onSyncComplete }: SyncSchoolsDialogProps) {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Kod</TableHead>
-                      <TableHead>Maktab nomi</TableHead>
-                      <TableHead>Viloyat</TableHead>
                       <TableHead>Tuman</TableHead>
                       <TableHead className="text-center">Foydalanuvchilar</TableHead>
                       <TableHead>Holat</TableHead>
@@ -299,12 +291,6 @@ export function SyncSchoolsDialog({ onSyncComplete }: SyncSchoolsDialogProps) {
                       <TableRow key={school.school_code}>
                         <TableCell className="font-mono text-xs">
                           {school.school_code}
-                        </TableCell>
-                        <TableCell className="max-w-[150px] truncate">
-                          {school.school_name || "—"}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {school.region || "—"}
                         </TableCell>
                         <TableCell className="text-sm">
                           {school.district || "—"}
