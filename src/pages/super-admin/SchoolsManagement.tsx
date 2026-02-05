@@ -67,8 +67,9 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
  export default function SchoolsManagement() {
    const [schools, setSchools] = useState<School[]>([]);
    const [loading, setLoading] = useState(true);
-   const [searchTerm, setSearchTerm] = useState("");
-   const [regionFilter, setRegionFilter] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [regionFilter, setRegionFilter] = useState<string>("all");
+  const [districtFilter, setDistrictFilter] = useState<string>("all");
    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
    const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
@@ -494,14 +495,22 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
      setIsResetPasswordDialogOpen(true);
    };
  
-   const filteredSchools = schools.filter((school) => {
-     const matchesSearch =
-       school.school_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       school.school_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       school.district.toLowerCase().includes(searchTerm.toLowerCase());
-     const matchesRegion = regionFilter === "all" || school.region === regionFilter;
-     return matchesSearch && matchesRegion;
-   });
+  // Get unique districts based on selected region
+  const availableDistricts = [...new Set(
+    schools
+      .filter(s => regionFilter === "all" || s.region === regionFilter)
+      .map(s => s.district)
+  )].sort();
+
+  const filteredSchools = schools.filter((school) => {
+    const matchesSearch =
+      school.school_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      school.school_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      school.district.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRegion = regionFilter === "all" || school.region === regionFilter;
+    const matchesDistrict = districtFilter === "all" || school.district === districtFilter;
+    return matchesSearch && matchesRegion && matchesDistrict;
+  });
  
    return (
      <AdminLayout variant="super">
@@ -806,19 +815,35 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
                className="pl-9"
              />
            </div>
-           <Select value={regionFilter} onValueChange={setRegionFilter}>
-             <SelectTrigger className="w-[200px]">
-               <SelectValue placeholder="Viloyat bo'yicha" />
-             </SelectTrigger>
-             <SelectContent>
-               <SelectItem value="all">Barcha viloyatlar</SelectItem>
-               {REGIONS.map((r) => (
-                 <SelectItem key={r} value={r}>
-                   {r}
-                 </SelectItem>
-               ))}
-             </SelectContent>
-           </Select>
+          <Select value={regionFilter} onValueChange={(value) => {
+            setRegionFilter(value);
+            setDistrictFilter("all"); // Reset district when region changes
+          }}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Viloyat bo'yicha" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha viloyatlar</SelectItem>
+              {REGIONS.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {r}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={districtFilter} onValueChange={setDistrictFilter}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Tuman bo'yicha" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha tumanlar</SelectItem>
+              {availableDistricts.map((d) => (
+                <SelectItem key={d} value={d}>
+                  {d}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
          </div>
  
          {/* Table */}
