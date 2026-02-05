@@ -171,8 +171,8 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
   };
 
   const downloadImportTemplate = () => {
-    const headers = "viloyat,tuman,maktab_nomi,kod,admin_fio,login";
-    const example = "Toshkent shahri,Yunusobod tumani,123-maktab,TSH123,Aliyev Ali Aliyevich,maktab123";
+    const headers = "viloyat,tuman,maktab_nomi,kod,admin_fio,login,parol";
+    const example = "Toshkent shahri,Yunusobod tumani,123-maktab,TSH123,Aliyev Ali Aliyevich,maktab123,MyPassword123";
     const csv = headers + "\n" + example;
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
