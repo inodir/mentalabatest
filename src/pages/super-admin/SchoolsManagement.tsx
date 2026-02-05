@@ -60,6 +60,7 @@
    student_count?: number;
    test_count?: number;
    avg_score?: number;
+  initial_password?: string;
  }
  
  export default function SchoolsManagement() {
@@ -216,6 +217,15 @@
  
        if (error) throw error;
  
+      // Fetch credentials for all schools
+      const { data: credentialsData } = await supabase
+        .from("school_admin_credentials")
+        .select("school_id, initial_password");
+
+      const credentialsMap = new Map(
+        (credentialsData || []).map((c) => [c.school_id, c.initial_password])
+      );
+
        // Fetch additional stats for each school
        const schoolsWithStats = await Promise.all(
          (data || []).map(async (school) => {
@@ -242,6 +252,7 @@
              student_count: studentCount || 0,
              test_count: testData?.length || 0,
              avg_score: avgScore,
+            initial_password: credentialsMap.get(school.id) || "",
            };
          })
        );
@@ -422,7 +433,7 @@
    };
  
    const handleExportCSV = () => {
-    const headers = ["Viloyat", "Tuman", "Maktab nomi", "Kod", "Admin F.I.O.", "Admin login", "O'quvchilar", "Testlar", "O'rtacha ball"];
+    const headers = ["Viloyat", "Tuman", "Maktab nomi", "Kod", "Admin F.I.O.", "Admin login", "Parol", "O'quvchilar", "Testlar", "O'rtacha ball"];
      const rows = filteredSchools.map((s) => [
        s.region,
        s.district,
@@ -430,6 +441,7 @@
        s.school_code,
        s.admin_full_name,
       s.admin_login,
+      s.initial_password || "",
        s.student_count,
        s.test_count,
        s.avg_score,

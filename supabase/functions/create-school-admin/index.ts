@@ -101,6 +101,15 @@
        })
      }
      
+      // Store initial password for export purposes
+      await supabaseAdmin
+        .from('school_admin_credentials')
+        .upsert({
+          school_id: school_id,
+          admin_login: admin_login,
+          initial_password: admin_password
+        })
+      
      return new Response(JSON.stringify({ 
        success: true, 
        user_id: newUserId,

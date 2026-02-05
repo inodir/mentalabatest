@@ -49,6 +49,38 @@ export type Database = {
           },
         ]
       }
+      school_admin_credentials: {
+        Row: {
+          admin_login: string
+          created_at: string
+          id: string
+          initial_password: string
+          school_id: string
+        }
+        Insert: {
+          admin_login: string
+          created_at?: string
+          id?: string
+          initial_password: string
+          school_id: string
+        }
+        Update: {
+          admin_login?: string
+          created_at?: string
+          id?: string
+          initial_password?: string
+          school_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_admin_credentials_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: true
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schools: {
         Row: {
           admin_full_name: string

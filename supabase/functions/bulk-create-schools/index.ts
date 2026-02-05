@@ -143,6 +143,13 @@
            role: "school_admin",
          });
  
+        // Store initial password for export purposes
+        await supabase.from("school_admin_credentials").upsert({
+          school_id: schoolData.id,
+          admin_login: school.admin_login,
+          initial_password: password,
+        });
+
          results.push({
            success: true,
            school_code: school.school_code,
