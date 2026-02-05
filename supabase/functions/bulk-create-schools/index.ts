@@ -24,23 +24,64 @@ interface SchoolData {
    error?: string;
  }
  
- Deno.serve(async (req) => {
-   if (req.method === "OPTIONS") {
-     return new Response(null, { headers: corsHeaders });
-   }
- 
-   try {
-     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-     const supabase = createClient(supabaseUrl, serviceRoleKey, {
-       auth: { autoRefreshToken: false, persistSession: false }
-     });
- 
-     const { schools } = await req.json() as { schools: SchoolData[] };
- 
-     if (!schools || !Array.isArray(schools) || schools.length === 0) {
-       throw new Error("schools array is required");
-     }
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+
+    // Verify the requesting user is authenticated and is a super_admin
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization header' }), { 
+        status: 401, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
+        status: 401, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
+
+    // Check if user is super_admin
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'super_admin')
+      .single();
+
+    if (roleError || !roleData) {
+      return new Response(JSON.stringify({ error: 'Only super admins can bulk create schools' }), { 
+        status: 403, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
+
+    const { schools } = await req.json() as { schools: SchoolData[] };
+
+    if (!schools || !Array.isArray(schools) || schools.length === 0) {
+      throw new Error("schools array is required");
+    }
+
+    // Limit schools per request
+    if (schools.length > 100) {
+      return new Response(JSON.stringify({ error: 'Maximum 100 schools per request' }), { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
  
       // Process schools in parallel batches
       const BATCH_SIZE = 5;
