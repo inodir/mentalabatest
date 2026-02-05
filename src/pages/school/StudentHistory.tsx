@@ -22,18 +22,21 @@
    certificate_score: string | null;
  }
  
- interface TestResult {
-   id: string;
-   test_date: string;
-   test_language: string;
-   subject1: string;
-   subject2: string;
-   score_subject1: number;
-   score_subject2: number;
-   total_score: number;
-   max_score: number;
-   attempt_number: number;
- }
+interface TestResult {
+  id: string;
+  test_date: string;
+  test_language: string;
+  subject1: string;
+  subject2: string;
+  score_ona_tili: number;
+  score_matematika: number;
+  score_tarix: number;
+  score_subject1: number;
+  score_subject2: number;
+  total_score: number;
+  max_score: number;
+  attempt_number: number;
+}
  
  export default function StudentHistory() {
    const { studentId } = useParams<{ studentId: string }>();
@@ -183,34 +186,38 @@
            <CardHeader>
              <CardTitle>O'quvchi ma'lumotlari</CardTitle>
            </CardHeader>
-           <CardContent>
-             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-               <div>
-                 <p className="text-sm text-muted-foreground">Test tili</p>
-                 <p className="font-medium">{getLanguageLabel(student.test_language)}</p>
-               </div>
-               <div>
-                 <p className="text-sm text-muted-foreground">1-fan</p>
-                 <p className="font-medium">{student.subject1}</p>
-               </div>
-               <div>
-                 <p className="text-sm text-muted-foreground">2-fan</p>
-                 <p className="font-medium">{student.subject2}</p>
-               </div>
-               <div>
-                 <p className="text-sm text-muted-foreground">Til sertifikati</p>
-                 <p className="font-medium">
-                   {student.has_language_certificate ? (
-                     <Badge>
-                       {student.certificate_type} {student.certificate_score && `(${student.certificate_score})`}
-                     </Badge>
-                   ) : (
-                     <Badge variant="secondary">Yo'q</Badge>
-                   )}
-                 </p>
-               </div>
-             </div>
-           </CardContent>
+            <CardContent>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Test tili</p>
+                  <p className="font-medium">{getLanguageLabel(student.test_language)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Majburiy fanlar</p>
+                  <p className="font-medium text-xs">Ona tili, Matematika, Tarix</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">1-fan (tanlangan)</p>
+                  <p className="font-medium">{student.subject1}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">2-fan (tanlangan)</p>
+                  <p className="font-medium">{student.subject2}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Til sertifikati</p>
+                  <p className="font-medium">
+                    {student.has_language_certificate ? (
+                      <Badge>
+                        {student.certificate_type} {student.certificate_score && `(${student.certificate_score})`}
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">Yo'q</Badge>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
          </Card>
  
          {/* Test History */}
@@ -243,26 +250,38 @@
                          </p>
                        </div>
                      </div>
-                     <div className="flex flex-wrap items-center gap-4">
-                       <div className="text-center">
-                         <p className="text-xs text-muted-foreground">{result.subject1}</p>
-                         <Badge variant="outline">{result.score_subject1}</Badge>
-                       </div>
-                       <div className="text-center">
-                         <p className="text-xs text-muted-foreground">{result.subject2}</p>
-                         <Badge variant="outline">{result.score_subject2}</Badge>
-                       </div>
-                       <div className="text-center">
-                         <p className="text-xs text-muted-foreground">Jami</p>
-                         <Badge
-                           variant={
-                             result.total_score >= result.max_score * 0.7 ? "default" : "secondary"
-                           }
-                         >
-                           {result.total_score}/{result.max_score}
-                         </Badge>
-                       </div>
-                     </div>
+                    <div className="flex flex-wrap items-center gap-4">
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Ona tili</p>
+                        <Badge variant="outline">{result.score_ona_tili}</Badge>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Matematika</p>
+                        <Badge variant="outline">{result.score_matematika}</Badge>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Tarix</p>
+                        <Badge variant="outline">{result.score_tarix}</Badge>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">{result.subject1}</p>
+                        <Badge variant="outline">{result.score_subject1}</Badge>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">{result.subject2}</p>
+                        <Badge variant="outline">{result.score_subject2}</Badge>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Jami</p>
+                        <Badge
+                          variant={
+                            result.total_score >= result.max_score * 0.7 ? "default" : "secondary"
+                          }
+                        >
+                          {result.total_score}/{result.max_score}
+                        </Badge>
+                      </div>
+                    </div>
                    </div>
                  ))}
                </div>

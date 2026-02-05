@@ -185,8 +185,11 @@ export type Database = {
           created_at: string
           id: string
           max_score: number
+          score_matematika: number
+          score_ona_tili: number
           score_subject1: number
           score_subject2: number
+          score_tarix: number
           student_id: string
           subject1: string
           subject2: string
@@ -199,8 +202,11 @@ export type Database = {
           created_at?: string
           id?: string
           max_score?: number
+          score_matematika?: number
+          score_ona_tili?: number
           score_subject1?: number
           score_subject2?: number
+          score_tarix?: number
           student_id: string
           subject1: string
           subject2: string
@@ -213,8 +219,11 @@ export type Database = {
           created_at?: string
           id?: string
           max_score?: number
+          score_matematika?: number
+          score_ona_tili?: number
           score_subject1?: number
           score_subject2?: number
+          score_tarix?: number
           student_id?: string
           subject1?: string
           subject2?: string

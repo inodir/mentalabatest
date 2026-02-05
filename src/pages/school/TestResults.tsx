@@ -27,21 +27,24 @@
  import { format } from "date-fns";
  import { useNavigate } from "react-router-dom";
  
- interface TestResult {
-   id: string;
-   student_id: string;
-   student_name: string;
-   test_date: string;
-   test_language: string;
-   subject1: string;
-   subject2: string;
-   score_subject1: number;
-   score_subject2: number;
-   total_score: number;
-   max_score: number;
-   has_certificate: boolean;
-   attempt_number: number;
- }
+interface TestResult {
+  id: string;
+  student_id: string;
+  student_name: string;
+  test_date: string;
+  test_language: string;
+  subject1: string;
+  subject2: string;
+  score_ona_tili: number;
+  score_matematika: number;
+  score_tarix: number;
+  score_subject1: number;
+  score_subject2: number;
+  total_score: number;
+  max_score: number;
+  has_certificate: boolean;
+  attempt_number: number;
+}
  
  export default function TestResults() {
    const { schoolId } = useAuth();
@@ -106,29 +109,35 @@
      return TEST_LANGUAGES.find((l) => l.value === value)?.label || value;
    };
  
-   const handleExportCSV = () => {
-     const headers = [
-       "Sana",
-       "F.I.O.",
-       "Test tili",
-       "Fan 1",
-       "Ball 1",
-       "Fan 2",
-       "Ball 2",
-       "Jami ball",
-       "Til sertifikati",
-     ];
-     const rows = filteredResults.map((r) => [
-       format(new Date(r.test_date), "dd.MM.yyyy"),
-       r.student_name,
-       getLanguageLabel(r.test_language),
-       r.subject1,
-       r.score_subject1,
-       r.subject2,
-       r.score_subject2,
-       r.total_score,
-       r.has_certificate ? "Ha" : "Yo'q",
-     ]);
+    const handleExportCSV = () => {
+      const headers = [
+        "Sana",
+        "F.I.O.",
+        "Test tili",
+        "Ona tili",
+        "Matematika",
+        "Tarix",
+        "Fan 1",
+        "Ball 1",
+        "Fan 2",
+        "Ball 2",
+        "Jami ball",
+        "Til sertifikati",
+      ];
+      const rows = filteredResults.map((r) => [
+        format(new Date(r.test_date), "dd.MM.yyyy"),
+        r.student_name,
+        getLanguageLabel(r.test_language),
+        r.score_ona_tili,
+        r.score_matematika,
+        r.score_tarix,
+        r.subject1,
+        r.score_subject1,
+        r.subject2,
+        r.score_subject2,
+        r.total_score,
+        r.has_certificate ? "Ha" : "Yo'q",
+      ]);
  
      const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
      const blob = new Blob([csv], { type: "text/csv" });
@@ -221,32 +230,35 @@
          {/* Table */}
          <div className="rounded-lg border bg-card">
            <Table>
-             <TableHeader>
-               <TableRow>
-                 <TableHead>Sana</TableHead>
-                 <TableHead>F.I.O.</TableHead>
-                 <TableHead>Test tili</TableHead>
-                 <TableHead>Fan 1 (ball)</TableHead>
-                 <TableHead>Fan 2 (ball)</TableHead>
-                 <TableHead>Jami ball</TableHead>
-                 <TableHead>Til sertifikati</TableHead>
-                 <TableHead className="text-right">Amallar</TableHead>
-               </TableRow>
-             </TableHeader>
-             <TableBody>
-               {loading ? (
-                 <TableRow>
-                   <TableCell colSpan={8} className="py-10 text-center">
-                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-                   </TableCell>
-                 </TableRow>
-               ) : filteredResults.length === 0 ? (
-                 <TableRow>
-                   <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
-                     Natijalar topilmadi
-                   </TableCell>
-                 </TableRow>
-               ) : (
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Sana</TableHead>
+                  <TableHead>F.I.O.</TableHead>
+                  <TableHead>Test tili</TableHead>
+                  <TableHead>Ona tili (M)</TableHead>
+                  <TableHead>Matematika (M)</TableHead>
+                  <TableHead>Tarix (M)</TableHead>
+                  <TableHead>1-fan (ball)</TableHead>
+                  <TableHead>2-fan (ball)</TableHead>
+                  <TableHead>Jami ball</TableHead>
+                  <TableHead>Sertifikat</TableHead>
+                  <TableHead className="text-right">Amallar</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={11} className="py-10 text-center">
+                      <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                    </TableCell>
+                  </TableRow>
+                ) : filteredResults.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={11} className="py-10 text-center text-muted-foreground">
+                      Natijalar topilmadi
+                    </TableCell>
+                  </TableRow>
+                ) : (
                  filteredResults.map((result) => (
                    <TableRow key={result.id}>
                      <TableCell>
@@ -255,32 +267,41 @@
                          {format(new Date(result.test_date), "dd.MM.yyyy")}
                        </div>
                      </TableCell>
-                     <TableCell className="font-medium">{result.student_name}</TableCell>
-                     <TableCell>{getLanguageLabel(result.test_language)}</TableCell>
-                     <TableCell>
-                       {result.subject1}{" "}
-                       <Badge variant="outline" className="ml-1">
-                         {result.score_subject1}
-                       </Badge>
-                     </TableCell>
-                     <TableCell>
-                       {result.subject2}{" "}
-                       <Badge variant="outline" className="ml-1">
-                         {result.score_subject2}
-                       </Badge>
-                     </TableCell>
-                     <TableCell>
-                       <Badge
-                         variant={result.total_score >= result.max_score * 0.7 ? "default" : "secondary"}
-                       >
-                         {result.total_score}/{result.max_score}
-                       </Badge>
-                     </TableCell>
-                     <TableCell>
-                       <Badge variant={result.has_certificate ? "default" : "secondary"}>
-                         {result.has_certificate ? "Ha" : "Yo'q"}
-                       </Badge>
-                     </TableCell>
+                      <TableCell className="font-medium">{result.student_name}</TableCell>
+                      <TableCell>{getLanguageLabel(result.test_language)}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{result.score_ona_tili}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{result.score_matematika}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{result.score_tarix}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {result.subject1}{" "}
+                        <Badge variant="outline" className="ml-1">
+                          {result.score_subject1}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {result.subject2}{" "}
+                        <Badge variant="outline" className="ml-1">
+                          {result.score_subject2}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={result.total_score >= result.max_score * 0.7 ? "default" : "secondary"}
+                        >
+                          {result.total_score}/{result.max_score}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={result.has_certificate ? "default" : "secondary"}>
+                          {result.has_certificate ? "Ha" : "Yo'q"}
+                        </Badge>
+                      </TableCell>
                      <TableCell className="text-right">
                        <Button
                          variant="ghost"

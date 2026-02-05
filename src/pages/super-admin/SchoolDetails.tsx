@@ -415,9 +415,9 @@ export default function SchoolDetails() {
                       <TableCell className="text-center">
                         <span
                           className={
-                            student.avg_score >= 150
+                            student.avg_score >= 350
                               ? "text-success font-medium"
-                              : student.avg_score >= 100
+                              : student.avg_score >= 250
                               ? "text-warning font-medium"
                               : ""
                           }
