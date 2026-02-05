@@ -815,19 +815,35 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
                className="pl-9"
              />
            </div>
-           <Select value={regionFilter} onValueChange={setRegionFilter}>
-             <SelectTrigger className="w-[200px]">
-               <SelectValue placeholder="Viloyat bo'yicha" />
-             </SelectTrigger>
-             <SelectContent>
-               <SelectItem value="all">Barcha viloyatlar</SelectItem>
-               {REGIONS.map((r) => (
-                 <SelectItem key={r} value={r}>
-                   {r}
-                 </SelectItem>
-               ))}
-             </SelectContent>
-           </Select>
+          <Select value={regionFilter} onValueChange={(value) => {
+            setRegionFilter(value);
+            setDistrictFilter("all"); // Reset district when region changes
+          }}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Viloyat bo'yicha" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha viloyatlar</SelectItem>
+              {REGIONS.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {r}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={districtFilter} onValueChange={setDistrictFilter}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Tuman bo'yicha" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha tumanlar</SelectItem>
+              {availableDistricts.map((d) => (
+                <SelectItem key={d} value={d}>
+                  {d}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
          </div>
  
          {/* Table */}
