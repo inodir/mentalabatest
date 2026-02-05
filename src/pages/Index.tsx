@@ -14,9 +14,6 @@ export default function Index() {
             <span className="text-xl font-bold">Mentalaba.uz</span>
           </div>
           <nav className="flex items-center gap-4">
-            <Link to="/super-admin/login">
-              <Button variant="ghost">Super Admin</Button>
-            </Link>
             <Link to="/school/login">
               <Button>Maktab kirish</Button>
             </Link>
@@ -40,12 +37,6 @@ export default function Index() {
               <Button size="lg" className="min-w-[200px]">
                 <School className="mr-2 h-5 w-5" />
                 Maktab sifatida kirish
-              </Button>
-            </Link>
-            <Link to="/super-admin/login">
-              <Button size="lg" variant="outline" className="min-w-[200px]">
-                <Shield className="mr-2 h-5 w-5" />
-                Super Admin
               </Button>
             </Link>
           </div>
