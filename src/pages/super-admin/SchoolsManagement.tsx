@@ -67,8 +67,9 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
  export default function SchoolsManagement() {
    const [schools, setSchools] = useState<School[]>([]);
    const [loading, setLoading] = useState(true);
-   const [searchTerm, setSearchTerm] = useState("");
-   const [regionFilter, setRegionFilter] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [regionFilter, setRegionFilter] = useState<string>("all");
+  const [districtFilter, setDistrictFilter] = useState<string>("all");
    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
    const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
