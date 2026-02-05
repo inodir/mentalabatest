@@ -1,69 +1,127 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { AdminLayout } from "@/components/layout/AdminLayout";
- import { Button } from "@/components/ui/button";
- import { Input } from "@/components/ui/input";
- import {
-   Table,
-   TableBody,
-   TableCell,
-   TableHead,
-   TableHeader,
-   TableRow,
- } from "@/components/ui/table";
- import {
-   Dialog,
-   DialogContent,
-   DialogDescription,
-   DialogHeader,
-   DialogTitle,
-   DialogTrigger,
- } from "@/components/ui/dialog";
- import {
-   Select,
-   SelectContent,
-   SelectItem,
-   SelectTrigger,
-   SelectValue,
- } from "@/components/ui/select";
- import { Label } from "@/components/ui/label";
- import { Badge } from "@/components/ui/badge";
- import { supabase } from "@/integrations/supabase/client";
- import { useToast } from "@/hooks/use-toast";
- import { REGIONS } from "@/lib/constants";
- import {
-   Plus,
-   Search,
-   Edit,
-   Key,
-   Power,
-   Download,
-   Loader2,
-   Copy,
-   Eye,
-   EyeOff,
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useDTMSchoolStats } from "@/hooks/useDTMSchoolStats";
+import { REGIONS } from "@/lib/constants";
+import {
+  Plus,
+  Search,
+  Edit,
+  Key,
+  Power,
+  Download,
+  Loader2,
+  Copy,
+  Eye,
+  EyeOff,
   Upload,
   FileSpreadsheet,
   CheckCircle2,
   XCircle,
   User,
- } from "lucide-react";
- 
- interface School {
-   id: string;
-   region: string;
-   district: string;
-   school_name: string;
-   school_code: string;
-   admin_full_name: string;
-   admin_login: string;
-   is_active: boolean;
-   created_at: string;
-   student_count?: number;
-   test_count?: number;
-   avg_score?: number;
+  Users,
+  Award,
+  TrendingUp,
+  RefreshCw,
+} from "lucide-react";
+
+interface School {
+  id: string;
+  region: string;
+  district: string;
+  school_name: string;
+  school_code: string;
+  admin_full_name: string;
+  admin_login: string;
+  is_active: boolean;
+  created_at: string;
+  student_count?: number;
+  test_count?: number;
+  avg_score?: number;
   initial_password?: string;
- }
+  // DTM API stats
+  dtm_user_count?: number;
+  dtm_result_count?: number;
+  dtm_avg_score?: number;
+}
+
+// DTM Stats cell component
+function DTMStatsCell({ 
+  userCount, 
+  resultCount, 
+  avgScore 
+}: { 
+  userCount?: number; 
+  resultCount?: number; 
+  avgScore?: number; 
+}) {
+  if (userCount === undefined) {
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center justify-center gap-1">
+            <Badge variant="secondary" className="text-xs">
+              <Users className="h-3 w-3 mr-1" />
+              {userCount}
+            </Badge>
+            {resultCount !== undefined && resultCount > 0 && (
+              <Badge variant="outline" className="text-xs text-success border-success/30">
+                <Award className="h-3 w-3 mr-1" />
+                {resultCount}
+              </Badge>
+            )}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <div className="space-y-1 text-xs">
+            <div>DTM foydalanuvchilar: {userCount}</div>
+            <div>Natijasi bor: {resultCount || 0}</div>
+            <div>O'rtacha ball: {avgScore || 0}</div>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
 // Separate component for table row with password visibility
 function SchoolTableRow({
@@ -149,6 +207,27 @@ function SchoolTableRow({
           )}
         </div>
       </TableCell>
+      {/* DTM Stats */}
+      <TableCell className="text-center">
+        <DTMStatsCell 
+          userCount={school.dtm_user_count} 
+          resultCount={school.dtm_result_count} 
+          avgScore={school.dtm_avg_score} 
+        />
+      </TableCell>
+      <TableCell className="text-center">
+        {school.dtm_avg_score !== undefined ? (
+          <Badge 
+            variant={school.dtm_avg_score >= 100 ? "default" : school.dtm_avg_score >= 60 ? "secondary" : "outline"}
+            className="font-mono"
+          >
+            <TrendingUp className="h-3 w-3 mr-1" />
+            {school.dtm_avg_score}
+          </Badge>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </TableCell>
       <TableCell className="text-center">{school.student_count}</TableCell>
       <TableCell className="text-center">{school.test_count}</TableCell>
       <TableCell className="text-center">{school.avg_score}</TableCell>
@@ -194,19 +273,19 @@ function SchoolTableRow({
   );
 }
  
- export default function SchoolsManagement() {
-   const [schools, setSchools] = useState<School[]>([]);
-   const [loading, setLoading] = useState(true);
+export default function SchoolsManagement() {
+  const [schools, setSchools] = useState<School[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [regionFilter, setRegionFilter] = useState<string>("all");
   const [districtFilter, setDistrictFilter] = useState<string>("all");
-   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
-   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
-   const [generatedPassword, setGeneratedPassword] = useState("");
-   const [showPassword, setShowPassword] = useState(false);
-   const [isSaving, setIsSaving] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
+  const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
+  const [generatedPassword, setGeneratedPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<Array<Record<string, string>>>([]);
@@ -220,7 +299,10 @@ function SchoolTableRow({
   }>>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [importStep, setImportStep] = useState<"upload" | "preview" | "results">("upload");
-   const { toast } = useToast();
+  const { toast } = useToast();
+  
+  // DTM API stats hook
+  const { stats: dtmStats, loading: dtmStatsLoading, refresh: refreshDTMStats } = useDTMSchoolStats();
   const parseCSV = (text: string) => {
     const lines = text.trim().split("\n");
     if (lines.length < 2) return [];
@@ -337,19 +419,37 @@ function SchoolTableRow({
      admin_login: "",
    });
  
-   useEffect(() => {
-     fetchSchools();
-   }, []);
- 
-   const fetchSchools = async () => {
-     try {
-       const { data, error } = await supabase
-         .from("schools")
-         .select("*")
-         .order("created_at", { ascending: false });
- 
-       if (error) throw error;
- 
+  useEffect(() => {
+    fetchSchools();
+  }, []);
+
+  // Merge DTM stats when they load
+  useEffect(() => {
+    if (!dtmStatsLoading && dtmStats.size > 0 && schools.length > 0) {
+      setSchools(prev => prev.map(school => {
+        const dtmSchoolStats = dtmStats.get(school.school_code);
+        if (dtmSchoolStats) {
+          return {
+            ...school,
+            dtm_user_count: dtmSchoolStats.user_count,
+            dtm_result_count: dtmSchoolStats.result_count,
+            dtm_avg_score: dtmSchoolStats.avg_score,
+          };
+        }
+        return school;
+      }));
+    }
+  }, [dtmStats, dtmStatsLoading]);
+
+  const fetchSchools = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("schools")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
       // Fetch credentials for all schools
       const { data: credentialsData } = await supabase
         .from("school_admin_credentials")
@@ -359,49 +459,49 @@ function SchoolTableRow({
         (credentialsData || []).map((c) => [c.school_id, c.initial_password])
       );
 
-       // Fetch additional stats for each school
-       const schoolsWithStats = await Promise.all(
-         (data || []).map(async (school) => {
-           const { count: studentCount } = await supabase
-             .from("students")
-             .select("*", { count: "exact", head: true })
-             .eq("school_id", school.id);
- 
-           const { data: testData } = await supabase
-             .from("test_results")
-             .select("total_score, student_id")
-             .in(
-               "student_id",
-               (await supabase.from("students").select("id").eq("school_id", school.id)).data?.map((s) => s.id) || []
-             );
- 
-           const avgScore =
-             testData && testData.length > 0
-               ? Math.round(testData.reduce((sum, t) => sum + t.total_score, 0) / testData.length)
-               : 0;
- 
-           return {
-             ...school,
-             student_count: studentCount || 0,
-             test_count: testData?.length || 0,
-             avg_score: avgScore,
+      // Fetch additional stats for each school
+      const schoolsWithStats = await Promise.all(
+        (data || []).map(async (school) => {
+          const { count: studentCount } = await supabase
+            .from("students")
+            .select("*", { count: "exact", head: true })
+            .eq("school_id", school.id);
+
+          const { data: testData } = await supabase
+            .from("test_results")
+            .select("total_score, student_id")
+            .in(
+              "student_id",
+              (await supabase.from("students").select("id").eq("school_id", school.id)).data?.map((s) => s.id) || []
+            );
+
+          const avgScore =
+            testData && testData.length > 0
+              ? Math.round(testData.reduce((sum, t) => sum + t.total_score, 0) / testData.length)
+              : 0;
+
+          return {
+            ...school,
+            student_count: studentCount || 0,
+            test_count: testData?.length || 0,
+            avg_score: avgScore,
             initial_password: credentialsMap.get(school.id) || "",
-           };
-         })
-       );
- 
-       setSchools(schoolsWithStats);
-     } catch (error) {
-       console.error("Error fetching schools:", error);
-       toast({
-         title: "Xatolik",
-         description: "Maktablarni yuklashda xatolik yuz berdi",
-         variant: "destructive",
-       });
-     } finally {
-       setLoading(false);
-     }
-   };
+          };
+        })
+      );
+
+      setSchools(schoolsWithStats);
+    } catch (error) {
+      console.error("Error fetching schools:", error);
+      toast({
+        title: "Xatolik",
+        description: "Maktablarni yuklashda xatolik yuz berdi",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
  
    const generatePassword = () => {
      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
@@ -565,29 +665,32 @@ function SchoolTableRow({
      }
    };
  
-   const handleExportCSV = () => {
-    const headers = ["Viloyat", "Tuman", "Maktab nomi", "Kod", "Admin F.I.O.", "Admin login", "Parol", "O'quvchilar", "Testlar", "O'rtacha ball"];
-     const rows = filteredSchools.map((s) => [
-       s.region,
-       s.district,
-       s.school_name,
-       s.school_code,
-       s.admin_full_name,
+  const handleExportCSV = () => {
+    const headers = ["Viloyat", "Tuman", "Maktab nomi", "Kod", "Admin F.I.O.", "Admin login", "Parol", "DTM foydalanuvchilar", "DTM natijasi bor", "DTM o'rtacha ball", "O'quvchilar", "Testlar", "O'rtacha ball"];
+    const rows = filteredSchools.map((s) => [
+      s.region,
+      s.district,
+      s.school_name,
+      s.school_code,
+      s.admin_full_name,
       s.admin_login,
       s.initial_password || "",
-       s.student_count,
-       s.test_count,
-       s.avg_score,
-     ]);
- 
-     const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
-     const blob = new Blob([csv], { type: "text/csv" });
-     const url = URL.createObjectURL(blob);
-     const a = document.createElement("a");
-     a.href = url;
-     a.download = "maktablar.csv";
-     a.click();
-   };
+      s.dtm_user_count || 0,
+      s.dtm_result_count || 0,
+      s.dtm_avg_score || 0,
+      s.student_count,
+      s.test_count,
+      s.avg_score,
+    ]);
+
+    const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "maktablar.csv";
+    a.click();
+  };
  
    const copyToClipboard = (text: string) => {
      navigator.clipboard.writeText(text);
@@ -653,7 +756,16 @@ function SchoolTableRow({
                Platformadagi barcha maktablarni boshqaring
              </p>
            </div>
-           <div className="flex gap-2">
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={refreshDTMStats} 
+              disabled={dtmStatsLoading}
+              title="DTM statistikasini yangilash"
+            >
+              <RefreshCw className={`h-4 w-4 ${dtmStatsLoading ? "animate-spin" : ""}`} />
+            </Button>
             <Dialog open={isImportDialogOpen} onOpenChange={(open) => { setIsImportDialogOpen(open); if (!open) resetImport(); }}>
               <DialogTrigger asChild>
                 <Button variant="outline">
@@ -987,6 +1099,32 @@ function SchoolTableRow({
                 <TableHead>Kod</TableHead>
                 <TableHead>Admin</TableHead>
                 <TableHead>Login / Parol</TableHead>
+                <TableHead className="text-center">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger className="flex items-center justify-center gap-1">
+                        <Users className="h-4 w-4" />
+                        DTM
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        DTM platformasi foydalanuvchilari
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </TableHead>
+                <TableHead className="text-center">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger className="flex items-center justify-center gap-1">
+                        <TrendingUp className="h-4 w-4" />
+                        O'rtacha
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        DTM o'rtacha ball
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </TableHead>
                 <TableHead className="text-center">O'quvchilar</TableHead>
                 <TableHead className="text-center">Testlar</TableHead>
                 <TableHead className="text-center">O'rtacha ball</TableHead>
@@ -995,15 +1133,16 @@ function SchoolTableRow({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
+              {loading || dtmStatsLoading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="py-10 text-center">
+                  <TableCell colSpan={12} className="py-10 text-center">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                    {dtmStatsLoading && <p className="mt-2 text-xs text-muted-foreground">DTM statistikasi yuklanmoqda...</p>}
                   </TableCell>
                 </TableRow>
               ) : filteredSchools.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={12} className="py-10 text-center text-muted-foreground">
                     Maktablar topilmadi
                   </TableCell>
                 </TableRow>
