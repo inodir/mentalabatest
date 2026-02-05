@@ -23,7 +23,7 @@
  import { useAuth } from "@/hooks/useAuth";
  import { useToast } from "@/hooks/use-toast";
  import { SUBJECTS, TEST_LANGUAGES } from "@/lib/constants";
- import { Search, Download, Loader2, Calendar, Eye } from "lucide-react";
+ import { Search, Download, Loader2, Calendar, Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
  import { format } from "date-fns";
  import { useNavigate } from "react-router-dom";
  
@@ -49,23 +49,24 @@ interface TestResult {
   attempt_number: number;
 }
  
- export default function TestResults() {
-   const { schoolId } = useAuth();
-   const navigate = useNavigate();
-   const [results, setResults] = useState<TestResult[]>([]);
-   const [loading, setLoading] = useState(true);
-   const [searchTerm, setSearchTerm] = useState("");
-   const [subjectFilter, setSubjectFilter] = useState<string>("all");
-   const [dateFrom, setDateFrom] = useState("");
-   const [dateTo, setDateTo] = useState("");
-   const [minScore, setMinScore] = useState("");
-   const { toast } = useToast();
- 
-   useEffect(() => {
-     if (schoolId) {
-       fetchResults();
-     }
-   }, [schoolId]);
+export default function TestResults() {
+  const { schoolId } = useAuth();
+  const navigate = useNavigate();
+  const [results, setResults] = useState<TestResult[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [subject1Filter, setSubject1Filter] = useState<string>("all");
+  const [subject2Filter, setSubject2Filter] = useState<string>("all");
+  const [minScore, setMinScore] = useState("");
+  const [sortColumn, setSortColumn] = useState<string>("test_date");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (schoolId) {
+      fetchResults();
+    }
+  }, [schoolId]);
  
    const fetchResults = async () => {
      try {
@@ -165,17 +166,43 @@ interface TestResult {
      a.click();
    };
  
-   const filteredResults = results.filter((result) => {
-     const matchesSearch = result.student_name.toLowerCase().includes(searchTerm.toLowerCase());
-     const matchesSubject =
-       subjectFilter === "all" ||
-       result.subject1 === subjectFilter ||
-       result.subject2 === subjectFilter;
-     const matchesDateFrom = !dateFrom || result.test_date >= dateFrom;
-     const matchesDateTo = !dateTo || result.test_date <= dateTo;
-     const matchesMinScore = !minScore || result.total_score >= parseInt(minScore);
-     return matchesSearch && matchesSubject && matchesDateFrom && matchesDateTo && matchesMinScore;
-   });
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const getSortIcon = (column: string) => {
+    if (sortColumn !== column) return <ArrowUpDown className="h-4 w-4 ml-1" />;
+    return sortDirection === "asc" 
+      ? <ArrowUp className="h-4 w-4 ml-1" /> 
+      : <ArrowDown className="h-4 w-4 ml-1" />;
+  };
+
+  const filteredResults = results.filter((result) => {
+    const matchesSearch = result.student_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSubject1 = subject1Filter === "all" || result.subject1 === subject1Filter;
+    const matchesSubject2 = subject2Filter === "all" || result.subject2 === subject2Filter;
+    const matchesMinScore = !minScore || result.total_score >= parseInt(minScore);
+    return matchesSearch && matchesSubject1 && matchesSubject2 && matchesMinScore;
+  });
+
+  const sortedResults = [...filteredResults].sort((a, b) => {
+    let aVal: any = a[sortColumn as keyof TestResult];
+    let bVal: any = b[sortColumn as keyof TestResult];
+    
+    if (typeof aVal === "string") {
+      aVal = aVal.toLowerCase();
+      bVal = bVal?.toLowerCase() || "";
+    }
+    
+    if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+    if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
  
    return (
      <AdminLayout variant="school">
@@ -193,156 +220,216 @@ interface TestResult {
            </Button>
          </div>
  
-         {/* Filters */}
-         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-           <div className="relative sm:col-span-2 lg:col-span-1">
-             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-             <Input
-               placeholder="F.I.O. bo'yicha..."
-               value={searchTerm}
-               onChange={(e) => setSearchTerm(e.target.value)}
-               className="pl-9"
-             />
-           </div>
-           <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-             <SelectTrigger>
-               <SelectValue placeholder="Fan bo'yicha" />
-             </SelectTrigger>
-             <SelectContent>
-               <SelectItem value="all">Barcha fanlar</SelectItem>
-               {SUBJECTS.map((s) => (
-                 <SelectItem key={s} value={s}>
-                   {s}
-                 </SelectItem>
-               ))}
-             </SelectContent>
-           </Select>
-           <div className="space-y-1">
-             <Label className="text-xs">Sanadan</Label>
-             <Input
-               type="date"
-               value={dateFrom}
-               onChange={(e) => setDateFrom(e.target.value)}
-             />
-           </div>
-           <div className="space-y-1">
-             <Label className="text-xs">Sanagacha</Label>
-             <Input
-               type="date"
-               value={dateTo}
-               onChange={(e) => setDateTo(e.target.value)}
-             />
-           </div>
-           <div className="space-y-1">
-             <Label className="text-xs">Min ball</Label>
-             <Input
-               type="number"
-               placeholder="0"
-               value={minScore}
-               onChange={(e) => setMinScore(e.target.value)}
-             />
-           </div>
-         </div>
+        {/* Filters */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="F.I.O. bo'yicha..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={subject1Filter} onValueChange={setSubject1Filter}>
+            <SelectTrigger>
+              <SelectValue placeholder="1-fan bo'yicha" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha 1-fanlar</SelectItem>
+              {SUBJECTS.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={subject2Filter} onValueChange={setSubject2Filter}>
+            <SelectTrigger>
+              <SelectValue placeholder="2-fan bo'yicha" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha 2-fanlar</SelectItem>
+              {SUBJECTS.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="space-y-1">
+            <Label className="text-xs">Min ball</Label>
+            <Input
+              type="number"
+              placeholder="0"
+              value={minScore}
+              onChange={(e) => setMinScore(e.target.value)}
+            />
+          </div>
+        </div>
  
-         {/* Table */}
-         <div className="rounded-lg border bg-card">
-           <Table>
-              <TableHeader>
+        {/* Table */}
+        <div className="rounded-lg border bg-card overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort("test_date")}
+                >
+                  <div className="flex items-center">
+                    Sana {getSortIcon("test_date")}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort("student_name")}
+                >
+                  <div className="flex items-center">
+                    F.I.O. {getSortIcon("student_name")}
+                  </div>
+                </TableHead>
+                <TableHead>Telefon</TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort("test_language")}
+                >
+                  <div className="flex items-center">
+                    Test tili {getSortIcon("test_language")}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort("score_ona_tili")}
+                >
+                  <div className="flex items-center">
+                    Ona tili {getSortIcon("score_ona_tili")}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort("score_matematika")}
+                >
+                  <div className="flex items-center">
+                    Matematika {getSortIcon("score_matematika")}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort("score_tarix")}
+                >
+                  <div className="flex items-center">
+                    Tarix {getSortIcon("score_tarix")}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort("score_subject1")}
+                >
+                  <div className="flex items-center">
+                    1-fan (ball) {getSortIcon("score_subject1")}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort("score_subject2")}
+                >
+                  <div className="flex items-center">
+                    2-fan (ball) {getSortIcon("score_subject2")}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort("total_score")}
+                >
+                  <div className="flex items-center">
+                    Jami {getSortIcon("total_score")}
+                  </div>
+                </TableHead>
+                <TableHead>Sertifikat</TableHead>
+                <TableHead className="text-right">Amallar</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
                 <TableRow>
-                  <TableHead>Sana</TableHead>
-                  <TableHead>F.I.O.</TableHead>
-                  <TableHead>Telefon</TableHead>
-                  <TableHead>Test tili</TableHead>
-                  <TableHead>Ona tili</TableHead>
-                  <TableHead>Matematika</TableHead>
-                  <TableHead>Tarix</TableHead>
-                  <TableHead>1-fan (ball)</TableHead>
-                  <TableHead>2-fan (ball)</TableHead>
-                  <TableHead>Jami</TableHead>
-                  <TableHead>Sertifikat</TableHead>
-                  <TableHead className="text-right">Amallar</TableHead>
+                  <TableCell colSpan={12} className="py-10 text-center">
+                    <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={12} className="py-10 text-center">
-                      <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+              ) : sortedResults.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={12} className="py-10 text-center text-muted-foreground">
+                    Natijalar topilmadi
+                  </TableCell>
+                </TableRow>
+              ) : (
+                sortedResults.map((result) => (
+                  <TableRow key={result.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        {format(new Date(result.test_date), "dd.MM.yyyy")}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">{result.student_name}</TableCell>
+                    <TableCell>{result.student_phone}</TableCell>
+                    <TableCell>{getLanguageLabel(result.test_language)}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{result.score_ona_tili}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{result.score_matematika}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{result.score_tarix}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {result.subject1}{" "}
+                      <Badge variant="outline" className="ml-1">
+                        {result.score_subject1}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {result.subject2}{" "}
+                      <Badge variant="outline" className="ml-1">
+                        {result.score_subject2}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={result.total_score >= result.max_score * 0.7 ? "default" : "secondary"}
+                      >
+                        {result.total_score}/{result.max_score}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {result.has_certificate ? (
+                        <Badge variant="default" className="bg-success">
+                          {result.certificate_type}{" "}
+                          {result.certificate_score && `(${result.certificate_score})`}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">Yo'q</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => navigate(`/school/students/${result.student_id}`)}
+                        title="O'quvchi tarixini ko'rish"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
-                ) : filteredResults.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={12} className="py-10 text-center text-muted-foreground">
-                      Natijalar topilmadi
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                 filteredResults.map((result) => (
-                   <TableRow key={result.id}>
-                     <TableCell>
-                       <div className="flex items-center gap-2">
-                         <Calendar className="h-4 w-4 text-muted-foreground" />
-                         {format(new Date(result.test_date), "dd.MM.yyyy")}
-                       </div>
-                     </TableCell>
-                      <TableCell className="font-medium">{result.student_name}</TableCell>
-                      <TableCell>{result.student_phone}</TableCell>
-                      <TableCell>{getLanguageLabel(result.test_language)}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{result.score_ona_tili}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{result.score_matematika}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{result.score_tarix}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        {result.subject1}{" "}
-                        <Badge variant="outline" className="ml-1">
-                          {result.score_subject1}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {result.subject2}{" "}
-                        <Badge variant="outline" className="ml-1">
-                          {result.score_subject2}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={result.total_score >= result.max_score * 0.7 ? "default" : "secondary"}
-                        >
-                          {result.total_score}/{result.max_score}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {result.has_certificate ? (
-                          <Badge variant="default" className="bg-success">
-                            {result.certificate_type}{" "}
-                            {result.certificate_score && `(${result.certificate_score})`}
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary">Yo'q</Badge>
-                        )}
-                      </TableCell>
-                     <TableCell className="text-right">
-                       <Button
-                         variant="ghost"
-                         size="icon"
-                         onClick={() => navigate(`/school/students/${result.student_id}`)}
-                         title="O'quvchi tarixini ko'rish"
-                       >
-                         <Eye className="h-4 w-4" />
-                       </Button>
-                     </TableCell>
-                   </TableRow>
-                 ))
-               )}
-             </TableBody>
-           </Table>
-         </div>
-       </div>
-     </AdminLayout>
-   );
- }
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    </AdminLayout>
+  );
+}
