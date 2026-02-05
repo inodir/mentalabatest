@@ -597,6 +597,16 @@ export default function SchoolDetails() {
                             {result.total_score}/{result.max_score}
                           </Badge>
                         </TableCell>
+                        <TableCell>
+                          {result.has_certificate ? (
+                            <Badge variant="default" className="bg-success">
+                              {result.certificate_type}{" "}
+                              {result.certificate_score && `(${result.certificate_score})`}
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">Yo'q</Badge>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
