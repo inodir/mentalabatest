@@ -69,33 +69,45 @@ interface TestResult {
  
    const fetchResults = async () => {
      try {
-       // First get students for this school
-       const { data: students } = await supabase
-         .from("students")
-         .select("id, full_name, has_language_certificate")
-         .eq("school_id", schoolId);
- 
-       const studentIds = students?.map((s) => s.id) || [];
-       const studentMap = new Map(
-         students?.map((s) => [s.id, { name: s.full_name, hasCert: s.has_language_certificate }]) || []
-       );
- 
-       // Get test results
-       const { data, error } = await supabase
-         .from("test_results")
-         .select("*")
-         .in("student_id", studentIds.length > 0 ? studentIds : ["00000000-0000-0000-0000-000000000000"])
-         .order("test_date", { ascending: false });
- 
-       if (error) throw error;
- 
-       const resultsWithNames = (data || []).map((r) => ({
-         ...r,
-         student_name: studentMap.get(r.student_id)?.name || "Noma'lum",
-         has_certificate: studentMap.get(r.student_id)?.hasCert || false,
-       }));
- 
-       setResults(resultsWithNames);
+      // First get students for this school
+        const { data: students } = await supabase
+          .from("students")
+          .select("id, full_name, phone_number, has_language_certificate, certificate_type, certificate_score")
+          .eq("school_id", schoolId);
+
+        const studentIds = students?.map((s) => s.id) || [];
+        const studentMap = new Map(
+          students?.map((s) => [s.id, { 
+            name: s.full_name, 
+            phone: s.phone_number,
+            hasCert: s.has_language_certificate,
+            certType: s.certificate_type,
+            certScore: s.certificate_score,
+          }]) || []
+        );
+
+        // Get test results
+        const { data, error } = await supabase
+          .from("test_results")
+          .select("*")
+          .in("student_id", studentIds.length > 0 ? studentIds : ["00000000-0000-0000-0000-000000000000"])
+          .order("test_date", { ascending: false });
+
+        if (error) throw error;
+
+        const resultsWithNames = (data || []).map((r) => {
+          const studentInfo = studentMap.get(r.student_id);
+          return {
+            ...r,
+            student_name: studentInfo?.name || "Noma'lum",
+            student_phone: studentInfo?.phone || "",
+            has_certificate: studentInfo?.hasCert || false,
+            certificate_type: studentInfo?.certType || null,
+            certificate_score: studentInfo?.certScore || null,
+          };
+        });
+
+        setResults(resultsWithNames);
      } catch (error) {
        console.error("Error fetching results:", error);
        toast({
