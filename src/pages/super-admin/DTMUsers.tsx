@@ -21,20 +21,208 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useDTMUsers } from "@/hooks/useDTMUsers";
 import {
   Search,
   RefreshCw,
   Settings,
   AlertCircle,
-  Download,
   FileText,
   FileSpreadsheet,
   ChevronLeft,
   ChevronRight,
   Users as UsersIcon,
-  ExternalLink,
+  Phone,
+  MapPin,
+  School,
+  Calendar,
+  Award,
+  BookOpen,
+  Calculator,
+  History,
+  Beaker,
+  GraduationCap,
+  CheckCircle2,
+  XCircle,
+  Download,
+  Eye,
 } from "lucide-react";
+import { DTMUser } from "@/lib/dtm-api";
+
+// Subject score display component
+const SubjectScore = ({ 
+  label, 
+  score, 
+  maxScore, 
+  icon: Icon 
+}: { 
+  label: string; 
+  score?: number; 
+  maxScore: number;
+  icon: React.ComponentType<{ className?: string }>;
+}) => {
+  if (score === undefined || score === null) return null;
+  
+  const percentage = (score / maxScore) * 100;
+  const colorClass = percentage >= 80 
+    ? "text-success bg-success/10 border-success/30" 
+    : percentage >= 60 
+    ? "text-warning bg-warning/10 border-warning/30"
+    : "text-muted-foreground bg-muted border-border";
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border text-xs font-medium ${colorClass}`}>
+            <Icon className="h-3 w-3" />
+            <span>{score}</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{label}: {score}/{maxScore} ({Math.round(percentage)}%)</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
+// File download button component
+const FileButton = ({ 
+  url, 
+  type, 
+  label 
+}: { 
+  url?: string; 
+  type: "pdf" | "excel" | "file";
+  label: string;
+}) => {
+  if (!url) return null;
+
+  const config = {
+    pdf: { icon: FileText, className: "text-destructive hover:bg-destructive/10" },
+    excel: { icon: FileSpreadsheet, className: "text-success hover:bg-success/10" },
+    file: { icon: Download, className: "text-primary hover:bg-primary/10" },
+  };
+
+  const { icon: Icon, className } = config[type];
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`inline-flex items-center justify-center h-8 w-8 rounded-md transition-colors ${className}`}
+          >
+            <Icon className="h-4 w-4" />
+          </a>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{label}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
+// User detail card component for expanded view
+const UserDetailCard = ({ user }: { user: DTMUser }) => {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
+      {/* Personal Info */}
+      <div className="space-y-2">
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          Shaxsiy ma'lumotlar
+        </h4>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-sm">
+            <GraduationCap className="h-4 w-4 text-primary" />
+            <span className="font-medium truncate">{user.full_name || "—"}</span>
+          </div>
+          {user.phone_number && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Phone className="h-3 w-3" />
+              <a href={`tel:${user.phone_number}`} className="hover:text-primary">
+                {user.phone_number}
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Location */}
+      <div className="space-y-2">
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          Manzil
+        </h4>
+        <div className="space-y-1">
+          {user.region && (
+            <div className="flex items-center gap-2 text-sm">
+              <MapPin className="h-3 w-3 text-muted-foreground" />
+              <span>{user.region}</span>
+            </div>
+          )}
+          {user.district && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground pl-5">
+              <span>{user.district}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* School */}
+      <div className="space-y-2">
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          Maktab
+        </h4>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <School className="h-3 w-3 text-muted-foreground" />
+            <Badge variant="outline" className="font-mono text-xs">
+              {user.school_code || "—"}
+            </Badge>
+          </div>
+          {user.school_name && (
+            <p className="text-xs text-muted-foreground pl-5 truncate">
+              {user.school_name}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Dates */}
+      <div className="space-y-2">
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          Sanalar
+        </h4>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-sm">
+            <Calendar className="h-3 w-3 text-muted-foreground" />
+            <span className="text-xs">
+              Yaratilgan: {user.created_at ? new Date(user.created_at).toLocaleDateString("uz-UZ") : "—"}
+            </span>
+          </div>
+          {user.updated_at && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground pl-5">
+              <span className="text-xs">
+                Yangilangan: {new Date(user.updated_at).toLocaleDateString("uz-UZ")}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function DTMUsers() {
   const navigate = useNavigate();
@@ -52,10 +240,10 @@ export default function DTMUsers() {
     setSearchTerm,
   } = useDTMUsers(50);
 
+  const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [sortColumn, setSortColumn] = useState<string>("created_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
-  // Handle sorting
   const handleSort = (column: string) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -65,27 +253,22 @@ export default function DTMUsers() {
     }
   };
 
-  // Sort users
   const sortedUsers = [...filteredUsers].sort((a, b) => {
     let aVal = a[sortColumn];
     let bVal = b[sortColumn];
 
-    // Handle null/undefined
     if (aVal == null) aVal = "";
     if (bVal == null) bVal = "";
 
-    // Handle dates
     if (sortColumn === "created_at" || sortColumn === "updated_at") {
       aVal = new Date(aVal as string).getTime();
       bVal = new Date(bVal as string).getTime();
     }
 
-    // Handle numbers
     if (typeof aVal === "number" && typeof bVal === "number") {
       return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
     }
 
-    // Handle strings
     const aStr = String(aVal).toLowerCase();
     const bStr = String(bVal).toLowerCase();
     return sortDirection === "asc"
@@ -95,7 +278,13 @@ export default function DTMUsers() {
 
   const totalPages = pageInfo ? Math.ceil(pageInfo.totalCount / limit) : 0;
 
-  // Render error state
+  const SortIndicator = ({ column }: { column: string }) => (
+    sortColumn === column ? (
+      <span className="ml-1">{sortDirection === "asc" ? "↑" : "↓"}</span>
+    ) : null
+  );
+
+  // Error state
   if (error) {
     return (
       <AdminLayout variant="super">
@@ -145,22 +334,23 @@ export default function DTMUsers() {
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Foydalanuvchilar</h1>
+            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+              <UsersIcon className="h-8 w-8 text-primary" />
+              Foydalanuvchilar
+            </h1>
             <p className="text-muted-foreground">
               DTM platformasi foydalanuvchilari
               {pageInfo && (
-                <span className="ml-2">
-                  (Jami: <strong>{pageInfo.totalCount.toLocaleString()}</strong>)
-                </span>
+                <Badge variant="secondary" className="ml-2">
+                  Jami: {pageInfo.totalCount.toLocaleString()}
+                </Badge>
               )}
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={retry} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            </Button>
-          </div>
+          <Button variant="outline" size="icon" onClick={retry} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
         </div>
 
         {/* Filters */}
@@ -204,7 +394,7 @@ export default function DTMUsers() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
-              <UsersIcon className="h-5 w-5" />
+              <Award className="h-5 w-5 text-primary" />
               Foydalanuvchilar ro'yxati
             </CardTitle>
           </CardHeader>
@@ -212,7 +402,7 @@ export default function DTMUsers() {
             {loading ? (
               <div className="space-y-3">
                 {[...Array(10)].map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
+                  <Skeleton key={i} className="h-16 w-full" />
                 ))}
               </div>
             ) : (
@@ -222,161 +412,238 @@ export default function DTMUsers() {
                     <TableRow>
                       <TableHead className="w-[50px]">#</TableHead>
                       <TableHead
-                        className="cursor-pointer hover:bg-muted/50"
+                        className="cursor-pointer hover:bg-muted/50 min-w-[200px]"
                         onClick={() => handleSort("full_name")}
                       >
-                        F.I.O. {sortColumn === "full_name" && (sortDirection === "asc" ? "↑" : "↓")}
+                        <div className="flex items-center gap-2">
+                          <GraduationCap className="h-4 w-4" />
+                          F.I.O.
+                          <SortIndicator column="full_name" />
+                        </div>
                       </TableHead>
                       <TableHead
                         className="cursor-pointer hover:bg-muted/50"
                         onClick={() => handleSort("school_code")}
                       >
-                        Maktab {sortColumn === "school_code" && (sortDirection === "asc" ? "↑" : "↓")}
+                        <div className="flex items-center gap-2">
+                          <School className="h-4 w-4" />
+                          Maktab
+                          <SortIndicator column="school_code" />
+                        </div>
                       </TableHead>
-                      <TableHead>Telefon</TableHead>
+                      <TableHead>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4" />
+                          Telefon
+                        </div>
+                      </TableHead>
                       <TableHead
                         className="cursor-pointer hover:bg-muted/50 text-center"
                         onClick={() => handleSort("has_result")}
                       >
-                        Natija {sortColumn === "has_result" && (sortDirection === "asc" ? "↑" : "↓")}
+                        <div className="flex items-center justify-center gap-2">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Holat
+                          <SortIndicator column="has_result" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <BookOpen className="h-4 w-4" />
+                          Fan ballari
+                        </div>
                       </TableHead>
                       <TableHead
-                        className="cursor-pointer hover:bg-muted/50 text-right"
+                        className="cursor-pointer hover:bg-muted/50 text-center"
                         onClick={() => handleSort("total_point")}
                       >
-                        Ball {sortColumn === "total_point" && (sortDirection === "asc" ? "↑" : "↓")}
+                        <div className="flex items-center justify-center gap-2">
+                          <Award className="h-4 w-4" />
+                          Jami
+                          <SortIndicator column="total_point" />
+                        </div>
                       </TableHead>
-                      <TableHead className="text-center">Fayllar</TableHead>
-                      <TableHead
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleSort("created_at")}
-                      >
-                        Sana {sortColumn === "created_at" && (sortDirection === "asc" ? "↑" : "↓")}
+                      <TableHead className="text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <Download className="h-4 w-4" />
+                          Fayllar
+                        </div>
                       </TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {sortedUsers.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                          {searchTerm
-                            ? "Qidiruv natijasi topilmadi"
-                            : "Foydalanuvchilar topilmadi"}
+                        <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                          <div className="flex flex-col items-center gap-2">
+                            <UsersIcon className="h-8 w-8 opacity-50" />
+                            {searchTerm
+                              ? "Qidiruv natijasi topilmadi"
+                              : "Foydalanuvchilar topilmadi"}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : (
                       sortedUsers.map((user, index) => (
-                        <TableRow key={user.id || index}>
-                          <TableCell className="text-muted-foreground">
-                            {page * limit + index + 1}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            <div>
-                              <p className="truncate max-w-[200px]">{user.full_name || "—"}</p>
-                              {user.region && (
-                                <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                  {user.region}
-                                  {user.district && `, ${user.district}`}
+                        <>
+                          <TableRow 
+                            key={user.id || index}
+                            className={expandedUser === user.id ? "bg-muted/30" : ""}
+                          >
+                            <TableCell className="text-muted-foreground font-mono text-xs">
+                              {page * limit + index + 1}
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <p className="font-medium truncate max-w-[200px]">
+                                  {user.full_name || "—"}
                                 </p>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <Badge variant="outline" className="font-mono">
-                                {user.school_code || "—"}
-                              </Badge>
-                              {user.school_name && (
-                                <p className="text-xs text-muted-foreground mt-1 truncate max-w-[150px]">
-                                  {user.school_name}
-                                </p>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {user.phone_number ? (
-                              <a
-                                href={`tel:${user.phone_number}`}
-                                className="text-primary hover:underline text-sm"
-                              >
-                                {user.phone_number}
-                              </a>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {user.has_result ? (
-                              <Badge variant="default" className="bg-success text-success-foreground">
-                                Bor
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary">Yo'q</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold">
-                            {user.total_point != null ? (
-                              <span
-                                className={
-                                  user.total_point >= 150
-                                    ? "text-success"
-                                    : user.total_point >= 100
-                                    ? "text-warning"
-                                    : "text-muted-foreground"
-                                }
-                              >
-                                {user.total_point}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-center gap-1">
-                              {user.pdf_url && (
+                                {(user.region || user.district) && (
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <MapPin className="h-3 w-3" />
+                                    <span className="truncate max-w-[180px]">
+                                      {user.region}
+                                      {user.district && `, ${user.district}`}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <Badge variant="outline" className="font-mono">
+                                  {user.school_code || "—"}
+                                </Badge>
+                                {user.school_name && (
+                                  <p className="text-xs text-muted-foreground truncate max-w-[120px]">
+                                    {user.school_name}
+                                  </p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {user.phone_number ? (
                                 <a
-                                  href={user.pdf_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted transition-colors"
-                                  title="PDF yuklab olish"
+                                  href={`tel:${user.phone_number}`}
+                                  className="inline-flex items-center gap-1 text-primary hover:underline text-sm"
                                 >
-                                  <FileText className="h-4 w-4 text-destructive" />
+                                  <Phone className="h-3 w-3" />
+                                  {user.phone_number}
                                 </a>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
                               )}
-                              {user.excel_url && (
-                                <a
-                                  href={user.excel_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted transition-colors"
-                                  title="Excel yuklab olish"
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {user.has_result ? (
+                                <Badge className="bg-success/20 text-success border-success/30 gap-1">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  Bor
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="gap-1">
+                                  <XCircle className="h-3 w-3" />
+                                  Yo'q
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap items-center justify-center gap-1">
+                                <SubjectScore 
+                                  label="Ona tili" 
+                                  score={user.ona_tili_ball} 
+                                  maxScore={11} 
+                                  icon={BookOpen} 
+                                />
+                                <SubjectScore 
+                                  label="Matematika" 
+                                  score={user.matematika_ball} 
+                                  maxScore={11} 
+                                  icon={Calculator} 
+                                />
+                                <SubjectScore 
+                                  label="Tarix" 
+                                  score={user.tarix_ball} 
+                                  maxScore={11} 
+                                  icon={History} 
+                                />
+                                <SubjectScore 
+                                  label={user.fan1_nomi || "1-fan"} 
+                                  score={user.fan1_ball} 
+                                  maxScore={93} 
+                                  icon={Beaker} 
+                                />
+                                <SubjectScore 
+                                  label={user.fan2_nomi || "2-fan"} 
+                                  score={user.fan2_ball} 
+                                  maxScore={63} 
+                                  icon={GraduationCap} 
+                                />
+                                {!user.ona_tili_ball && !user.matematika_ball && !user.tarix_ball && 
+                                 !user.fan1_ball && !user.fan2_ball && (
+                                  <span className="text-muted-foreground text-xs">—</span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {user.total_point != null ? (
+                                <Badge 
+                                  className={
+                                    user.total_point >= 150
+                                      ? "bg-success/20 text-success border-success/30"
+                                      : user.total_point >= 100
+                                      ? "bg-warning/20 text-warning border-warning/30"
+                                      : "bg-muted text-muted-foreground"
+                                  }
                                 >
-                                  <FileSpreadsheet className="h-4 w-4 text-success" />
-                                </a>
+                                  <Award className="h-3 w-3 mr-1" />
+                                  {user.total_point}
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
                               )}
-                              {user.file_url && (
-                                <a
-                                  href={user.file_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted transition-colors"
-                                  title="Fayl yuklab olish"
-                                >
-                                  <Download className="h-4 w-4 text-primary" />
-                                </a>
-                              )}
-                              {!user.pdf_url && !user.excel_url && !user.file_url && (
-                                <span className="text-muted-foreground text-xs">—</span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {user.created_at
-                              ? new Date(user.created_at).toLocaleDateString("uz-UZ")
-                              : "—"}
-                          </TableCell>
-                        </TableRow>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center justify-center gap-1">
+                                <FileButton url={user.pdf_url} type="pdf" label="PDF yuklab olish" />
+                                <FileButton url={user.excel_url} type="excel" label="Excel yuklab olish" />
+                                <FileButton url={user.file_url} type="file" label="Fayl yuklab olish" />
+                                {!user.pdf_url && !user.excel_url && !user.file_url && (
+                                  <span className="text-muted-foreground text-xs">—</span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => setExpandedUser(
+                                        expandedUser === user.id ? null : user.id
+                                      )}
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Batafsil ko'rish</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </TableCell>
+                          </TableRow>
+                          {expandedUser === user.id && (
+                            <TableRow>
+                              <TableCell colSpan={9} className="p-0">
+                                <UserDetailCard user={user} />
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
                       ))
                     )}
                   </TableBody>
@@ -388,8 +655,13 @@ export default function DTMUsers() {
             {pageInfo && totalPages > 1 && (
               <div className="flex items-center justify-between mt-4 pt-4 border-t">
                 <p className="text-sm text-muted-foreground">
-                  {page * limit + 1} - {Math.min((page + 1) * limit, pageInfo.totalCount)} /{" "}
-                  {pageInfo.totalCount.toLocaleString()}
+                  <Badge variant="outline">
+                    {page * limit + 1} - {Math.min((page + 1) * limit, pageInfo.totalCount)}
+                  </Badge>
+                  <span className="mx-2">/</span>
+                  <Badge variant="secondary">
+                    {pageInfo.totalCount.toLocaleString()} ta
+                  </Badge>
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
@@ -398,12 +670,12 @@ export default function DTMUsers() {
                     onClick={() => setPage(page - 1)}
                     disabled={page === 0 || loading}
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="h-4 w-4 mr-1" />
                     Oldingi
                   </Button>
-                  <span className="text-sm px-2">
+                  <Badge variant="secondary" className="px-3">
                     {page + 1} / {totalPages}
-                  </span>
+                  </Badge>
                   <Button
                     variant="outline"
                     size="sm"
@@ -411,7 +683,7 @@ export default function DTMUsers() {
                     disabled={page >= totalPages - 1 || loading}
                   >
                     Keyingi
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="h-4 w-4 ml-1" />
                   </Button>
                 </div>
               </div>
