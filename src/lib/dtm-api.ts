@@ -157,29 +157,43 @@ export function calculateStats(
   };
 }
 
-// Fetch all users for accurate mode
+// Fetch all users for accurate mode with parallel requests
 export async function fetchAllDTMUsers(
   settings: DTMApiSettings,
   onProgress?: (loaded: number, total: number) => void
 ): Promise<{ entities: DTMUser[]; totalCount: number }> {
   const limit = 100;
-  let offset = 0;
-  let allEntities: DTMUser[] = [];
-  let totalCount = 0;
+  const concurrency = 5; // Parallel requests count
 
   // First request to get total count
   const firstResponse = await fetchDTMUsers(settings, 0, limit);
-  totalCount = firstResponse.pageInfo.totalCount;
-  allEntities = firstResponse.entities;
+  const totalCount = firstResponse.pageInfo.totalCount;
+  let allEntities: DTMUser[] = [...firstResponse.entities];
   
   onProgress?.(allEntities.length, totalCount);
 
-  // Fetch remaining pages
-  while (allEntities.length < totalCount) {
-    offset += limit;
-    const response = await fetchDTMUsers(settings, offset, limit);
-    allEntities = [...allEntities, ...response.entities];
-    onProgress?.(allEntities.length, totalCount);
+  if (allEntities.length >= totalCount) {
+    return { entities: allEntities, totalCount };
+  }
+
+  // Calculate remaining pages
+  const remainingPages = Math.ceil((totalCount - limit) / limit);
+  const offsets: number[] = [];
+  for (let i = 1; i <= remainingPages; i++) {
+    offsets.push(i * limit);
+  }
+
+  // Fetch in parallel batches
+  for (let i = 0; i < offsets.length; i += concurrency) {
+    const batch = offsets.slice(i, i + concurrency);
+    const promises = batch.map(offset => fetchDTMUsers(settings, offset, limit));
+    
+    const results = await Promise.all(promises);
+    for (const response of results) {
+      allEntities = [...allEntities, ...response.entities];
+    }
+    
+    onProgress?.(Math.min(allEntities.length, totalCount), totalCount);
   }
 
   return { entities: allEntities, totalCount };
