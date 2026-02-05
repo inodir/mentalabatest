@@ -5,14 +5,15 @@
    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
  };
  
- interface SchoolData {
-   region: string;
-   district: string;
-   school_name: string;
-   school_code: string;
-   admin_full_name: string;
-   admin_login: string;
- }
+interface SchoolData {
+  region: string;
+  district: string;
+  school_name: string;
+  school_code: string;
+  admin_full_name: string;
+  admin_login: string;
+  password?: string; // Optional - will be auto-generated if not provided
+}
  
  interface ImportResult {
    success: boolean;
