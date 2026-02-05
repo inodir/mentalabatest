@@ -230,18 +230,21 @@ interface TestResult {
          {/* Table */}
          <div className="rounded-lg border bg-card">
            <Table>
-             <TableHeader>
-               <TableRow>
-                 <TableHead>Sana</TableHead>
-                 <TableHead>F.I.O.</TableHead>
-                 <TableHead>Test tili</TableHead>
-                 <TableHead>Fan 1 (ball)</TableHead>
-                 <TableHead>Fan 2 (ball)</TableHead>
-                 <TableHead>Jami ball</TableHead>
-                 <TableHead>Til sertifikati</TableHead>
-                 <TableHead className="text-right">Amallar</TableHead>
-               </TableRow>
-             </TableHeader>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Sana</TableHead>
+                  <TableHead>F.I.O.</TableHead>
+                  <TableHead>Test tili</TableHead>
+                  <TableHead>Ona tili (M)</TableHead>
+                  <TableHead>Matematika (M)</TableHead>
+                  <TableHead>Tarix (M)</TableHead>
+                  <TableHead>1-fan (ball)</TableHead>
+                  <TableHead>2-fan (ball)</TableHead>
+                  <TableHead>Jami ball</TableHead>
+                  <TableHead>Sertifikat</TableHead>
+                  <TableHead className="text-right">Amallar</TableHead>
+                </TableRow>
+              </TableHeader>
              <TableBody>
                {loading ? (
                  <TableRow>
