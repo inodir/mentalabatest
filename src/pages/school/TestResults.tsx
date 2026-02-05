@@ -31,6 +31,7 @@ interface TestResult {
   id: string;
   student_id: string;
   student_name: string;
+  student_phone: string;
   test_date: string;
   test_language: string;
   subject1: string;
@@ -43,6 +44,8 @@ interface TestResult {
   total_score: number;
   max_score: number;
   has_certificate: boolean;
+  certificate_type: string | null;
+  certificate_score: string | null;
   attempt_number: number;
 }
  
