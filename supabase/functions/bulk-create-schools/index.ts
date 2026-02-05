@@ -5,14 +5,15 @@
    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
  };
  
- interface SchoolData {
-   region: string;
-   district: string;
-   school_name: string;
-   school_code: string;
-   admin_full_name: string;
-   admin_login: string;
- }
+interface SchoolData {
+  region: string;
+  district: string;
+  school_name: string;
+  school_code: string;
+  admin_full_name: string;
+  admin_login: string;
+  password?: string; // Optional - will be auto-generated if not provided
+}
  
  interface ImportResult {
    success: boolean;
@@ -76,12 +77,15 @@
            continue;
          }
  
-         // Generate password
-         const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-         let password = "";
-         for (let i = 0; i < 12; i++) {
-           password += chars.charAt(Math.floor(Math.random() * chars.length));
-         }
+        // Use provided password or generate one
+        let password = school.password?.trim();
+        if (!password) {
+          const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+          password = "";
+          for (let i = 0; i < 12; i++) {
+            password += chars.charAt(Math.floor(Math.random() * chars.length));
+          }
+        }
  
          // Create school record
          const { data: schoolData, error: schoolError } = await supabase

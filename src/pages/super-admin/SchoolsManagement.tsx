@@ -133,6 +133,7 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
         school_code: row.kod || row.school_code || row.maktab_kodi || "",
         admin_full_name: row.admin_fio || row.admin_full_name || row.admin || "",
         admin_login: row.login || row.admin_login || "",
+        password: row.parol || row.password || "",
       }));
       
       const { data, error } = await supabase.functions.invoke("bulk-create-schools", {
@@ -170,8 +171,8 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
   };
 
   const downloadImportTemplate = () => {
-    const headers = "viloyat,tuman,maktab_nomi,kod,admin_fio,login";
-    const example = "Toshkent shahri,Yunusobod tumani,123-maktab,TSH123,Aliyev Ali Aliyevich,maktab123";
+    const headers = "viloyat,tuman,maktab_nomi,kod,admin_fio,login,parol";
+    const example = "Toshkent shahri,Yunusobod tumani,123-maktab,TSH123,Aliyev Ali Aliyevich,maktab123,MyPassword123";
     const csv = headers + "\n" + example;
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -557,7 +558,7 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
                       Shablon yuklab olish
                     </Button>
                     <p className="text-xs text-muted-foreground">
-                      CSV ustunlari: viloyat, tuman, maktab_nomi, kod, admin_fio, login
+                      CSV ustunlari: viloyat, tuman, maktab_nomi, kod, admin_fio, login, parol (ixtiyoriy)
                     </p>
                   </div>
                 )}
