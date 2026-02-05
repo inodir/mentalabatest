@@ -303,6 +303,18 @@ export default function SchoolsManagement() {
   
   // DTM API stats hook
   const { stats: dtmStats, loading: dtmStatsLoading, refresh: refreshDTMStats } = useDTMSchoolStats();
+  // Sanitize CSV cell values to prevent CSV injection
+  const sanitizeCSVValue = (value: string): string => {
+    if (!value) return value;
+    const trimmed = value.trim();
+    const firstChar = trimmed.charAt(0);
+    // Remove dangerous first characters that could be interpreted as formulas
+    if (['=', '+', '-', '@', '|', '%'].includes(firstChar)) {
+      return trimmed.substring(1).trim();
+    }
+    return trimmed;
+  };
+
   const parseCSV = (text: string) => {
     const lines = text.trim().split("\n");
     if (lines.length < 2) return [];
@@ -314,7 +326,8 @@ export default function SchoolsManagement() {
       const values = lines[i].split(",").map(v => v.trim());
       const row: Record<string, string> = {};
       headers.forEach((header, idx) => {
-        row[header] = values[idx] || "";
+        // Sanitize each cell value
+        row[header] = sanitizeCSVValue(values[idx] || "");
       });
       data.push(row);
     }
@@ -326,9 +339,81 @@ export default function SchoolsManagement() {
     const file = e.target.files?.[0];
     if (!file) return;
     
+    // Validate file size (max 5MB)
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        title: "Fayl hajmi juda katta",
+        description: "Maksimal fayl hajmi: 5MB",
+        variant: "destructive",
+      });
+      e.target.value = ""; // Reset input
+      return;
+    }
+    
+    // Validate file type
+    if (!file.type.includes('csv') && !file.name.toLowerCase().endsWith('.csv')) {
+      toast({
+        title: "Noto'g'ri fayl turi",
+        description: "Faqat CSV fayllar qabul qilinadi",
+        variant: "destructive",
+      });
+      e.target.value = "";
+      return;
+    }
+    
     setImportFile(file);
     const text = await file.text();
     const parsed = parseCSV(text);
+    
+    // Validate row count (max 1000 schools)
+    const MAX_ROWS = 1000;
+    if (parsed.length > MAX_ROWS) {
+      toast({
+        title: "Juda ko'p qatorlar",
+        description: `Maksimal ${MAX_ROWS} ta maktab import qilish mumkin. Sizning faylingizda ${parsed.length} ta qator bor.`,
+        variant: "destructive",
+      });
+      e.target.value = "";
+      setImportFile(null);
+      return;
+    }
+    
+    // Validate required fields exist
+    if (parsed.length > 0) {
+      const requiredFields = ['viloyat', 'tuman', 'maktab_nomi', 'kod', 'admin_fio', 'login'];
+      const alternativeFields: Record<string, string[]> = {
+        'viloyat': ['region'],
+        'tuman': ['district'],
+        'maktab_nomi': ['school_name', 'maktab'],
+        'kod': ['school_code', 'maktab_kodi'],
+        'admin_fio': ['admin_full_name', 'admin'],
+        'login': ['admin_login'],
+      };
+      
+      const headers = Object.keys(parsed[0]);
+      const missingFields: string[] = [];
+      
+      for (const field of requiredFields) {
+        const alternatives = [field, ...(alternativeFields[field] || [])];
+        const found = alternatives.some(alt => headers.includes(alt));
+        if (!found) {
+          missingFields.push(field);
+        }
+      }
+      
+      if (missingFields.length > 0) {
+        toast({
+          title: "Majburiy ustunlar yo'q",
+          description: `Quyidagi ustunlar topilmadi: ${missingFields.join(', ')}`,
+          variant: "destructive",
+        });
+        e.target.value = "";
+        setImportFile(null);
+        return;
+      }
+    }
+    
     setImportPreview(parsed);
     setImportStep("preview");
   };
