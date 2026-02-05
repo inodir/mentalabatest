@@ -81,8 +81,7 @@ export function useDTMUsers(initialLimit: number = 50): UseDTMUsersResult {
     return (
       user.full_name?.toLowerCase().includes(term) ||
       user.school_code?.toLowerCase().includes(term) ||
-      user.school_name?.toLowerCase().includes(term) ||
-      user.phone_number?.includes(term)
+      user.phone?.includes(term)
     );
   });
 

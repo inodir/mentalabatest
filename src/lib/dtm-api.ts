@@ -1,28 +1,30 @@
 // DTM API Client Helper
 const DEFAULT_MAIN_URL = "https://dtm-api.misterdev.uz/";
 
+export interface DTMTestScore {
+  name: string;
+  point: number;
+}
+
+export interface DTMTestResults {
+  mandatory: DTMTestScore[];
+  primary: DTMTestScore;
+  secondary: DTMTestScore;
+}
+
 export interface DTMUser {
-  id: string;
+  id: number;
   full_name: string;
-  school_code: string;
-  school_name?: string;
-  region?: string;
-  district?: string;
-  phone_number?: string;
+  chat_id?: string;
   has_result: boolean;
+  phone?: string;
+  district?: string;
+  school_code: string;
+  test_results?: DTMTestResults;
   total_point: number | null;
-  ona_tili_ball?: number;
-  matematika_ball?: number;
-  tarix_ball?: number;
-  fan1_ball?: number;
-  fan2_ball?: number;
-  fan1_nomi?: string;
-  fan2_nomi?: string;
-  file_url?: string;
-  pdf_url?: string;
-  excel_url?: string;
+  test_file_url?: string;
+  test_result_file_url?: string;
   created_at: string;
-  updated_at?: string;
   [key: string]: unknown;
 }
 
