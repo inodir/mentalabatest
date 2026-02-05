@@ -529,6 +529,7 @@ export default function SchoolDetails() {
                   <TableRow>
                     <TableHead>Sana</TableHead>
                     <TableHead>F.I.O.</TableHead>
+                    <TableHead>Telefon</TableHead>
                     <TableHead>Test tili</TableHead>
                     <TableHead className="text-center">Ona tili</TableHead>
                     <TableHead className="text-center">Matematika</TableHead>
@@ -536,12 +537,13 @@ export default function SchoolDetails() {
                     <TableHead>1-fan (ball)</TableHead>
                     <TableHead>2-fan (ball)</TableHead>
                     <TableHead className="text-center">Jami</TableHead>
+                    <TableHead>Sertifikat</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredResults.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8">
+                      <TableCell colSpan={11} className="text-center py-8">
                         <p className="text-muted-foreground">Natijalar topilmadi</p>
                       </TableCell>
                     </TableRow>
