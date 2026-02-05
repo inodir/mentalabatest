@@ -22,18 +22,21 @@
    certificate_score: string | null;
  }
  
- interface TestResult {
-   id: string;
-   test_date: string;
-   test_language: string;
-   subject1: string;
-   subject2: string;
-   score_subject1: number;
-   score_subject2: number;
-   total_score: number;
-   max_score: number;
-   attempt_number: number;
- }
+interface TestResult {
+  id: string;
+  test_date: string;
+  test_language: string;
+  subject1: string;
+  subject2: string;
+  score_ona_tili: number;
+  score_matematika: number;
+  score_tarix: number;
+  score_subject1: number;
+  score_subject2: number;
+  total_score: number;
+  max_score: number;
+  attempt_number: number;
+}
  
  export default function StudentHistory() {
    const { studentId } = useParams<{ studentId: string }>();
