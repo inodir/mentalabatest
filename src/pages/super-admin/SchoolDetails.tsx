@@ -89,7 +89,6 @@ export default function SchoolDetails() {
   const [searchTerm, setSearchTerm] = useState("");
   const [resultsSearchTerm, setResultsSearchTerm] = useState("");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
-  const [certificateFilter, setCertificateFilter] = useState<string>("all");
   const { toast } = useToast();
 
   // Stats
@@ -277,11 +276,7 @@ export default function SchoolDetails() {
       subjectFilter === "all" ||
       student.subject1 === subjectFilter ||
       student.subject2 === subjectFilter;
-    const matchesCertificate =
-      certificateFilter === "all" ||
-      (certificateFilter === "yes" && student.has_language_certificate) ||
-      (certificateFilter === "no" && !student.has_language_certificate);
-    return matchesSearch && matchesSubject && matchesCertificate;
+    return matchesSearch && matchesSubject;
   });
 
   const filteredResults = testResults.filter((result) =>
@@ -442,16 +437,6 @@ export default function SchoolDetails() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={certificateFilter} onValueChange={setCertificateFilter}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Sertifikat" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Barchasi</SelectItem>
-                  <SelectItem value="yes">Sertifikat bor</SelectItem>
-                  <SelectItem value="no">Sertifikat yo'q</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             {/* Students Table */}
@@ -464,15 +449,13 @@ export default function SchoolDetails() {
                     <TableHead>Test tili</TableHead>
                     <TableHead>1-fan</TableHead>
                     <TableHead>2-fan</TableHead>
-                    <TableHead>Sertifikat</TableHead>
                     <TableHead className="text-center">Testlar</TableHead>
-                    <TableHead className="text-center">O'rtacha</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredStudents.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8">
+                      <TableCell colSpan={6} className="text-center py-8">
                         <p className="text-muted-foreground">O'quvchilar topilmadi</p>
                       </TableCell>
                     </TableRow>
@@ -490,32 +473,8 @@ export default function SchoolDetails() {
                         </TableCell>
                         <TableCell>{student.subject1}</TableCell>
                         <TableCell>{student.subject2}</TableCell>
-                        <TableCell>
-                          {student.has_language_certificate ? (
-                            <Badge variant="default" className="bg-success">
-                              {student.certificate_type}{" "}
-                              {student.certificate_score &&
-                                `(${student.certificate_score})`}
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">Yo'q</Badge>
-                          )}
-                        </TableCell>
                         <TableCell className="text-center">
                           {student.test_count}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span
-                            className={
-                              (student.avg_score || 0) >= 350
-                                ? "text-success font-medium"
-                                : (student.avg_score || 0) >= 250
-                                ? "text-warning font-medium"
-                                : ""
-                            }
-                          >
-                            {student.avg_score || "-"}
-                          </span>
                         </TableCell>
                       </TableRow>
                     ))
