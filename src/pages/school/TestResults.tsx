@@ -251,13 +251,14 @@ interface TestResult {
                 <TableRow>
                   <TableHead>Sana</TableHead>
                   <TableHead>F.I.O.</TableHead>
+                  <TableHead>Telefon</TableHead>
                   <TableHead>Test tili</TableHead>
-                  <TableHead>Ona tili (M)</TableHead>
-                  <TableHead>Matematika (M)</TableHead>
-                  <TableHead>Tarix (M)</TableHead>
+                  <TableHead>Ona tili</TableHead>
+                  <TableHead>Matematika</TableHead>
+                  <TableHead>Tarix</TableHead>
                   <TableHead>1-fan (ball)</TableHead>
                   <TableHead>2-fan (ball)</TableHead>
-                  <TableHead>Jami ball</TableHead>
+                  <TableHead>Jami</TableHead>
                   <TableHead>Sertifikat</TableHead>
                   <TableHead className="text-right">Amallar</TableHead>
                 </TableRow>
