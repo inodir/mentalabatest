@@ -286,6 +286,7 @@ interface TestResult {
                        </div>
                      </TableCell>
                       <TableCell className="font-medium">{result.student_name}</TableCell>
+                      <TableCell>{result.student_phone}</TableCell>
                       <TableCell>{getLanguageLabel(result.test_language)}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{result.score_ona_tili}</Badge>
@@ -316,9 +317,14 @@ interface TestResult {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={result.has_certificate ? "default" : "secondary"}>
-                          {result.has_certificate ? "Ha" : "Yo'q"}
-                        </Badge>
+                        {result.has_certificate ? (
+                          <Badge variant="default" className="bg-success">
+                            {result.certificate_type}{" "}
+                            {result.certificate_score && `(${result.certificate_score})`}
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">Yo'q</Badge>
+                        )}
                       </TableCell>
                      <TableCell className="text-right">
                        <Button
