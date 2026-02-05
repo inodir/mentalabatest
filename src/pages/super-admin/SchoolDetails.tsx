@@ -276,11 +276,7 @@ export default function SchoolDetails() {
       subjectFilter === "all" ||
       student.subject1 === subjectFilter ||
       student.subject2 === subjectFilter;
-    const matchesCertificate =
-      certificateFilter === "all" ||
-      (certificateFilter === "yes" && student.has_language_certificate) ||
-      (certificateFilter === "no" && !student.has_language_certificate);
-    return matchesSearch && matchesSubject && matchesCertificate;
+    return matchesSearch && matchesSubject;
   });
 
   const filteredResults = testResults.filter((result) =>
