@@ -41,6 +41,10 @@
    Copy,
    Eye,
    EyeOff,
+  Upload,
+  FileSpreadsheet,
+  CheckCircle2,
+  XCircle,
  } from "lucide-react";
  
  interface School {
@@ -70,7 +74,124 @@
    const [generatedPassword, setGeneratedPassword] = useState("");
    const [showPassword, setShowPassword] = useState(false);
    const [isSaving, setIsSaving] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<Array<Record<string, string>>>([]);
+  const [importResults, setImportResults] = useState<Array<{
+    success: boolean;
+    school_code: string;
+    school_name: string;
+    admin_login: string;
+    password?: string;
+    error?: string;
+  }>>([]);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importStep, setImportStep] = useState<"upload" | "preview" | "results">("upload");
    const { toast } = useToast();
+  const parseCSV = (text: string) => {
+    const lines = text.trim().split("\n");
+    if (lines.length < 2) return [];
+    
+    const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
+    const data: Array<Record<string, string>> = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(",").map(v => v.trim());
+      const row: Record<string, string> = {};
+      headers.forEach((header, idx) => {
+        row[header] = values[idx] || "";
+      });
+      data.push(row);
+    }
+    
+    return data;
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setImportFile(file);
+    const text = await file.text();
+    const parsed = parseCSV(text);
+    setImportPreview(parsed);
+    setImportStep("preview");
+  };
+
+  const handleImport = async () => {
+    if (importPreview.length === 0) return;
+    setIsImporting(true);
+    
+    try {
+      const schools = importPreview.map(row => ({
+        region: row.viloyat || row.region || "",
+        district: row.tuman || row.district || "",
+        school_name: row.maktab_nomi || row.school_name || row.maktab || "",
+        school_code: row.kod || row.school_code || row.maktab_kodi || "",
+        admin_full_name: row.admin_fio || row.admin_full_name || row.admin || "",
+        admin_login: row.login || row.admin_login || "",
+      }));
+      
+      const { data, error } = await supabase.functions.invoke("bulk-create-schools", {
+        body: { schools },
+      });
+      
+      if (error) throw error;
+      
+      setImportResults(data.results);
+      setImportStep("results");
+      fetchSchools();
+      
+      const successCount = data.results.filter((r: { success: boolean }) => r.success).length;
+      toast({
+        title: "Import yakunlandi",
+        description: `${successCount}/${data.results.length} maktab muvaffaqiyatli qo'shildi`,
+      });
+    } catch (error) {
+      console.error("Import error:", error);
+      toast({
+        title: "Xatolik",
+        description: "Import qilishda xatolik yuz berdi",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const resetImport = () => {
+    setImportFile(null);
+    setImportPreview([]);
+    setImportResults([]);
+    setImportStep("upload");
+  };
+
+  const downloadImportTemplate = () => {
+    const headers = "viloyat,tuman,maktab_nomi,kod,admin_fio,login";
+    const example = "Toshkent shahri,Yunusobod tumani,123-maktab,TSH123,Aliyev Ali Aliyevich,maktab123";
+    const csv = headers + "\n" + example;
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "maktablar_shablon.csv";
+    a.click();
+  };
+
+  const downloadImportResults = () => {
+    const headers = "maktab_kodi,maktab_nomi,login,parol,holat,xato";
+    const rows = importResults.map(r => 
+      `${r.school_code},${r.school_name},${r.admin_login},${r.password || ""},${r.success ? "Muvaffaqiyatli" : "Xato"},${r.error || ""}`
+    );
+    const csv = [headers, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "import_natijalar.csv";
+    a.click();
+  };
+
  
    // Form state
    const [formData, setFormData] = useState({
@@ -379,6 +500,159 @@
              </p>
            </div>
            <div className="flex gap-2">
+            <Dialog open={isImportDialogOpen} onOpenChange={(open) => { setIsImportDialogOpen(open); if (!open) resetImport(); }}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Maktablarni import qilish</DialogTitle>
+                  <DialogDescription>
+                    CSV fayldan maktablarni yuklang
+                  </DialogDescription>
+                </DialogHeader>
+                
+                {importStep === "upload" && (
+                  <div className="space-y-4">
+                    <div className="rounded-lg border-2 border-dashed p-8 text-center">
+                      <FileSpreadsheet className="mx-auto h-12 w-12 text-muted-foreground" />
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        CSV faylni tanlang
+                      </p>
+                      <input
+                        type="file"
+                        accept=".csv"
+                        onChange={handleFileSelect}
+                        className="mt-4"
+                      />
+                    </div>
+                    <Button variant="outline" onClick={downloadImportTemplate} className="w-full">
+                      <Download className="mr-2 h-4 w-4" />
+                      Shablon yuklab olish
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      CSV ustunlari: viloyat, tuman, maktab_nomi, kod, admin_fio, login
+                    </p>
+                  </div>
+                )}
+                
+                {importStep === "preview" && (
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      {importPreview.length} ta maktab topildi
+                    </p>
+                    <div className="max-h-60 overflow-auto rounded border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Viloyat</TableHead>
+                            <TableHead>Tuman</TableHead>
+                            <TableHead>Maktab</TableHead>
+                            <TableHead>Kod</TableHead>
+                            <TableHead>Login</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {importPreview.slice(0, 10).map((row, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell className="text-xs">{row.viloyat || row.region}</TableCell>
+                              <TableCell className="text-xs">{row.tuman || row.district}</TableCell>
+                              <TableCell className="text-xs">{row.maktab_nomi || row.school_name || row.maktab}</TableCell>
+                              <TableCell className="text-xs">{row.kod || row.school_code || row.maktab_kodi}</TableCell>
+                              <TableCell className="text-xs">{row.login || row.admin_login}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                      {importPreview.length > 10 && (
+                        <p className="p-2 text-center text-xs text-muted-foreground">
+                          va yana {importPreview.length - 10} ta...
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={resetImport} className="flex-1">
+                        Bekor qilish
+                      </Button>
+                      <Button onClick={handleImport} disabled={isImporting} className="flex-1">
+                        {isImporting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Import qilinmoqda...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="mr-2 h-4 w-4" />
+                            Import qilish
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
+                {importStep === "results" && (
+                  <div className="space-y-4">
+                    <div className="flex gap-4">
+                      <div className="flex items-center gap-2 text-success">
+                        <CheckCircle2 className="h-5 w-5" />
+                        <span>{importResults.filter(r => r.success).length} muvaffaqiyatli</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-destructive">
+                        <XCircle className="h-5 w-5" />
+                        <span>{importResults.filter(r => !r.success).length} xato</span>
+                      </div>
+                    </div>
+                    <div className="max-h-60 overflow-auto rounded border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Holat</TableHead>
+                            <TableHead>Maktab</TableHead>
+                            <TableHead>Login</TableHead>
+                            <TableHead>Parol</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {importResults.map((result, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell>
+                                {result.success ? (
+                                  <CheckCircle2 className="h-4 w-4 text-success" />
+                                ) : (
+                                  <XCircle className="h-4 w-4 text-destructive" />
+                                )}
+                              </TableCell>
+                              <TableCell className="text-xs">{result.school_name}</TableCell>
+                              <TableCell className="text-xs">{result.admin_login}</TableCell>
+                              <TableCell className="text-xs">
+                                {result.password ? (
+                                  <code className="rounded bg-muted px-1">{result.password}</code>
+                                ) : (
+                                  <span className="text-destructive">{result.error}</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={downloadImportResults} className="flex-1">
+                        <Download className="mr-2 h-4 w-4" />
+                        Natijalarni yuklab olish
+                      </Button>
+                      <Button onClick={() => setIsImportDialogOpen(false)} className="flex-1">
+                        Yopish
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
              <Button variant="outline" onClick={handleExportCSV}>
                <Download className="mr-2 h-4 w-4" />
                Export
