@@ -422,13 +422,14 @@
    };
  
    const handleExportCSV = () => {
-     const headers = ["Viloyat", "Tuman", "Maktab nomi", "Kod", "Admin", "O'quvchilar", "Testlar", "O'rtacha ball"];
+    const headers = ["Viloyat", "Tuman", "Maktab nomi", "Kod", "Admin F.I.O.", "Admin login", "O'quvchilar", "Testlar", "O'rtacha ball"];
      const rows = filteredSchools.map((s) => [
        s.region,
        s.district,
        s.school_name,
        s.school_code,
        s.admin_full_name,
+      s.admin_login,
        s.student_count,
        s.test_count,
        s.avg_score,
