@@ -166,17 +166,43 @@ export default function TestResults() {
      a.click();
    };
  
-   const filteredResults = results.filter((result) => {
-     const matchesSearch = result.student_name.toLowerCase().includes(searchTerm.toLowerCase());
-     const matchesSubject =
-       subjectFilter === "all" ||
-       result.subject1 === subjectFilter ||
-       result.subject2 === subjectFilter;
-     const matchesDateFrom = !dateFrom || result.test_date >= dateFrom;
-     const matchesDateTo = !dateTo || result.test_date <= dateTo;
-     const matchesMinScore = !minScore || result.total_score >= parseInt(minScore);
-     return matchesSearch && matchesSubject && matchesDateFrom && matchesDateTo && matchesMinScore;
-   });
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const getSortIcon = (column: string) => {
+    if (sortColumn !== column) return <ArrowUpDown className="h-4 w-4 ml-1" />;
+    return sortDirection === "asc" 
+      ? <ArrowUp className="h-4 w-4 ml-1" /> 
+      : <ArrowDown className="h-4 w-4 ml-1" />;
+  };
+
+  const filteredResults = results.filter((result) => {
+    const matchesSearch = result.student_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSubject1 = subject1Filter === "all" || result.subject1 === subject1Filter;
+    const matchesSubject2 = subject2Filter === "all" || result.subject2 === subject2Filter;
+    const matchesMinScore = !minScore || result.total_score >= parseInt(minScore);
+    return matchesSearch && matchesSubject1 && matchesSubject2 && matchesMinScore;
+  });
+
+  const sortedResults = [...filteredResults].sort((a, b) => {
+    let aVal: any = a[sortColumn as keyof TestResult];
+    let bVal: any = b[sortColumn as keyof TestResult];
+    
+    if (typeof aVal === "string") {
+      aVal = aVal.toLowerCase();
+      bVal = bVal?.toLowerCase() || "";
+    }
+    
+    if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+    if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
  
    return (
      <AdminLayout variant="school">
