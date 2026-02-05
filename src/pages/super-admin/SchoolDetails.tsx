@@ -559,6 +559,7 @@ export default function SchoolDetails() {
                         <TableCell className="font-medium">
                           {result.student_name}
                         </TableCell>
+                        <TableCell>{result.student_phone}</TableCell>
                         <TableCell>
                           <Badge variant="outline">
                             {getLanguageLabel(result.test_language)}
