@@ -131,7 +131,13 @@ export default function SchoolDetails() {
 
       const studentIds = studentsData?.map((s) => s.id) || [];
       const studentMap = new Map(
-        studentsData?.map((s) => [s.id, s.full_name]) || []
+        studentsData?.map((s) => [s.id, {
+          name: s.full_name,
+          phone: s.phone_number,
+          has_certificate: s.has_language_certificate,
+          certificate_type: s.certificate_type,
+          certificate_score: s.certificate_score,
+        }]) || []
       );
 
       // Fetch all test results for this school's students
@@ -143,10 +149,17 @@ export default function SchoolDetails() {
           .in("student_id", studentIds)
           .order("test_date", { ascending: false });
 
-        allTestResults = (resultsData || []).map((r) => ({
-          ...r,
-          student_name: studentMap.get(r.student_id) || "Noma'lum",
-        }));
+        allTestResults = (resultsData || []).map((r) => {
+          const studentInfo = studentMap.get(r.student_id);
+          return {
+            ...r,
+            student_name: studentInfo?.name || "Noma'lum",
+            student_phone: studentInfo?.phone || "",
+            has_certificate: studentInfo?.has_certificate || false,
+            certificate_type: studentInfo?.certificate_type || null,
+            certificate_score: studentInfo?.certificate_score || null,
+          };
+        });
       }
 
       setTestResults(allTestResults);
