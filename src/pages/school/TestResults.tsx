@@ -266,13 +266,13 @@ interface TestResult {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="py-10 text-center">
+                    <TableCell colSpan={12} className="py-10 text-center">
                       <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                     </TableCell>
                   </TableRow>
                 ) : filteredResults.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={12} className="py-10 text-center text-muted-foreground">
                       Natijalar topilmadi
                     </TableCell>
                   </TableRow>
