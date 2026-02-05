@@ -35,7 +35,7 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
         .from("profiles")
         .select("school_id")
         .eq("user_id", userId)
-        .single()
+        .maybeSingle()
     ]);
 
     return {
