@@ -10,9 +10,19 @@ interface DTMStudentsTableProps {
   students: DTMUser[];
   loading: boolean;
   onRefresh?: () => void;
+  title?: string;
+  emptyMessage?: string;
+  showResultStatus?: boolean;
 }
 
-export function DTMStudentsTable({ students, loading, onRefresh }: DTMStudentsTableProps) {
+export function DTMStudentsTable({ 
+  students, 
+  loading, 
+  onRefresh,
+  title = "DTM ro'yxatdagi o'quvchilar",
+  emptyMessage = "O'quvchilar topilmadi",
+  showResultStatus = true
+}: DTMStudentsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredStudents = students.filter((student) =>
@@ -26,7 +36,7 @@ export function DTMStudentsTable({ students, loading, onRefresh }: DTMStudentsTa
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            DTM ro'yxatdagi o'quvchilar ({students.length})
+            {title} ({students.length})
           </CardTitle>
           <div className="flex gap-2">
             <div className="relative flex-1 sm:w-64">
@@ -58,7 +68,7 @@ export function DTMStudentsTable({ students, loading, onRefresh }: DTMStudentsTa
           </div>
         ) : students.length === 0 ? (
           <div className="flex h-[200px] items-center justify-center text-muted-foreground">
-            DTM ro'yxatida o'quvchilar topilmadi
+            {emptyMessage}
           </div>
         ) : (
           <div className="rounded-md border">
@@ -69,7 +79,9 @@ export function DTMStudentsTable({ students, loading, onRefresh }: DTMStudentsTa
                     <th className="px-4 py-3 text-left font-medium">#</th>
                     <th className="px-4 py-3 text-left font-medium">Ism</th>
                     <th className="px-4 py-3 text-left font-medium">Telefon</th>
-                    <th className="px-4 py-3 text-left font-medium">Holati</th>
+                    {showResultStatus && (
+                      <th className="px-4 py-3 text-left font-medium">Holati</th>
+                    )}
                     <th className="px-4 py-3 text-right font-medium">Ball</th>
                   </tr>
                 </thead>
@@ -81,13 +93,15 @@ export function DTMStudentsTable({ students, loading, onRefresh }: DTMStudentsTa
                       <td className="px-4 py-3 text-muted-foreground">
                         {student.phone || "-"}
                       </td>
-                      <td className="px-4 py-3">
-                        {student.has_result ? (
-                          <Badge variant="default">Natija bor</Badge>
-                        ) : (
-                          <Badge variant="secondary">Natija yo'q</Badge>
-                        )}
-                      </td>
+                      {showResultStatus && (
+                        <td className="px-4 py-3">
+                          {student.has_result ? (
+                            <Badge variant="default">Natija bor</Badge>
+                          ) : (
+                            <Badge variant="secondary">Natija yo'q</Badge>
+                          )}
+                        </td>
+                      )}
                       <td className="px-4 py-3 text-right font-medium">
                         {student.total_point ?? "-"}
                       </td>

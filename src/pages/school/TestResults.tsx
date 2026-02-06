@@ -1,177 +1,62 @@
- import { useEffect, useState } from "react";
- import { AdminLayout } from "@/components/layout/AdminLayout";
- import { Button } from "@/components/ui/button";
- import { Input } from "@/components/ui/input";
- import {
-   Table,
-   TableBody,
-   TableCell,
-   TableHead,
-   TableHeader,
-   TableRow,
- } from "@/components/ui/table";
- import {
-   Select,
-   SelectContent,
-   SelectItem,
-   SelectTrigger,
-   SelectValue,
- } from "@/components/ui/select";
- import { Label } from "@/components/ui/label";
- import { Badge } from "@/components/ui/badge";
- import { supabase } from "@/integrations/supabase/client";
- import { useAuth } from "@/hooks/useAuth";
- import { useToast } from "@/hooks/use-toast";
- import { SUBJECTS, TEST_LANGUAGES } from "@/lib/constants";
- import { Search, Download, Loader2, Calendar, Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
- import { format } from "date-fns";
- import { useNavigate } from "react-router-dom";
- 
-interface TestResult {
-  id: string;
-  student_id: string;
-  student_name: string;
-  student_phone: string;
-  test_date: string;
-  test_language: string;
-  subject1: string;
-  subject2: string;
-  score_ona_tili: number;
-  score_matematika: number;
-  score_tarix: number;
-  score_subject1: number;
-  score_subject2: number;
-  total_score: number;
-  max_score: number;
-  has_certificate: boolean;
-  certificate_type: string | null;
-  certificate_score: string | null;
-  attempt_number: number;
-}
- 
+import { useState } from "react";
+import { AdminLayout } from "@/components/layout/AdminLayout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useSchoolDTMData } from "@/hooks/useSchoolDTMData";
+import { 
+  Search, 
+  Download, 
+  RefreshCw, 
+  FileText, 
+  ArrowUpDown, 
+  ArrowUp, 
+  ArrowDown,
+  ExternalLink,
+  AlertCircle
+} from "lucide-react";
+import { DTMUser } from "@/lib/dtm-api";
+
 export default function TestResults() {
-  const { schoolId } = useAuth();
-  const navigate = useNavigate();
-  const [results, setResults] = useState<TestResult[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { 
+    students: allStudents, 
+    loading, 
+    refetch,
+    schoolCode,
+    error 
+  } = useSchoolDTMData();
+  
   const [searchTerm, setSearchTerm] = useState("");
-  const [subject1Filter, setSubject1Filter] = useState<string>("all");
-  const [subject2Filter, setSubject2Filter] = useState<string>("all");
   const [minScore, setMinScore] = useState("");
-  const [sortColumn, setSortColumn] = useState<string>("test_date");
+  const [sortColumn, setSortColumn] = useState<string>("total_point");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const { toast } = useToast();
 
-  useEffect(() => {
-    if (schoolId) {
-      fetchResults();
-    }
-  }, [schoolId]);
- 
-   const fetchResults = async () => {
-     try {
-      // First get students for this school
-        const { data: students } = await supabase
-          .from("students")
-          .select("id, full_name, phone_number, has_language_certificate, certificate_type, certificate_score")
-          .eq("school_id", schoolId);
+  // Filter only students with results
+  const studentsWithResults = allStudents.filter(s => s.has_result);
 
-        const studentIds = students?.map((s) => s.id) || [];
-        const studentMap = new Map(
-          students?.map((s) => [s.id, { 
-            name: s.full_name, 
-            phone: s.phone_number,
-            hasCert: s.has_language_certificate,
-            certType: s.certificate_type,
-            certScore: s.certificate_score,
-          }]) || []
-        );
-
-        // Get test results
-        const { data, error } = await supabase
-          .from("test_results")
-          .select("*")
-          .in("student_id", studentIds.length > 0 ? studentIds : ["00000000-0000-0000-0000-000000000000"])
-          .order("test_date", { ascending: false });
-
-        if (error) throw error;
-
-        const resultsWithNames = (data || []).map((r) => {
-          const studentInfo = studentMap.get(r.student_id);
-          return {
-            ...r,
-            student_name: studentInfo?.name || "Noma'lum",
-            student_phone: studentInfo?.phone || "",
-            has_certificate: studentInfo?.hasCert || false,
-            certificate_type: studentInfo?.certType || null,
-            certificate_score: studentInfo?.certScore || null,
-          };
-        });
-
-        setResults(resultsWithNames);
-     } catch (error) {
-       console.error("Error fetching results:", error);
-       toast({
-         title: "Xatolik",
-         description: "Natijalarni yuklashda xatolik yuz berdi",
-         variant: "destructive",
-       });
-     } finally {
-       setLoading(false);
-     }
-   };
- 
-   const getLanguageLabel = (value: string) => {
-     return TEST_LANGUAGES.find((l) => l.value === value)?.label || value;
-   };
- 
-    const handleExportCSV = () => {
-      const headers = [
-        "Sana",
-        "F.I.O.",
-        "Telefon",
-        "Test tili",
-        "Ona tili",
-        "Matematika",
-        "Tarix",
-        "1-fan",
-        "Ball",
-        "2-fan",
-        "Ball",
-        "Jami ball",
-        "Sertifikat",
-      ];
-      const rows = filteredResults.map((r) => [
-        format(new Date(r.test_date), "dd.MM.yyyy"),
-        r.student_name,
-        r.student_phone,
-        getLanguageLabel(r.test_language),
-        r.score_ona_tili,
-        r.score_matematika,
-        r.score_tarix,
-        r.subject1,
-        r.score_subject1,
-        r.subject2,
-        r.score_subject2,
-        r.total_score,
-        r.has_certificate ? `${r.certificate_type} ${r.certificate_score || ""}` : "Yo'q",
-      ]);
- 
-     const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
-     const blob = new Blob([csv], { type: "text/csv" });
-     const url = URL.createObjectURL(blob);
-     const a = document.createElement("a");
-     a.href = url;
-     a.download = "test-natijalari.csv";
-     a.click();
-   };
- 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortColumn(column);
-      setSortDirection("asc");
+      setSortDirection("desc");
     }
   };
 
@@ -182,253 +67,297 @@ export default function TestResults() {
       : <ArrowDown className="h-4 w-4 ml-1" />;
   };
 
-  const filteredResults = results.filter((result) => {
-    const matchesSearch = result.student_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSubject1 = subject1Filter === "all" || result.subject1 === subject1Filter;
-    const matchesSubject2 = subject2Filter === "all" || result.subject2 === subject2Filter;
-    const matchesMinScore = !minScore || result.total_score >= parseInt(minScore);
-    return matchesSearch && matchesSubject1 && matchesSubject2 && matchesMinScore;
+  const filteredResults = studentsWithResults.filter((student) => {
+    const matchesSearch = student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (student.phone && student.phone.includes(searchTerm));
+    const matchesMinScore = !minScore || (student.total_point ?? 0) >= parseInt(minScore);
+    return matchesSearch && matchesMinScore;
   });
 
   const sortedResults = [...filteredResults].sort((a, b) => {
-    let aVal: any = a[sortColumn as keyof TestResult];
-    let bVal: any = b[sortColumn as keyof TestResult];
+    let aVal: any;
+    let bVal: any;
     
-    if (typeof aVal === "string") {
-      aVal = aVal.toLowerCase();
-      bVal = bVal?.toLowerCase() || "";
+    switch (sortColumn) {
+      case "full_name":
+        aVal = a.full_name.toLowerCase();
+        bVal = b.full_name.toLowerCase();
+        break;
+      case "total_point":
+        aVal = a.total_point ?? 0;
+        bVal = b.total_point ?? 0;
+        break;
+      default:
+        aVal = a[sortColumn as keyof DTMUser];
+        bVal = b[sortColumn as keyof DTMUser];
     }
     
     if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
     if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
     return 0;
   });
- 
-   return (
-     <AdminLayout variant="school">
-       <div className="space-y-6">
-         <div className="flex items-center justify-between">
-           <div>
-             <h1 className="text-3xl font-bold tracking-tight">Test natijalari</h1>
-             <p className="text-muted-foreground">
-               O'quvchilaringizning test natijalari
-             </p>
-           </div>
-           <Button variant="outline" onClick={handleExportCSV}>
-             <Download className="mr-2 h-4 w-4" />
-             Export
-           </Button>
-         </div>
- 
-        {/* Filters */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="F.I.O. bo'yicha..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Select value={subject1Filter} onValueChange={setSubject1Filter}>
-            <SelectTrigger>
-              <SelectValue placeholder="1-fan bo'yicha" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Barcha 1-fanlar</SelectItem>
-              {SUBJECTS.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={subject2Filter} onValueChange={setSubject2Filter}>
-            <SelectTrigger>
-              <SelectValue placeholder="2-fan bo'yicha" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Barcha 2-fanlar</SelectItem>
-              {SUBJECTS.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="space-y-1">
-            <Label className="text-xs">Min ball</Label>
-            <Input
-              type="number"
-              placeholder="0"
-              value={minScore}
-              onChange={(e) => setMinScore(e.target.value)}
-            />
-          </div>
-        </div>
- 
-        {/* Table */}
-        <div className="rounded-lg border bg-card overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort("test_date")}
-                >
-                  <div className="flex items-center">
-                    Sana {getSortIcon("test_date")}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort("student_name")}
-                >
-                  <div className="flex items-center">
-                    F.I.O. {getSortIcon("student_name")}
-                  </div>
-                </TableHead>
-                <TableHead>Telefon</TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort("test_language")}
-                >
-                  <div className="flex items-center">
-                    Test tili {getSortIcon("test_language")}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort("score_ona_tili")}
-                >
-                  <div className="flex items-center">
-                    Ona tili {getSortIcon("score_ona_tili")}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort("score_matematika")}
-                >
-                  <div className="flex items-center">
-                    Matematika {getSortIcon("score_matematika")}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort("score_tarix")}
-                >
-                  <div className="flex items-center">
-                    Tarix {getSortIcon("score_tarix")}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort("score_subject1")}
-                >
-                  <div className="flex items-center">
-                    1-fan (ball) {getSortIcon("score_subject1")}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort("score_subject2")}
-                >
-                  <div className="flex items-center">
-                    2-fan (ball) {getSortIcon("score_subject2")}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort("total_score")}
-                >
-                  <div className="flex items-center">
-                    Jami {getSortIcon("total_score")}
-                  </div>
-                </TableHead>
-                <TableHead>Sertifikat</TableHead>
-                <TableHead className="text-right">Amallar</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={12} className="py-10 text-center">
-                    <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-                  </TableCell>
-                </TableRow>
-              ) : sortedResults.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={12} className="py-10 text-center text-muted-foreground">
-                    Natijalar topilmadi
-                  </TableCell>
-                </TableRow>
-              ) : (
-                sortedResults.map((result) => (
-                  <TableRow key={result.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        {format(new Date(result.test_date), "dd.MM.yyyy")}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">{result.student_name}</TableCell>
-                    <TableCell>{result.student_phone}</TableCell>
-                    <TableCell>{getLanguageLabel(result.test_language)}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{result.score_ona_tili}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{result.score_matematika}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{result.score_tarix}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {result.subject1}{" "}
-                      <Badge variant="outline" className="ml-1">
-                        {result.score_subject1}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {result.subject2}{" "}
-                      <Badge variant="outline" className="ml-1">
-                        {result.score_subject2}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={result.total_score >= result.max_score * 0.7 ? "default" : "secondary"}
-                      >
-                        {result.total_score}/{result.max_score}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {result.has_certificate ? (
-                        <Badge variant="default" className="bg-success">
-                          {result.certificate_type}{" "}
-                          {result.certificate_score && `(${result.certificate_score})`}
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary">Yo'q</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => navigate(`/school/students/${result.student_id}`)}
-                        title="O'quvchi tarixini ko'rish"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+
+  const handleExportCSV = () => {
+    const headers = ["#", "F.I.O.", "Telefon", "Jami ball"];
+    const rows = sortedResults.map((s, i) => [
+      i + 1,
+      s.full_name,
+      s.phone || "-",
+      s.total_point ?? "-",
+    ]);
+
+    const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "test-natijalari.csv";
+    a.click();
+  };
+
+  // Calculate stats
+  const avgScore = studentsWithResults.length > 0
+    ? Math.round(
+        studentsWithResults.reduce((sum, s) => sum + (s.total_point || 0), 0) /
+          studentsWithResults.length
+      )
+    : 0;
+  
+  const maxScore = studentsWithResults.length > 0
+    ? Math.max(...studentsWithResults.map(s => s.total_point || 0))
+    : 0;
+
+  return (
+    <AdminLayout variant="school">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Test natijalari</h1>
+            <p className="text-muted-foreground">
+              DTM test natijalari chiqqan o'quvchilar
+              {schoolCode && (
+                <Badge variant="secondary" className="ml-2">
+                  Maktab kodi: {schoolCode}
+                </Badge>
               )}
-            </TableBody>
-          </Table>
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch(true)}
+              disabled={loading || !schoolCode}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              Yangilash
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleExportCSV}
+              disabled={sortedResults.length === 0}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+          </div>
         </div>
+
+        {/* Error State */}
+        {error && (
+          <Card className="border-destructive">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="h-5 w-5" />
+                <p>{error}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* No School Code State */}
+        {!schoolCode && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">Maktab kodi kiritilmagan</h3>
+                <p className="text-muted-foreground">
+                  DTM natijalarini ko'rish uchun avval Bosh sahifada maktab kodingizni kiriting
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {schoolCode && (
+          <>
+            {/* Stats */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Natijasi bor o'quvchilar
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold">{studentsWithResults.length}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    O'rtacha ball
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold">{avgScore}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Eng yuqori ball
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold">{maxScore}</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="F.I.O. yoki telefon bo'yicha qidirish..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="w-[150px]">
+                <Input
+                  type="number"
+                  placeholder="Min ball"
+                  value={minScore}
+                  onChange={(e) => setMinScore(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Results Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Natijalar jadvali ({sortedResults.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="flex h-[300px] items-center justify-center">
+                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : sortedResults.length === 0 ? (
+                  <div className="flex h-[200px] items-center justify-center text-muted-foreground">
+                    Natijali o'quvchilar topilmadi
+                  </div>
+                ) : (
+                  <div className="rounded-md border">
+                    <div className="max-h-[500px] overflow-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[60px]">#</TableHead>
+                            <TableHead 
+                              className="cursor-pointer hover:bg-muted/50"
+                              onClick={() => handleSort("full_name")}
+                            >
+                              <div className="flex items-center">
+                                F.I.O. {getSortIcon("full_name")}
+                              </div>
+                            </TableHead>
+                            <TableHead>Telefon</TableHead>
+                            <TableHead 
+                              className="cursor-pointer hover:bg-muted/50 text-right"
+                              onClick={() => handleSort("total_point")}
+                            >
+                              <div className="flex items-center justify-end">
+                                Jami ball {getSortIcon("total_point")}
+                              </div>
+                            </TableHead>
+                            <TableHead className="text-right">Hujjatlar</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sortedResults.map((student, index) => (
+                            <TableRow key={student.id}>
+                              <TableCell className="text-muted-foreground">
+                                {index + 1}
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                {student.full_name}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {student.phone || "-"}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Badge 
+                                  variant={(student.total_point ?? 0) >= 140 ? "default" : "secondary"}
+                                  className="text-base"
+                                >
+                                  {student.total_point ?? 0}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-1">
+                                  {student.test_file_url && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      asChild
+                                    >
+                                      <a 
+                                        href={student.test_file_url} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                      >
+                                        <ExternalLink className="h-4 w-4 mr-1" />
+                                        Test
+                                      </a>
+                                    </Button>
+                                  )}
+                                  {student.test_result_file_url && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      asChild
+                                    >
+                                      <a 
+                                        href={student.test_result_file_url} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                      >
+                                        <ExternalLink className="h-4 w-4 mr-1" />
+                                        Natija
+                                      </a>
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </AdminLayout>
   );
