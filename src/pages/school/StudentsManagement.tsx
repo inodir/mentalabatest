@@ -250,13 +250,16 @@ export default function StudentsManagement() {
             </TabsList>
           </div>
 
-          {/* DTM Students Tab */}
+          {/* DTM Students Tab - Only students WITHOUT results */}
           <TabsContent value="dtm" className="mt-6">
             {schoolCode ? (
               <DTMStudentsTable 
-                students={dtmStudents} 
+                students={dtmStudents.filter(s => !s.has_result)} 
                 loading={dtmLoading}
                 onRefresh={() => refetchDTM(true)}
+                title="Natijasi chiqmagan o'quvchilar"
+                emptyMessage="Barcha o'quvchilarning natijasi chiqqan"
+                showResultStatus={false}
               />
             ) : (
               <div className="rounded-lg border bg-card p-8 text-center">
