@@ -195,53 +195,6 @@ export default function SchoolDashboard() {
               </CardContent>
             </Card>
 
-            {/* All Students Table */}
-            {students.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Barcha o'quvchilar ({students.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="rounded-md border">
-                    <div className="max-h-[400px] overflow-auto">
-                      <table className="w-full text-sm">
-                        <thead className="sticky top-0 bg-muted">
-                          <tr className="border-b">
-                            <th className="px-4 py-3 text-left font-medium">Ism</th>
-                            <th className="px-4 py-3 text-left font-medium">Telefon</th>
-                            <th className="px-4 py-3 text-left font-medium">Holati</th>
-                            <th className="px-4 py-3 text-right font-medium">Ball</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {students.map((student) => (
-                            <tr key={student.id} className="border-b last:border-0">
-                              <td className="px-4 py-3">{student.full_name}</td>
-                              <td className="px-4 py-3 text-muted-foreground">
-                                {student.phone || "-"}
-                              </td>
-                              <td className="px-4 py-3">
-                                {student.has_result ? (
-                                  <Badge variant="default">Natija bor</Badge>
-                                ) : (
-                                  <Badge variant="secondary">Natija yo'q</Badge>
-                                )}
-                              </td>
-                              <td className="px-4 py-3 text-right font-medium">
-                                {student.total_point ?? "-"}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </>
         )}
       </div>
