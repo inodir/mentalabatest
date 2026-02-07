@@ -70,9 +70,6 @@ interface School {
   admin_login: string;
   is_active: boolean;
   created_at: string;
-  student_count?: number;
-  test_count?: number;
-  avg_score?: number;
   initial_password?: string;
   // DTM API stats
   dtm_user_count?: number;
@@ -228,9 +225,6 @@ function SchoolTableRow({
           <span className="text-xs text-muted-foreground">—</span>
         )}
       </TableCell>
-      <TableCell className="text-center">{school.student_count}</TableCell>
-      <TableCell className="text-center">{school.test_count}</TableCell>
-      <TableCell className="text-center">{school.avg_score}</TableCell>
       <TableCell>
         <Badge variant={school.is_active ? "default" : "secondary"}>
           {school.is_active ? "Faol" : "Nofaol"}
@@ -528,8 +522,7 @@ export default function SchoolsManagement() {
 
   const fetchSchools = async () => {
     try {
-      // Fetch all data in parallel (3 queries instead of N*3)
-      const [schoolsRes, credentialsRes, studentsRes, testResultsRes] = await Promise.all([
+      const [schoolsRes, credentialsRes] = await Promise.all([
         supabase
           .from("schools")
           .select("*")
@@ -537,51 +530,18 @@ export default function SchoolsManagement() {
         supabase
           .from("school_admin_credentials")
           .select("school_id, initial_password"),
-        supabase
-          .from("students")
-          .select("id, school_id"),
-        supabase
-          .from("test_results")
-          .select("total_score, student_id"),
       ]);
 
       if (schoolsRes.error) throw schoolsRes.error;
 
-      // Build lookup maps
       const credentialsMap = new Map(
         (credentialsRes.data || []).map((c) => [c.school_id, c.initial_password])
       );
 
-      // Count students per school
-      const studentCountMap = new Map<string, number>();
-      const studentSchoolMap = new Map<string, string>(); // student_id -> school_id
-      for (const s of studentsRes.data || []) {
-        studentCountMap.set(s.school_id, (studentCountMap.get(s.school_id) || 0) + 1);
-        studentSchoolMap.set(s.id, s.school_id);
-      }
-
-      // Aggregate test results per school
-      const schoolTestStats = new Map<string, { total: number; count: number }>();
-      for (const t of testResultsRes.data || []) {
-        const schoolId = studentSchoolMap.get(t.student_id);
-        if (!schoolId) continue;
-        const existing = schoolTestStats.get(schoolId) || { total: 0, count: 0 };
-        existing.total += t.total_score;
-        existing.count += 1;
-        schoolTestStats.set(schoolId, existing);
-      }
-
-      // Merge everything
-      const schoolsWithStats = (schoolsRes.data || []).map((school) => {
-        const testStats = schoolTestStats.get(school.id);
-        return {
-          ...school,
-          student_count: studentCountMap.get(school.id) || 0,
-          test_count: testStats?.count || 0,
-          avg_score: testStats ? Math.round(testStats.total / testStats.count) : 0,
-          initial_password: credentialsMap.get(school.id) || "",
-        };
-      });
+      const schoolsWithStats = (schoolsRes.data || []).map((school) => ({
+        ...school,
+        initial_password: credentialsMap.get(school.id) || "",
+      }));
 
       setSchools(schoolsWithStats);
     } catch (error) {
@@ -759,7 +719,7 @@ export default function SchoolsManagement() {
    };
  
   const handleExportCSV = () => {
-    const headers = ["Viloyat", "Tuman", "Maktab nomi", "Kod", "Admin F.I.O.", "Admin login", "Parol", "DTM foydalanuvchilar", "DTM natijasi bor", "DTM o'rtacha ball", "O'quvchilar", "Testlar", "O'rtacha ball"];
+    const headers = ["Viloyat", "Tuman", "Maktab nomi", "Kod", "Admin F.I.O.", "Admin login", "Parol", "DTM foydalanuvchilar", "DTM natijasi bor", "DTM o'rtacha ball"];
     const rows = filteredSchools.map((s) => [
       s.region,
       s.district,
@@ -771,9 +731,6 @@ export default function SchoolsManagement() {
       s.dtm_user_count || 0,
       s.dtm_result_count || 0,
       s.dtm_avg_score || 0,
-      s.student_count,
-      s.test_count,
-      s.avg_score,
     ]);
 
     const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
@@ -1218,9 +1175,6 @@ export default function SchoolsManagement() {
                     </Tooltip>
                   </TooltipProvider>
                 </TableHead>
-                <TableHead className="text-center">O'quvchilar</TableHead>
-                <TableHead className="text-center">Testlar</TableHead>
-                <TableHead className="text-center">O'rtacha ball</TableHead>
                 <TableHead>Holat</TableHead>
                 <TableHead className="text-right">Amallar</TableHead>
               </TableRow>
@@ -1228,14 +1182,14 @@ export default function SchoolsManagement() {
             <TableBody>
               {loading || dtmStatsLoading ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="py-10 text-center">
+                  <TableCell colSpan={9} className="py-10 text-center">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                     {dtmStatsLoading && <p className="mt-2 text-xs text-muted-foreground">DTM statistikasi yuklanmoqda...</p>}
                   </TableCell>
                 </TableRow>
               ) : filteredSchools.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
                     Maktablar topilmadi
                   </TableCell>
                 </TableRow>
