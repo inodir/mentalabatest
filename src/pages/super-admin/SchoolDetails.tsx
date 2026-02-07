@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -11,19 +11,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { SUBJECTS } from "@/lib/constants";
+import {
+  getApiSettings,
+  fetchAllDTMUsers,
+  DTMUser,
+} from "@/lib/dtm-api";
 import {
   ArrowLeft,
   Search,
@@ -32,7 +29,7 @@ import {
   TrendingUp,
   Download,
   Loader2,
-  Calendar,
+  RefreshCw,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -47,165 +44,62 @@ interface School {
   is_active: boolean;
 }
 
-interface Student {
-  id: string;
-  full_name: string;
-  phone_number: string;
-  test_language: string;
-  subject1: string;
-  subject2: string;
-  has_language_certificate: boolean;
-  certificate_type: string | null;
-  certificate_score: string | null;
-  created_at: string;
-  test_count?: number;
-  avg_score?: number;
-}
-
-interface TestResult {
-  id: string;
-  student_id: string;
-  student_name: string;
-  student_phone: string;
-  has_certificate: boolean;
-  certificate_type: string | null;
-  certificate_score: string | null;
-  test_date: string;
-  test_language: string;
-  subject1: string;
-  subject2: string;
-  score_ona_tili: number;
-  score_matematika: number;
-  score_tarix: number;
-  score_subject1: number;
-  score_subject2: number;
-  total_score: number;
-  max_score: number;
-  attempt_number: number;
-}
-
 export default function SchoolDetails() {
   const { schoolId } = useParams<{ schoolId: string }>();
   const [school, setSchool] = useState<School | null>(null);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [testResults, setTestResults] = useState<TestResult[]>([]);
+  const [dtmUsers, setDtmUsers] = useState<DTMUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dtmLoading, setDtmLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [resultsSearchTerm, setResultsSearchTerm] = useState("");
-  const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const { toast } = useToast();
 
-  // Stats
-  const [stats, setStats] = useState({
-    totalStudents: 0,
-    totalTests: 0,
-    avgScore: 0,
-  });
+  // Derived data
+  const registeredUsers = dtmUsers.filter((u) => !u.has_result);
+  const usersWithResults = dtmUsers.filter((u) => u.has_result);
+
+  const totalStudents = dtmUsers.length;
+  const totalWithResults = usersWithResults.length;
+  const avgScore =
+    usersWithResults.length > 0
+      ? Math.round(
+          usersWithResults
+            .filter((u) => u.total_point !== null && u.total_point !== undefined)
+            .reduce((sum, u) => sum + (u.total_point || 0), 0) /
+            usersWithResults.filter(
+              (u) => u.total_point !== null && u.total_point !== undefined
+            ).length
+        )
+      : 0;
 
   useEffect(() => {
     if (schoolId) {
-      fetchSchoolData();
+      fetchSchoolInfo();
     }
   }, [schoolId]);
 
-  const fetchSchoolData = async () => {
+  // Fetch DTM data when school is loaded
+  useEffect(() => {
+    if (school?.school_code) {
+      fetchDTMData();
+    }
+  }, [school?.school_code]);
+
+  const fetchSchoolInfo = async () => {
     try {
-      // Fetch school info
-      const { data: schoolData, error: schoolError } = await supabase
+      const { data, error } = await supabase
         .from("schools")
         .select("*")
         .eq("id", schoolId)
         .single();
 
-      if (schoolError) throw schoolError;
-      setSchool(schoolData);
-
-      // Fetch students
-      const { data: studentsData, error: studentsError } = await supabase
-        .from("students")
-        .select("*")
-        .eq("school_id", schoolId)
-        .order("created_at", { ascending: false });
-
-      if (studentsError) throw studentsError;
-
-      const studentIds = studentsData?.map((s) => s.id) || [];
-      const studentMap = new Map(
-        studentsData?.map((s) => [s.id, {
-          name: s.full_name,
-          phone: s.phone_number,
-          has_certificate: s.has_language_certificate,
-          certificate_type: s.certificate_type,
-          certificate_score: s.certificate_score,
-        }]) || []
-      );
-
-      // Fetch all test results for this school's students
-      let allTestResults: TestResult[] = [];
-      if (studentIds.length > 0) {
-        const { data: resultsData } = await supabase
-          .from("test_results")
-          .select("*")
-          .in("student_id", studentIds)
-          .order("test_date", { ascending: false });
-
-        allTestResults = (resultsData || []).map((r) => {
-          const studentInfo = studentMap.get(r.student_id);
-          return {
-            ...r,
-            student_name: studentInfo?.name || "Noma'lum",
-            student_phone: studentInfo?.phone || "",
-            has_certificate: studentInfo?.has_certificate || false,
-            certificate_type: studentInfo?.certificate_type || null,
-            certificate_score: studentInfo?.certificate_score || null,
-          };
-        });
-      }
-
-      setTestResults(allTestResults);
-
-      // Calculate student stats
-      const studentsWithStats = (studentsData || []).map((student) => {
-        const studentTests = allTestResults.filter(
-          (t) => t.student_id === student.id
-        );
-        const avgScore =
-          studentTests.length > 0
-            ? Math.round(
-                studentTests.reduce((sum, t) => sum + t.total_score, 0) /
-                  studentTests.length
-              )
-            : 0;
-
-        return {
-          ...student,
-          test_count: studentTests.length,
-          avg_score: avgScore,
-        };
-      });
-
-      setStudents(studentsWithStats);
-
-      // Calculate overall stats
-      const totalTests = allTestResults.length;
-      const avgScore =
-        allTestResults.length > 0
-          ? Math.round(
-              allTestResults.reduce((sum, t) => sum + t.total_score, 0) /
-                allTestResults.length
-            )
-          : 0;
-
-      setStats({
-        totalStudents: studentsWithStats.length,
-        totalTests,
-        avgScore,
-      });
+      if (error) throw error;
+      setSchool(data);
     } catch (error) {
-      console.error("Error fetching school data:", error);
+      console.error("Error fetching school:", error);
       toast({
         title: "Xatolik",
-        description: "Ma'lumotlarni yuklashda xatolik yuz berdi",
+        description: "Maktab ma'lumotlarini yuklashda xatolik",
         variant: "destructive",
       });
     } finally {
@@ -213,108 +107,109 @@ export default function SchoolDetails() {
     }
   };
 
-  const handleExportStudentsCSV = () => {
-    const headers = [
-      "F.I.O.",
-      "Telefon",
-      "Test tili",
-      "1-fan",
-      "2-fan",
-      "Sertifikat",
-      "Sertifikat turi",
-      "Ball",
-      "Testlar soni",
-      "O'rtacha ball",
-    ];
-    const rows = filteredStudents.map((s) => [
-      s.full_name,
-      s.phone_number,
-      s.test_language,
-      s.subject1,
-      s.subject2,
-      s.has_language_certificate ? "Ha" : "Yo'q",
-      s.certificate_type || "",
-      s.certificate_score || "",
-      s.test_count,
-      s.avg_score,
-    ]);
+  const fetchDTMData = useCallback(
+    async (forceRefresh = false) => {
+      if (!school?.school_code) return;
 
-    const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${school?.school_name || "maktab"}_oquvchilar.csv`;
-    a.click();
+      const settings = getApiSettings();
+      if (!settings) {
+        return;
+      }
+
+      setDtmLoading(true);
+      try {
+        const { entities } = await fetchAllDTMUsers(
+          settings,
+          undefined,
+          forceRefresh
+        );
+        const schoolStudents = entities.filter(
+          (u) => u.school_code === school.school_code
+        );
+        setDtmUsers(schoolStudents);
+      } catch (err) {
+        console.error("Error fetching DTM data:", err);
+        toast({
+          title: "Xatolik",
+          description: "DTM ma'lumotlarini yuklashda xatolik",
+          variant: "destructive",
+        });
+      } finally {
+        setDtmLoading(false);
+      }
+    },
+    [school?.school_code, toast]
+  );
+
+  // Filters
+  const filteredRegistered = registeredUsers.filter((u) =>
+    u.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (u.phone || "").includes(searchTerm)
+  );
+
+  const filteredResults = usersWithResults.filter((u) =>
+    u.full_name.toLowerCase().includes(resultsSearchTerm.toLowerCase()) ||
+    (u.phone || "").includes(resultsSearchTerm)
+  );
+
+  // CSV exports
+  const handleExportRegisteredCSV = () => {
+    const headers = ["F.I.O.", "Telefon", "Tuman", "Ro'yxatdan o'tgan sana"];
+    const rows = filteredRegistered.map((u) => [
+      u.full_name,
+      u.phone || "",
+      u.district || "",
+      format(new Date(u.created_at), "dd.MM.yyyy"),
+    ]);
+    downloadCSV(headers, rows, `${school?.school_name || "maktab"}_royxat.csv`);
   };
 
   const handleExportResultsCSV = () => {
     const headers = [
-      "Sana",
       "F.I.O.",
       "Telefon",
-      "Test tili",
-      "Ona tili",
-      "Matematika",
-      "Tarix",
+      "Tuman",
+      "Majburiy fanlar",
       "1-fan",
-      "Ball",
+      "1-fan ball",
       "2-fan",
-      "Ball",
-      "Jami",
-      "Sertifikat",
+      "2-fan ball",
+      "Jami ball",
     ];
-    const rows = filteredResults.map((r) => [
-      format(new Date(r.test_date), "dd.MM.yyyy"),
-      r.student_name,
-      r.student_phone,
-      getLanguageLabel(r.test_language),
-      r.score_ona_tili,
-      r.score_matematika,
-      r.score_tarix,
-      r.subject1,
-      r.score_subject1,
-      r.subject2,
-      r.score_subject2,
-      r.total_score,
-      r.has_certificate ? `${r.certificate_type} ${r.certificate_score || ""}` : "Yo'q",
-    ]);
+    const rows = filteredResults.map((u) => {
+      const mandatory = u.test_results?.mandatory || [];
+      const mandatoryTotal = mandatory.reduce((s, m) => s + m.point, 0);
+      return [
+        u.full_name,
+        u.phone || "",
+        u.district || "",
+        mandatoryTotal,
+        u.test_results?.primary?.name || "",
+        u.test_results?.primary?.point || 0,
+        u.test_results?.secondary?.name || "",
+        u.test_results?.secondary?.point || 0,
+        u.total_point ?? 0,
+      ];
+    });
+    downloadCSV(
+      headers,
+      rows,
+      `${school?.school_name || "maktab"}_natijalar.csv`
+    );
+  };
 
+  const downloadCSV = (
+    headers: string[],
+    rows: (string | number)[][],
+    filename: string
+  ) => {
     const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${school?.school_name || "maktab"}_natijalar.csv`;
+    a.download = filename;
     a.click();
-  };
-
-  const filteredStudents = students.filter((student) => {
-    const matchesSearch =
-      student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.phone_number.includes(searchTerm);
-    const matchesSubject =
-      subjectFilter === "all" ||
-      student.subject1 === subjectFilter ||
-      student.subject2 === subjectFilter;
-    return matchesSearch && matchesSubject;
-  });
-
-  const filteredResults = testResults.filter((result) =>
-    result.student_name.toLowerCase().includes(resultsSearchTerm.toLowerCase())
-  );
-
-  const getLanguageLabel = (lang: string) => {
-    switch (lang) {
-      case "uzbek":
-        return "O'zbek";
-      case "russian":
-        return "Rus";
-      case "english":
-        return "Ingliz";
-      default:
-        return lang;
-    }
   };
 
   if (loading) {
@@ -358,6 +253,17 @@ export default function SchoolDetails() {
               {school.region}, {school.district} • Kod: {school.school_code}
             </p>
           </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => fetchDTMData(true)}
+            disabled={dtmLoading}
+            title="Yangilash"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${dtmLoading ? "animate-spin" : ""}`}
+            />
+          </Button>
           <Badge variant={school.is_active ? "default" : "secondary"}>
             {school.is_active ? "Faol" : "Nofaol"}
           </Badge>
@@ -367,29 +273,53 @@ export default function SchoolDetails() {
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">O'quvchilar</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                O'quvchilar
+              </CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalStudents}</div>
+              <div className="text-2xl font-bold">
+                {dtmLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  totalStudents
+                )}
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Testlar</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Natijasi bor
+              </CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalTests}</div>
+              <div className="text-2xl font-bold">
+                {dtmLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  totalWithResults
+                )}
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">O'rtacha ball</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                O'rtacha ball
+              </CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.avgScore}/189</div>
+              <div className="text-2xl font-bold">
+                {dtmLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  `${avgScore}/189`
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -414,88 +344,74 @@ export default function SchoolDetails() {
         {/* Tabs */}
         <Tabs defaultValue="results" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="students" className="gap-2">
+            <TabsTrigger value="registered" className="gap-2">
               <Users className="h-4 w-4" />
-              Ro'yxatdan o'tganlar ({stats.totalStudents})
+              Ro'yxatdan o'tganlar ({registeredUsers.length})
             </TabsTrigger>
             <TabsTrigger value="results" className="gap-2">
               <FileText className="h-4 w-4" />
-              Natijalar ({stats.totalTests})
+              Natijalar ({usersWithResults.length})
             </TabsTrigger>
           </TabsList>
 
-          {/* Students Tab */}
-          <TabsContent value="students" className="space-y-4">
+          {/* Registered Tab */}
+          <TabsContent value="registered" className="space-y-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-xl font-semibold">O'quvchilar ro'yxati</h2>
-              <Button variant="outline" onClick={handleExportStudentsCSV}>
+              <h2 className="text-xl font-semibold">
+                Ro'yxatdan o'tgan o'quvchilar
+              </h2>
+              <Button variant="outline" onClick={handleExportRegisteredCSV}>
                 <Download className="mr-2 h-4 w-4" />
                 Export
               </Button>
             </div>
 
-            {/* Filters */}
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Qidirish..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Fan" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Barcha fanlar</SelectItem>
-                  {SUBJECTS.map((subject) => (
-                    <SelectItem key={subject} value={subject}>
-                      {subject}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Qidirish..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
 
-            {/* Students Table */}
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>F.I.O.</TableHead>
                     <TableHead>Telefon</TableHead>
-                    <TableHead>Test tili</TableHead>
-                    <TableHead>1-fan</TableHead>
-                    <TableHead>2-fan</TableHead>
-                    <TableHead className="text-center">Testlar</TableHead>
+                    <TableHead>Tuman</TableHead>
+                    <TableHead>Sana</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredStudents.length === 0 ? (
+                  {dtmLoading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8">
-                        <p className="text-muted-foreground">O'quvchilar topilmadi</p>
+                      <TableCell colSpan={4} className="text-center py-8">
+                        <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredRegistered.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={4}
+                        className="text-center py-8 text-muted-foreground"
+                      >
+                        O'quvchilar topilmadi
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredStudents.map((student) => (
-                      <TableRow key={student.id}>
+                    filteredRegistered.map((user) => (
+                      <TableRow key={user.id}>
                         <TableCell className="font-medium">
-                          {student.full_name}
+                          {user.full_name}
                         </TableCell>
-                        <TableCell>{student.phone_number}</TableCell>
+                        <TableCell>{user.phone || "—"}</TableCell>
+                        <TableCell>{user.district || "—"}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">
-                            {getLanguageLabel(student.test_language)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{student.subject1}</TableCell>
-                        <TableCell>{student.subject2}</TableCell>
-                        <TableCell className="text-center">
-                          {student.test_count}
+                          {format(new Date(user.created_at), "dd.MM.yyyy")}
                         </TableCell>
                       </TableRow>
                     ))
@@ -515,7 +431,6 @@ export default function SchoolDetails() {
               </Button>
             </div>
 
-            {/* Search */}
             <div className="relative max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -526,93 +441,76 @@ export default function SchoolDetails() {
               />
             </div>
 
-            {/* Results Table */}
             <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Sana</TableHead>
                     <TableHead>F.I.O.</TableHead>
                     <TableHead>Telefon</TableHead>
-                    <TableHead>Test tili</TableHead>
-                    <TableHead className="text-center">Ona tili</TableHead>
-                    <TableHead className="text-center">Matematika</TableHead>
-                    <TableHead className="text-center">Tarix</TableHead>
+                    <TableHead className="text-center">Majburiy</TableHead>
                     <TableHead>1-fan (ball)</TableHead>
                     <TableHead>2-fan (ball)</TableHead>
                     <TableHead className="text-center">Jami</TableHead>
-                    <TableHead>Sertifikat</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredResults.length === 0 ? (
+                  {dtmLoading ? (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center py-8">
-                        <p className="text-muted-foreground">Natijalar topilmadi</p>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredResults.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className="text-center py-8 text-muted-foreground"
+                      >
+                        Natijalar topilmadi
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredResults.map((result) => (
-                      <TableRow key={result.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            {format(new Date(result.test_date), "dd.MM.yyyy")}
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {result.student_name}
-                        </TableCell>
-                        <TableCell>{result.student_phone}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {getLanguageLabel(result.test_language)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline">{result.score_ona_tili}</Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline">{result.score_matematika}</Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline">{result.score_tarix}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {result.subject1}{" "}
-                          <Badge variant="outline" className="ml-1">
-                            {result.score_subject1}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {result.subject2}{" "}
-                          <Badge variant="outline" className="ml-1">
-                            {result.score_subject2}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            variant={
-                              result.total_score >= result.max_score * 0.7
-                                ? "default"
-                                : "secondary"
-                            }
-                          >
-                            {result.total_score}/{result.max_score}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {result.has_certificate ? (
-                            <Badge variant="default" className="bg-success">
-                              {result.certificate_type}{" "}
-                              {result.certificate_score && `(${result.certificate_score})`}
+                    filteredResults.map((user) => {
+                      const mandatory = user.test_results?.mandatory || [];
+                      const mandatoryTotal = mandatory.reduce(
+                        (s, m) => s + m.point,
+                        0
+                      );
+                      return (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">
+                            {user.full_name}
+                          </TableCell>
+                          <TableCell>{user.phone || "—"}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline">{mandatoryTotal}/33</Badge>
+                          </TableCell>
+                          <TableCell>
+                            {user.test_results?.primary?.name || "—"}{" "}
+                            <Badge variant="outline" className="ml-1">
+                              {user.test_results?.primary?.point || 0}
                             </Badge>
-                          ) : (
-                            <Badge variant="secondary">Yo'q</Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
+                          </TableCell>
+                          <TableCell>
+                            {user.test_results?.secondary?.name || "—"}{" "}
+                            <Badge variant="outline" className="ml-1">
+                              {user.test_results?.secondary?.point || 0}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge
+                              variant={
+                                (user.total_point || 0) >= 130
+                                  ? "default"
+                                  : "secondary"
+                              }
+                            >
+                              {user.total_point ?? 0}/189
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
