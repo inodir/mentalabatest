@@ -528,52 +528,60 @@ export default function SchoolsManagement() {
 
   const fetchSchools = async () => {
     try {
-      const { data, error } = await supabase
-        .from("schools")
-        .select("*")
-        .order("created_at", { ascending: false });
+      // Fetch all data in parallel (3 queries instead of N*3)
+      const [schoolsRes, credentialsRes, studentsRes, testResultsRes] = await Promise.all([
+        supabase
+          .from("schools")
+          .select("*")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("school_admin_credentials")
+          .select("school_id, initial_password"),
+        supabase
+          .from("students")
+          .select("id, school_id"),
+        supabase
+          .from("test_results")
+          .select("total_score, student_id"),
+      ]);
 
-      if (error) throw error;
+      if (schoolsRes.error) throw schoolsRes.error;
 
-      // Fetch credentials for all schools
-      const { data: credentialsData } = await supabase
-        .from("school_admin_credentials")
-        .select("school_id, initial_password");
-
+      // Build lookup maps
       const credentialsMap = new Map(
-        (credentialsData || []).map((c) => [c.school_id, c.initial_password])
+        (credentialsRes.data || []).map((c) => [c.school_id, c.initial_password])
       );
 
-      // Fetch additional stats for each school
-      const schoolsWithStats = await Promise.all(
-        (data || []).map(async (school) => {
-          const { count: studentCount } = await supabase
-            .from("students")
-            .select("*", { count: "exact", head: true })
-            .eq("school_id", school.id);
+      // Count students per school
+      const studentCountMap = new Map<string, number>();
+      const studentSchoolMap = new Map<string, string>(); // student_id -> school_id
+      for (const s of studentsRes.data || []) {
+        studentCountMap.set(s.school_id, (studentCountMap.get(s.school_id) || 0) + 1);
+        studentSchoolMap.set(s.id, s.school_id);
+      }
 
-          const { data: testData } = await supabase
-            .from("test_results")
-            .select("total_score, student_id")
-            .in(
-              "student_id",
-              (await supabase.from("students").select("id").eq("school_id", school.id)).data?.map((s) => s.id) || []
-            );
+      // Aggregate test results per school
+      const schoolTestStats = new Map<string, { total: number; count: number }>();
+      for (const t of testResultsRes.data || []) {
+        const schoolId = studentSchoolMap.get(t.student_id);
+        if (!schoolId) continue;
+        const existing = schoolTestStats.get(schoolId) || { total: 0, count: 0 };
+        existing.total += t.total_score;
+        existing.count += 1;
+        schoolTestStats.set(schoolId, existing);
+      }
 
-          const avgScore =
-            testData && testData.length > 0
-              ? Math.round(testData.reduce((sum, t) => sum + t.total_score, 0) / testData.length)
-              : 0;
-
-          return {
-            ...school,
-            student_count: studentCount || 0,
-            test_count: testData?.length || 0,
-            avg_score: avgScore,
-            initial_password: credentialsMap.get(school.id) || "",
-          };
-        })
-      );
+      // Merge everything
+      const schoolsWithStats = (schoolsRes.data || []).map((school) => {
+        const testStats = schoolTestStats.get(school.id);
+        return {
+          ...school,
+          student_count: studentCountMap.get(school.id) || 0,
+          test_count: testStats?.count || 0,
+          avg_score: testStats ? Math.round(testStats.total / testStats.count) : 0,
+          initial_password: credentialsMap.get(school.id) || "",
+        };
+      });
 
       setSchools(schoolsWithStats);
     } catch (error) {

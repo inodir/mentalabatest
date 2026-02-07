@@ -412,7 +412,7 @@ export default function SchoolDetails() {
         </Card>
 
         {/* Tabs */}
-        <Tabs defaultValue="students" className="space-y-4">
+        <Tabs defaultValue="results" className="space-y-4">
           <TabsList>
             <TabsTrigger value="students" className="gap-2">
               <Users className="h-4 w-4" />
