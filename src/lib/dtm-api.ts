@@ -98,6 +98,9 @@ export function clearDTMCache(): void {
   delete dtmCache.stats;
 }
 
+// API settings cache TTL: 30 days
+const API_SETTINGS_TTL = 30 * 24 * 60 * 60 * 1000;
+
 // Get API settings from localStorage
 export function getApiSettings(): DTMApiSettings | null {
   const settings = localStorage.getItem("dtm_api_settings");
@@ -106,6 +109,13 @@ export function getApiSettings(): DTMApiSettings | null {
   try {
     const parsed = JSON.parse(settings);
     if (!parsed.apiKey) return null;
+    
+    // Check 30-day expiry
+    if (parsed.savedAt && Date.now() - parsed.savedAt > API_SETTINGS_TTL) {
+      localStorage.removeItem("dtm_api_settings");
+      return null;
+    }
+    
     return {
       mainUrl: parsed.mainUrl || DEFAULT_MAIN_URL,
       apiKey: parsed.apiKey,
@@ -115,9 +125,12 @@ export function getApiSettings(): DTMApiSettings | null {
   }
 }
 
-// Save API settings to localStorage
+// Save API settings to localStorage with timestamp
 export function saveApiSettings(settings: DTMApiSettings): void {
-  localStorage.setItem("dtm_api_settings", JSON.stringify(settings));
+  localStorage.setItem("dtm_api_settings", JSON.stringify({
+    ...settings,
+    savedAt: Date.now(),
+  }));
 }
 
 // Validate URL format

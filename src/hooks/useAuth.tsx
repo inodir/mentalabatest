@@ -118,8 +118,8 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
         key.startsWith("school_dashboard_") || 
         key.startsWith("school_dtm_data_") ||
         key === "school_dtm_code" ||
-        key === "dtm_school_stats" ||
-        key === "dtm_api_settings"
+        key === "dtm_school_stats"
+        // dtm_api_settings is NOT cleared — persists for 30 days
       )) {
         keysToRemove.push(key);
       }
