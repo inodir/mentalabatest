@@ -36,7 +36,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useDTMSchoolStats } from "@/hooks/useDTMSchoolStats";
+
 import { REGIONS } from "@/lib/constants";
 import {
   Plus,
@@ -54,10 +54,6 @@ import {
   CheckCircle2,
   XCircle,
   User,
-  Users,
-  Award,
-  TrendingUp,
-  RefreshCw,
 } from "lucide-react";
 
 interface School {
@@ -71,53 +67,6 @@ interface School {
   is_active: boolean;
   created_at: string;
   initial_password?: string;
-  // DTM API stats
-  dtm_user_count?: number;
-  dtm_result_count?: number;
-  dtm_avg_score?: number;
-}
-
-// DTM Stats cell component
-function DTMStatsCell({ 
-  userCount, 
-  resultCount, 
-  avgScore 
-}: { 
-  userCount?: number; 
-  resultCount?: number; 
-  avgScore?: number; 
-}) {
-  if (userCount === undefined) {
-    return <span className="text-xs text-muted-foreground">—</span>;
-  }
-
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex items-center justify-center gap-1">
-            <Badge variant="secondary" className="text-xs">
-              <Users className="h-3 w-3 mr-1" />
-              {userCount}
-            </Badge>
-            {resultCount !== undefined && resultCount > 0 && (
-              <Badge variant="outline" className="text-xs text-success border-success/30">
-                <Award className="h-3 w-3 mr-1" />
-                {resultCount}
-              </Badge>
-            )}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent>
-          <div className="space-y-1 text-xs">
-            <div>DTM foydalanuvchilar: {userCount}</div>
-            <div>Natijasi bor: {resultCount || 0}</div>
-            <div>O'rtacha ball: {avgScore || 0}</div>
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
 }
 
 // Separate component for table row with password visibility
@@ -204,27 +153,6 @@ function SchoolTableRow({
           )}
         </div>
       </TableCell>
-      {/* DTM Stats */}
-      <TableCell className="text-center">
-        <DTMStatsCell 
-          userCount={school.dtm_user_count} 
-          resultCount={school.dtm_result_count} 
-          avgScore={school.dtm_avg_score} 
-        />
-      </TableCell>
-      <TableCell className="text-center">
-        {school.dtm_avg_score !== undefined ? (
-          <Badge 
-            variant={school.dtm_avg_score >= 100 ? "default" : school.dtm_avg_score >= 60 ? "secondary" : "outline"}
-            className="font-mono"
-          >
-            <TrendingUp className="h-3 w-3 mr-1" />
-            {school.dtm_avg_score}
-          </Badge>
-        ) : (
-          <span className="text-xs text-muted-foreground">—</span>
-        )}
-      </TableCell>
       <TableCell>
         <Badge variant={school.is_active ? "default" : "secondary"}>
           {school.is_active ? "Faol" : "Nofaol"}
@@ -295,8 +223,6 @@ export default function SchoolsManagement() {
   const [importStep, setImportStep] = useState<"upload" | "preview" | "results">("upload");
   const { toast } = useToast();
   
-  // DTM API stats hook
-  const { stats: dtmStats, loading: dtmStatsLoading, refresh: refreshDTMStats } = useDTMSchoolStats();
   // Sanitize CSV cell values to prevent CSV injection
   const sanitizeCSVValue = (value: string): string => {
     if (!value) return value;
@@ -502,23 +428,6 @@ export default function SchoolsManagement() {
     fetchSchools();
   }, []);
 
-  // Merge DTM stats when they load
-  useEffect(() => {
-    if (!dtmStatsLoading && dtmStats.size > 0 && schools.length > 0) {
-      setSchools(prev => prev.map(school => {
-        const dtmSchoolStats = dtmStats.get(school.school_code);
-        if (dtmSchoolStats) {
-          return {
-            ...school,
-            dtm_user_count: dtmSchoolStats.user_count,
-            dtm_result_count: dtmSchoolStats.result_count,
-            dtm_avg_score: dtmSchoolStats.avg_score,
-          };
-        }
-        return school;
-      }));
-    }
-  }, [dtmStats, dtmStatsLoading]);
 
   const fetchSchools = async () => {
     try {
@@ -719,7 +628,7 @@ export default function SchoolsManagement() {
    };
  
   const handleExportCSV = () => {
-    const headers = ["Viloyat", "Tuman", "Maktab nomi", "Kod", "Admin F.I.O.", "Admin login", "Parol", "DTM foydalanuvchilar", "DTM natijasi bor", "DTM o'rtacha ball"];
+    const headers = ["Viloyat", "Tuman", "Maktab nomi", "Kod", "Admin F.I.O.", "Admin login", "Parol"];
     const rows = filteredSchools.map((s) => [
       s.region,
       s.district,
@@ -728,9 +637,6 @@ export default function SchoolsManagement() {
       s.admin_full_name,
       s.admin_login,
       s.initial_password || "",
-      s.dtm_user_count || 0,
-      s.dtm_result_count || 0,
-      s.dtm_avg_score || 0,
     ]);
 
     const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
@@ -807,15 +713,6 @@ export default function SchoolsManagement() {
              </p>
            </div>
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={() => refreshDTMStats(true)} 
-              disabled={dtmStatsLoading}
-              title="DTM statistikasini yangilash"
-            >
-              <RefreshCw className={`h-4 w-4 ${dtmStatsLoading ? "animate-spin" : ""}`} />
-            </Button>
             <Dialog open={isImportDialogOpen} onOpenChange={(open) => { setIsImportDialogOpen(open); if (!open) resetImport(); }}>
               <DialogTrigger asChild>
                 <Button variant="outline">
@@ -1149,47 +1046,20 @@ export default function SchoolsManagement() {
                 <TableHead>Kod</TableHead>
                 <TableHead>Admin</TableHead>
                 <TableHead>Login / Parol</TableHead>
-                <TableHead className="text-center">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger className="flex items-center justify-center gap-1">
-                        <Users className="h-4 w-4" />
-                        DTM
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        DTM platformasi foydalanuvchilari
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </TableHead>
-                <TableHead className="text-center">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger className="flex items-center justify-center gap-1">
-                        <TrendingUp className="h-4 w-4" />
-                        O'rtacha
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        DTM o'rtacha ball
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </TableHead>
                 <TableHead>Holat</TableHead>
                 <TableHead className="text-right">Amallar</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading || dtmStatsLoading ? (
+              {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="py-10 text-center">
+                  <TableCell colSpan={7} className="py-10 text-center">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-                    {dtmStatsLoading && <p className="mt-2 text-xs text-muted-foreground">DTM statistikasi yuklanmoqda...</p>}
                   </TableCell>
                 </TableRow>
               ) : filteredSchools.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                     Maktablar topilmadi
                   </TableCell>
                 </TableRow>
