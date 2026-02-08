@@ -14,9 +14,40 @@ export type Database = {
   }
   public: {
     Tables: {
+      district_admin_credentials: {
+        Row: {
+          admin_full_name: string
+          admin_login: string
+          created_at: string
+          district: string
+          id: string
+          initial_password: string
+          region: string
+        }
+        Insert: {
+          admin_full_name: string
+          admin_login: string
+          created_at?: string
+          district: string
+          id?: string
+          initial_password: string
+          region: string
+        }
+        Update: {
+          admin_full_name?: string
+          admin_login?: string
+          created_at?: string
+          district?: string
+          id?: string
+          initial_password?: string
+          region?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
+          district: string | null
           full_name: string
           id: string
           password_changed: boolean
@@ -26,6 +57,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          district?: string | null
           full_name: string
           id?: string
           password_changed?: boolean
@@ -35,6 +67,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          district?: string | null
           full_name?: string
           id?: string
           password_changed?: boolean
@@ -270,6 +303,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_district: { Args: { _user_id: string }; Returns: string }
       get_user_school_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -280,7 +314,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "super_admin" | "school_admin"
+      app_role: "super_admin" | "school_admin" | "district_admin"
       certificate_type: "IELTS" | "CEFR" | "Duolingo" | "TOEFL" | "Other"
       test_language: "uzbek" | "russian" | "english"
     }
@@ -410,7 +444,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["super_admin", "school_admin"],
+      app_role: ["super_admin", "school_admin", "district_admin"],
       certificate_type: ["IELTS", "CEFR", "Duolingo", "TOEFL", "Other"],
       test_language: ["uzbek", "russian", "english"],
     },
