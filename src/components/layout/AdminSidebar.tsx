@@ -13,6 +13,7 @@ import {
   ChevronRight,
   GraduationCap,
   Settings,
+  MapPin,
 } from "lucide-react";
  
  interface NavItem {
@@ -25,25 +26,35 @@ const superAdminNavItems: NavItem[] = [
   { title: "Bosh sahifa", href: "/super-admin", icon: LayoutDashboard },
   { title: "Foydalanuvchilar", href: "/super-admin/users", icon: Users },
   { title: "Maktablar", href: "/super-admin/schools", icon: School },
+  { title: "Tuman adminlari", href: "/super-admin/district-admins", icon: MapPin },
   { title: "Sozlamalar", href: "/super-admin/settings", icon: Settings },
 ];
  
- const schoolAdminNavItems: NavItem[] = [
-   { title: "Bosh sahifa", href: "/school", icon: LayoutDashboard },
-   { title: "O'quvchilar", href: "/school/students", icon: Users },
-   { title: "Test natijalari", href: "/school/results", icon: FileText },
- ];
+const schoolAdminNavItems: NavItem[] = [
+  { title: "Bosh sahifa", href: "/school", icon: LayoutDashboard },
+  { title: "O'quvchilar", href: "/school/students", icon: Users },
+  { title: "Test natijalari", href: "/school/results", icon: FileText },
+];
+
+const districtAdminNavItems: NavItem[] = [
+  { title: "Bosh sahifa", href: "/district", icon: LayoutDashboard },
+  { title: "Maktablar", href: "/district", icon: School },
+];
  
- interface AdminSidebarProps {
-   variant: "super" | "school";
- }
+interface AdminSidebarProps {
+  variant: "super" | "school" | "district";
+}
  
  export function AdminSidebar({ variant }: AdminSidebarProps) {
    const [collapsed, setCollapsed] = useState(false);
    const location = useLocation();
    const { signOut } = useAuth();
  
-   const navItems = variant === "super" ? superAdminNavItems : schoolAdminNavItems;
+  const navItems = variant === "super" 
+    ? superAdminNavItems 
+    : variant === "district" 
+      ? districtAdminNavItems 
+      : schoolAdminNavItems;
  
    const handleSignOut = async () => {
      await signOut();

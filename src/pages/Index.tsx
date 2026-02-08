@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GraduationCap, School, Shield, Users, FileText, BarChart3 } from "lucide-react";
+import { GraduationCap, School, Shield, Users, FileText, BarChart3, MapPin } from "lucide-react";
 
 export default function Index() {
   return (
@@ -14,6 +14,9 @@ export default function Index() {
             <span className="text-xl font-bold">Mentalaba.uz</span>
           </div>
           <nav className="flex items-center gap-4">
+            <Link to="/district/login">
+              <Button variant="outline">Tuman kirish</Button>
+            </Link>
             <Link to="/school/login">
               <Button>Maktab kirish</Button>
             </Link>
@@ -37,6 +40,12 @@ export default function Index() {
               <Button size="lg" className="min-w-[200px]">
                 <School className="mr-2 h-5 w-5" />
                 Maktab sifatida kirish
+              </Button>
+            </Link>
+            <Link to="/district/login">
+              <Button size="lg" variant="outline" className="min-w-[200px]">
+                <MapPin className="mr-2 h-5 w-5" />
+                Tuman sifatida kirish
               </Button>
             </Link>
           </div>
