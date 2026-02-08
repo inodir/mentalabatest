@@ -1,10 +1,10 @@
  import { ReactNode } from "react";
  import { AdminSidebar } from "./AdminSidebar";
  
- interface AdminLayoutProps {
-   children: ReactNode;
-   variant: "super" | "school";
- }
+interface AdminLayoutProps {
+  children: ReactNode;
+  variant: "super" | "school" | "district";
+}
  
  export function AdminLayout({ children, variant }: AdminLayoutProps) {
    return (

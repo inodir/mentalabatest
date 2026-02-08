@@ -15,7 +15,7 @@ export default function ChangePassword() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { user, markPasswordChanged } = useAuth();
+  const { user, role, markPasswordChanged } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -82,7 +82,7 @@ export default function ChangePassword() {
         description: "Parol muvaffaqiyatli o'zgartirildi",
       });
 
-      navigate("/school");
+      navigate(role === "district_admin" ? "/district" : "/school");
     } catch {
       toast({
         title: "Xatolik",

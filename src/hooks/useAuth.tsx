@@ -2,14 +2,15 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
  import { User, Session } from "@supabase/supabase-js";
  import { supabase } from "@/integrations/supabase/client";
  
- type AppRole = "super_admin" | "school_admin" | null;
+ type AppRole = "super_admin" | "school_admin" | "district_admin" | null;
  
  interface AuthContextType {
    user: User | null;
    session: Session | null;
-   role: AppRole;
-   schoolId: string | null;
-   passwordChanged: boolean;
+  role: AppRole;
+  schoolId: string | null;
+  district: string | null;
+  passwordChanged: boolean;
    loading: boolean;
    signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
    signOut: () => Promise<void>;
@@ -21,9 +22,10 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
  export function AuthProvider({ children }: { children: ReactNode }) {
    const [user, setUser] = useState<User | null>(null);
    const [session, setSession] = useState<Session | null>(null);
-   const [role, setRole] = useState<AppRole>(null);
-   const [schoolId, setSchoolId] = useState<string | null>(null);
-   const [passwordChanged, setPasswordChanged] = useState(true); // default true so super_admins aren't affected
+  const [role, setRole] = useState<AppRole>(null);
+  const [schoolId, setSchoolId] = useState<string | null>(null);
+  const [district, setDistrict] = useState<string | null>(null);
+  const [passwordChanged, setPasswordChanged] = useState(true); // default true so super_admins aren't affected
    const [loading, setLoading] = useState(true);
   const initialLoadDone = useRef(false);
 
@@ -36,7 +38,7 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
         .single(),
       supabase
         .from("profiles")
-        .select("school_id, password_changed")
+        .select("school_id, district, password_changed")
         .eq("user_id", userId)
         .maybeSingle()
     ]);
@@ -44,6 +46,7 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
     return {
       role: roleResult.data?.role as AppRole ?? null,
       schoolId: profileResult.data?.school_id ?? null,
+      district: profileResult.data?.district ?? null,
       passwordChanged: profileResult.data?.password_changed ?? true
     };
   };
@@ -65,12 +68,14 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
           if (isMounted) {
             setRole(userData.role);
             setSchoolId(userData.schoolId);
+            setDistrict(userData.district);
             setPasswordChanged(userData.passwordChanged);
           }
          } else {
-           setRole(null);
-           setSchoolId(null);
-           setPasswordChanged(true);
+            setRole(null);
+            setSchoolId(null);
+            setDistrict(null);
+            setPasswordChanged(true);
          }
        }
      );
@@ -89,6 +94,7 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
           if (isMounted) {
             setRole(userData.role);
             setSchoolId(userData.schoolId);
+            setDistrict(userData.district);
             setPasswordChanged(userData.passwordChanged);
           }
         }
@@ -138,6 +144,7 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
     setSession(null);
     setRole(null);
     setSchoolId(null);
+    setDistrict(null);
     setPasswordChanged(true);
   };
 
@@ -146,9 +153,9 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
   };
  
    return (
-     <AuthContext.Provider
-       value={{ user, session, role, schoolId, passwordChanged, loading, signIn, signOut, markPasswordChanged }}
-     >
+    <AuthContext.Provider
+      value={{ user, session, role, schoolId, district, passwordChanged, loading, signIn, signOut, markPasswordChanged }}
+    >
        {children}
      </AuthContext.Provider>
    );
