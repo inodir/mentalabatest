@@ -114,13 +114,22 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
      };
    }, []);
  
-   const signIn = async (email: string, password: string) => {
-     const { error } = await supabase.auth.signInWithPassword({
-       email,
-       password,
-     });
-     return { error: error as Error | null };
-   };
+  const signIn = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (!error && data.user) {
+      const userData = await fetchUserData(data.user.id);
+      setUser(data.user);
+      setSession(data.session);
+      setRole(userData.role);
+      setSchoolId(userData.schoolId);
+      setDistrict(userData.district);
+      setPasswordChanged(userData.passwordChanged);
+    }
+    return { error: error as Error | null };
+  };
  
   const signOut = async () => {
     // Clear cached data on logout to prevent stale data for next user
