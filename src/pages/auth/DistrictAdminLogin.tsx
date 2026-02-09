@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,18 @@ export default function DistrictAdminLogin() {
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { user, role, loading, signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    if (!loading && user && role) {
+      if (role === "district_admin") navigate("/district", { replace: true });
+      else if (role === "super_admin") navigate("/super-admin", { replace: true });
+      else if (role === "school_admin") navigate("/school", { replace: true });
+    }
+  }, [loading, user, role, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +51,14 @@ export default function DistrictAdminLogin() {
       setIsLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-accent/5 via-background to-primary/5 p-4">
