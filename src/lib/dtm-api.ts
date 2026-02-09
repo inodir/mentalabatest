@@ -165,14 +165,27 @@ export async function fetchDTMUsers(
     },
   });
 
+  const contentType = response.headers.get("content-type");
+  const responseText = await response.text();
+
+  console.log("[DTM API] Status:", response.status);
+  console.log("[DTM API] Content-Type:", contentType);
+  console.log("[DTM API] Body preview:", responseText.substring(0, 500));
+
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
       throw new Error("API_KEY_INVALID");
     }
-    throw new Error(`API_ERROR_${response.status}`);
+    throw new Error(`API_ERROR_${response.status}: ${responseText.substring(0, 200)}`);
   }
 
-  return response.json();
+  // Parse JSON safely
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    console.error("[DTM API] JSON parse failed. Raw response:", responseText.substring(0, 500));
+    throw new Error(`API returned non-JSON response. Content-Type: ${contentType}`);
+  }
 }
 
 // Calculate stats from entities
