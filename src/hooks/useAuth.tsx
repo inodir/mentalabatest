@@ -26,8 +26,9 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [district, setDistrict] = useState<string | null>(null);
   const [passwordChanged, setPasswordChanged] = useState(true); // default true so super_admins aren't affected
-   const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const initialLoadDone = useRef(false);
+  const isSigningIn = useRef(false);
 
   const fetchUserData = async (userId: string) => {
     const [roleResult, profileResult] = await Promise.all([
@@ -59,6 +60,9 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
        async (event, session) => {
         if (!isMounted) return;
         
+        // Skip if signIn is handling state updates to prevent race condition
+        if (isSigningIn.current) return;
+        
          setSession(session);
          setUser(session?.user ?? null);
  
@@ -71,7 +75,7 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
             setDistrict(userData.district);
             setPasswordChanged(userData.passwordChanged);
           }
-         } else {
+         } else if (!session?.user) {
             setRole(null);
             setSchoolId(null);
             setDistrict(null);
@@ -115,20 +119,25 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
    }, []);
  
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (!error && data.user) {
-      const userData = await fetchUserData(data.user.id);
-      setUser(data.user);
-      setSession(data.session);
-      setRole(userData.role);
-      setSchoolId(userData.schoolId);
-      setDistrict(userData.district);
-      setPasswordChanged(userData.passwordChanged);
+    isSigningIn.current = true;
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (!error && data.user) {
+        const userData = await fetchUserData(data.user.id);
+        setUser(data.user);
+        setSession(data.session);
+        setRole(userData.role);
+        setSchoolId(userData.schoolId);
+        setDistrict(userData.district);
+        setPasswordChanged(userData.passwordChanged);
+      }
+      return { error: error as Error | null };
+    } finally {
+      isSigningIn.current = false;
     }
-    return { error: error as Error | null };
   };
  
   const signOut = async () => {
