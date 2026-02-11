@@ -76,6 +76,7 @@ Deno.serve(async (req) => {
           user_id: newUserId,
           full_name: admin_full_name,
           district: district,
+          password_changed: true,
         }),
       supabaseAdmin
         .from('user_roles')
