@@ -71,10 +71,11 @@
      const { error: profileError } = await supabaseAdmin
        .from('profiles')
        .insert({
-         user_id: newUserId,
-         full_name: admin_full_name,
-         school_id: school_id
-       })
+        user_id: newUserId,
+          full_name: admin_full_name,
+          school_id: school_id,
+          password_changed: true
+        })
      
      if (profileError) {
        // Rollback: delete the auth user
