@@ -30,7 +30,8 @@ export default function DistrictAdminLogin() {
     setIsLoading(true);
 
     try {
-      const email = login.includes("@") ? login : `${login}@mentalaba.uz`;
+      const rawEmail = login.includes("@") ? login : `${login}@mentalaba.uz`;
+      const email = rawEmail.toLowerCase();
       const { error } = await signIn(email, password);
       if (error) {
         toast({
