@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
-import { Search, Loader2, FileDown, X, Filter } from "lucide-react";
+import { Search, Loader2, FileDown, X } from "lucide-react";
 import type { DTMStudentItem } from "@/lib/dtm-auth";
 import { format } from "date-fns";
 
@@ -39,13 +39,6 @@ export default function StudentsManagement() {
   const groups = useMemo(() => [...new Set(meStudents.map(s => s.group_name))].sort(), [meStudents]);
   const languages = useMemo(() => [...new Set(meStudents.map(s => s.language))], [meStudents]);
   const genders = useMemo(() => [...new Set(meStudents.map(s => s.gender))], [meStudents]);
-
-  // Collect all unique subject names across students
-  const allSubjectNames = useMemo(() => {
-    const names = new Set<string>();
-    meStudents.forEach(s => s.dtm?.subjects?.forEach(sub => names.add(sub.subject_name)));
-    return [...names];
-  }, [meStudents]);
 
   const filteredStudents = meStudents.filter((student) => {
     const term = searchTerm.toLowerCase();
@@ -172,9 +165,7 @@ export default function StudentsManagement() {
                 <TableHead>Til</TableHead>
                 <TableHead>Ro'yxatdan o'tgan</TableHead>
                 <TableHead>Test holati</TableHead>
-                {allSubjectNames.map(name => (
-                  <TableHead key={name} className="text-right whitespace-nowrap">{name}</TableHead>
-                ))}
+                <TableHead>Fanlar</TableHead>
                 <TableHead className="text-right">Jami ball</TableHead>
                 <TableHead className="text-center">Natija fayl</TableHead>
               </TableRow>
@@ -182,13 +173,13 @@ export default function StudentsManagement() {
             <TableBody>
               {meLoading ? (
                 <TableRow>
-                  <TableCell colSpan={10 + allSubjectNames.length} className="py-10 text-center">
+                  <TableCell colSpan={11} className="py-10 text-center">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                   </TableCell>
                 </TableRow>
               ) : filteredStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10 + allSubjectNames.length} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={11} className="py-10 text-center text-muted-foreground">
                     {searchTerm || activeFilters > 0 ? "Qidiruv bo'yicha o'quvchi topilmadi" : "O'quvchilar topilmadi"}
                   </TableCell>
                 </TableRow>
@@ -217,25 +208,26 @@ export default function StudentsManagement() {
                         <Badge variant="outline">Ma'lumot yo'q</Badge>
                       )}
                     </TableCell>
-                    {allSubjectNames.map(name => {
-                      const sub = student.dtm?.subjects?.find(s => s.subject_name === name);
-                      return (
-                        <TableCell key={name} className="text-right">
-                          {sub != null ? (
-                            <TooltipProvider>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1 max-w-[300px]">
+                        {student.dtm?.subjects?.length ? (
+                          student.dtm.subjects.map(sub => (
+                            <TooltipProvider key={sub.subject_id}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className="font-medium cursor-default">{sub.earned_ball}/{sub.max_ball}</span>
+                                  <Badge variant={sub.earned_ball > 0 ? "default" : "secondary"} className="text-xs cursor-default">
+                                    {sub.subject_name.replace(/ *\(majburiy\)/, " (M)")}: {sub.earned_ball}/{sub.max_ball}
+                                  </Badge>
                                 </TooltipTrigger>
-                                <TooltipContent>{sub.percent}%</TooltipContent>
+                                <TooltipContent>{sub.subject_name} — {sub.percent}%</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                      );
-                    })}
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right">
                       {student.dtm?.total_ball != null ? (
                         <Badge
