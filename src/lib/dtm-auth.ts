@@ -90,6 +90,8 @@ export interface DTMUserData {
     answered_count: number;
     tested_percent: number;
     school_count: number;
+    gender_stats?: Record<string, number>;
+    language_stats?: Record<string, number>;
   };
   schools: DTMSchoolInfo[];
   districts: DTMDistrictInfo[];
