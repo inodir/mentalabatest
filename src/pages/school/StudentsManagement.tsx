@@ -168,20 +168,18 @@ export default function StudentsManagement() {
                 <TableHead>1-fan</TableHead>
                 <TableHead>2-fan</TableHead>
                 <TableHead className="text-right">Jami ball</TableHead>
-                <TableHead className="text-right">Jami ball</TableHead>
-                <TableHead className="text-center">Natija fayl</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {meLoading ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="py-10 text-center">
+                  <TableCell colSpan={10} className="py-10 text-center">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                   </TableCell>
                 </TableRow>
               ) : filteredStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={10} className="py-10 text-center text-muted-foreground">
                     {searchTerm || activeFilters > 0 ? "Qidiruv bo'yicha o'quvchi topilmadi" : "O'quvchilar topilmadi"}
                   </TableCell>
                 </TableRow>
@@ -257,27 +255,6 @@ export default function StudentsManagement() {
                         >
                           {student.dtm.total_ball}
                         </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {student.dtm?.result_file ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <a
-                                href={student.dtm.result_file}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center text-primary hover:underline"
-                              >
-                                <FileDown className="h-4 w-4" />
-                              </a>
-                            </TooltipTrigger>
-                            <TooltipContent>Natija faylini yuklab olish</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
