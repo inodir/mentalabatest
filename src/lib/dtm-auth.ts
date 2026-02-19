@@ -24,6 +24,7 @@ export interface DTMStudentTestInfo {
   secondary_ball: number | null;
   first_subject_point: number | null;
   second_subject_point: number | null;
+  result_file: string | null;
   created_at: string;
 }
 
@@ -62,6 +63,7 @@ export interface DTMUserData {
   stats: {
     registered_count: number;
     answered_count: number;
+    tested_percent: number;
     school_count: number;
   };
   schools: DTMSchoolInfo[];

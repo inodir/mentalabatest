@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -12,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
-import { Search, Loader2, ExternalLink } from "lucide-react";
+import { Search, Loader2, ExternalLink, FileDown } from "lucide-react";
 import type { DTMStudentItem } from "@/lib/dtm-auth";
 
 export default function StudentsManagement() {
@@ -66,19 +67,23 @@ export default function StudentsManagement() {
                 <TableHead>Jinsi</TableHead>
                 <TableHead>Til</TableHead>
                 <TableHead>Test holati</TableHead>
+                <TableHead className="text-right">Majburiy</TableHead>
+                <TableHead className="text-right">Asosiy fan</TableHead>
+                <TableHead className="text-right">Qo'shimcha fan</TableHead>
                 <TableHead className="text-right">Jami ball</TableHead>
+                <TableHead className="text-center">Natija fayl</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {meLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-10 text-center">
+                  <TableCell colSpan={12} className="py-10 text-center">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                   </TableCell>
                 </TableRow>
               ) : filteredStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={12} className="py-10 text-center text-muted-foreground">
                     {searchTerm ? "Qidiruv bo'yicha o'quvchi topilmadi" : "O'quvchilar topilmadi"}
                   </TableCell>
                 </TableRow>
@@ -107,6 +112,27 @@ export default function StudentsManagement() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
+                      {student.dtm?.mandatory_ball != null ? (
+                        <span className="font-medium">{student.dtm.mandatory_ball}</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {student.dtm?.primary_ball != null ? (
+                        <span className="font-medium">{student.dtm.primary_ball}</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {student.dtm?.secondary_ball != null ? (
+                        <span className="font-medium">{student.dtm.secondary_ball}</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
                       {student.dtm?.total_ball != null ? (
                         <Badge
                           variant={student.dtm.total_ball >= 140 ? "default" : "secondary"}
@@ -114,6 +140,27 @@ export default function StudentsManagement() {
                         >
                           {student.dtm.total_ball}
                         </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {student.dtm?.result_file ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <a
+                                href={student.dtm.result_file}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center text-primary hover:underline"
+                              >
+                                <FileDown className="h-4 w-4" />
+                              </a>
+                            </TooltipTrigger>
+                            <TooltipContent>Natija faylini yuklab olish</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}

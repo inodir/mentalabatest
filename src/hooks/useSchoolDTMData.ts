@@ -6,6 +6,7 @@ export interface SchoolDTMStats {
   totalStudents: number;
   studentsWithResults: number;
   studentsWithoutResults: number;
+  testedPercent: number;
   averageScore: number;
 }
 
@@ -25,6 +26,7 @@ export function useSchoolDTMData() {
     totalStudents: dtmUser?.stats?.registered_count ?? students.length,
     studentsWithResults: dtmUser?.stats?.answered_count ?? studentsWithResults.length,
     studentsWithoutResults: (dtmUser?.stats?.registered_count ?? students.length) - (dtmUser?.stats?.answered_count ?? studentsWithResults.length),
+    testedPercent: dtmUser?.stats?.tested_percent ?? 0,
     averageScore: avgScore,
   };
 
