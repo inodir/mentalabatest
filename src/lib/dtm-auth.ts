@@ -15,6 +15,14 @@ export interface DTMSchoolInfo {
   code: string;
 }
 
+export interface DTMSubjectScore {
+  subject_id: number;
+  subject_name: string;
+  earned_ball: number;
+  max_ball: number;
+  percent: number;
+}
+
 export interface DTMStudentTestInfo {
   tested: boolean;
   test_id: number | null;
@@ -26,6 +34,7 @@ export interface DTMStudentTestInfo {
   second_subject_point: number | null;
   result_file: string | null;
   created_at: string;
+  subjects?: DTMSubjectScore[];
 }
 
 export interface DTMStudentItem {
