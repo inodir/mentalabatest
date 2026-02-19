@@ -15,6 +15,28 @@ export interface DTMSchoolInfo {
   code: string;
 }
 
+export interface DTMStudentItem {
+  id: number;
+  bot_id: string;
+  phone: string;
+  full_name: string;
+  school_code: string;
+  school_name: string | null;
+  language: string;
+  region: string;
+  district: string;
+  gender: string;
+  group_name: string;
+  created_at: string;
+}
+
+export interface DTMStudentsData {
+  total: number;
+  limit: number;
+  offset: number;
+  items: DTMStudentItem[];
+}
+
 export interface DTMUserData {
   id: number;
   username: string;
@@ -30,6 +52,7 @@ export interface DTMUserData {
     school_count: number;
   };
   schools: DTMSchoolInfo[];
+  students?: DTMStudentsData;
 }
 
 interface DTMLoginResponse {
