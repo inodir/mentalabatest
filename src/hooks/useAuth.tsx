@@ -4,18 +4,16 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
  
  type AppRole = "super_admin" | "school_admin" | "district_admin" | null;
  
- interface AuthContextType {
-   user: User | null;
-   session: Session | null;
+interface AuthContextType {
+  user: User | null;
+  session: Session | null;
   role: AppRole;
   schoolId: string | null;
   district: string | null;
-  passwordChanged: boolean;
-   loading: boolean;
-   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-   signOut: () => Promise<void>;
-   markPasswordChanged: () => void;
- }
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signOut: () => Promise<void>;
+}
  
  const AuthContext = createContext<AuthContextType | undefined>(undefined);
  
@@ -25,7 +23,7 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
   const [role, setRole] = useState<AppRole>(null);
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [district, setDistrict] = useState<string | null>(null);
-  const [passwordChanged, setPasswordChanged] = useState(true); // default true so super_admins aren't affected
+  
   const [loading, setLoading] = useState(true);
   const initialLoadDone = useRef(false);
   const isSigningIn = useRef(false);
@@ -39,7 +37,7 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
         .single(),
       supabase
         .from("profiles")
-        .select("school_id, district, password_changed")
+        .select("school_id, district")
         .eq("user_id", userId)
         .maybeSingle()
     ]);
@@ -48,7 +46,6 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
       role: roleResult.data?.role as AppRole ?? null,
       schoolId: profileResult.data?.school_id ?? null,
       district: profileResult.data?.district ?? null,
-      passwordChanged: profileResult.data?.password_changed ?? true
     };
   };
  
@@ -73,13 +70,11 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
             setRole(userData.role);
             setSchoolId(userData.schoolId);
             setDistrict(userData.district);
-            setPasswordChanged(userData.passwordChanged);
           }
          } else if (!session?.user) {
             setRole(null);
             setSchoolId(null);
             setDistrict(null);
-            setPasswordChanged(true);
          }
        }
      );
@@ -99,7 +94,6 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
             setRole(userData.role);
             setSchoolId(userData.schoolId);
             setDistrict(userData.district);
-            setPasswordChanged(userData.passwordChanged);
           }
         }
       } finally {
@@ -132,7 +126,6 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
         setRole(userData.role);
         setSchoolId(userData.schoolId);
         setDistrict(userData.district);
-        setPasswordChanged(userData.passwordChanged);
       }
       return { error: error as Error | null };
     } finally {
@@ -163,16 +156,12 @@ import { useEffect, useState, createContext, useContext, ReactNode, useRef } fro
     setRole(null);
     setSchoolId(null);
     setDistrict(null);
-    setPasswordChanged(true);
   };
 
-  const markPasswordChanged = () => {
-    setPasswordChanged(true);
-  };
  
    return (
     <AuthContext.Provider
-      value={{ user, session, role, schoolId, district, passwordChanged, loading, signIn, signOut, markPasswordChanged }}
+      value={{ user, session, role, schoolId, district, loading, signIn, signOut }}
     >
        {children}
      </AuthContext.Provider>
