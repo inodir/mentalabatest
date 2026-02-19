@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { 
-  getApiSettings, 
-  fetchAllDTMUsers, 
+  fetchAllDTMUsersWithToken, 
   DTMUser, 
 } from "@/lib/dtm-api";
 import { useAuth } from "@/hooks/useAuth";
+import { getDTMTokens, dtmRefreshToken } from "@/lib/dtm-auth";
 
 export interface SchoolDTMStats {
   totalStudents: number;
@@ -20,44 +20,8 @@ interface UseSchoolDTMDataReturn {
   loading: boolean;
   error: string | null;
   schoolCode: string | null;
-  hasApiSettings: boolean;
   refetch: (forceRefresh?: boolean) => Promise<void>;
   lastUpdated: Date | null;
-}
-
-// Cache configuration
-const CACHE_TTL = 60 * 1000; // 1 minute cache
-const CACHE_KEY_PREFIX = "school_dtm_data_";
-
-interface CachedDTMData {
-  stats: SchoolDTMStats;
-  students: DTMUser[];
-  timestamp: number;
-}
-
-function getCachedDTMData(schoolCode: string): CachedDTMData | null {
-  try {
-    const cached = localStorage.getItem(`${CACHE_KEY_PREFIX}${schoolCode}`);
-    if (!cached) return null;
-    
-    const parsed: CachedDTMData = JSON.parse(cached);
-    if (Date.now() - parsed.timestamp > CACHE_TTL) {
-      localStorage.removeItem(`${CACHE_KEY_PREFIX}${schoolCode}`);
-      return null;
-    }
-    
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function setCachedDTMData(schoolCode: string, data: Omit<CachedDTMData, "timestamp">): void {
-  const cacheData: CachedDTMData = {
-    ...data,
-    timestamp: Date.now(),
-  };
-  localStorage.setItem(`${CACHE_KEY_PREFIX}${schoolCode}`, JSON.stringify(cacheData));
 }
 
 export function useSchoolDTMData(): UseSchoolDTMDataReturn {
@@ -72,11 +36,21 @@ export function useSchoolDTMData(): UseSchoolDTMDataReturn {
   const [students, setStudents] = useState<DTMUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hasApiSettings, setHasApiSettings] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Get school code from DTM auth
   const schoolCode = dtmUser?.school?.code ?? null;
+
+  // Set stats from /me immediately
+  useEffect(() => {
+    if (dtmUser?.stats) {
+      setStats(prev => ({
+        ...prev,
+        totalStudents: dtmUser.stats.registered_count ?? 0,
+        studentsWithResults: dtmUser.stats.answered_count ?? 0,
+        studentsWithoutResults: (dtmUser.stats.registered_count ?? 0) - (dtmUser.stats.answered_count ?? 0),
+      }));
+    }
+  }, [dtmUser]);
 
   const fetchData = useCallback(async (forceRefresh: boolean = false) => {
     if (!schoolCode) {
@@ -84,52 +58,56 @@ export function useSchoolDTMData(): UseSchoolDTMDataReturn {
       return;
     }
 
-    const settings = getApiSettings();
-    setHasApiSettings(!!settings);
-
-    if (!settings) {
-      setLoading(false);
-      setError("API sozlamalari topilmadi. Super admin API kalitini sozlashi kerak.");
-      return;
-    }
-
-    // Check cache first
-    if (!forceRefresh) {
-      const cached = getCachedDTMData(schoolCode);
-      if (cached) {
-        setStats(cached.stats);
-        setStudents(cached.students);
-        setLastUpdated(new Date(cached.timestamp));
-        setLoading(false);
-        return;
-      }
-    }
-
     setLoading(true);
     setError(null);
 
     try {
-      const { entities } = await fetchAllDTMUsers(settings, undefined, forceRefresh);
-      
-      // Filter by school code
-      const schoolStudents = entities.filter(
+      let { accessToken } = getDTMTokens();
+      if (!accessToken) {
+        setError("Tizimga qayta kiring");
+        setLoading(false);
+        return;
+      }
+
+      let result;
+      try {
+        result = await fetchAllDTMUsersWithToken(accessToken, undefined, forceRefresh);
+      } catch (err) {
+        // Try refresh token on auth error
+        if (err instanceof Error && err.message === "API_KEY_INVALID") {
+          const refreshed = await dtmRefreshToken();
+          if (refreshed) {
+            const tokens = getDTMTokens();
+            if (tokens.accessToken) {
+              result = await fetchAllDTMUsersWithToken(tokens.accessToken, undefined, forceRefresh);
+            }
+          }
+          if (!result) {
+            setError("Sessiya tugagan. Qayta kiring.");
+            setLoading(false);
+            return;
+          }
+        } else {
+          throw err;
+        }
+      }
+
+      const schoolStudents = result.entities.filter(
         (u) => u.school_code === schoolCode
       );
 
       setStudents(schoolStudents);
 
-      // Calculate stats
-      const studentsWithResults = schoolStudents.filter((u) => u.has_result);
-      const studentsWithoutResults = schoolStudents.filter((u) => !u.has_result);
-      
-      const usersWithPoints = schoolStudents.filter(
+      // Calculate detailed stats from actual data
+      const withResults = schoolStudents.filter((u) => u.has_result);
+      const withPoints = schoolStudents.filter(
         (u) => u.total_point !== null && u.total_point !== undefined
       );
       const avgScore =
-        usersWithPoints.length > 0
+        withPoints.length > 0
           ? Math.round(
-              usersWithPoints.reduce((sum, u) => sum + (u.total_point || 0), 0) /
-                usersWithPoints.length
+              withPoints.reduce((sum, u) => sum + (u.total_point || 0), 0) /
+                withPoints.length
             )
           : 0;
 
@@ -137,22 +115,14 @@ export function useSchoolDTMData(): UseSchoolDTMDataReturn {
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         .slice(0, 5);
 
-      const newStats: SchoolDTMStats = {
+      setStats({
         totalStudents: schoolStudents.length,
-        studentsWithResults: studentsWithResults.length,
-        studentsWithoutResults: studentsWithoutResults.length,
+        studentsWithResults: withResults.length,
+        studentsWithoutResults: schoolStudents.length - withResults.length,
         averageScore: avgScore,
         recentStudents,
-      };
-
-      setStats(newStats);
-      setLastUpdated(new Date());
-
-      // Cache the data
-      setCachedDTMData(schoolCode, {
-        stats: newStats,
-        students: schoolStudents,
       });
+      setLastUpdated(new Date());
     } catch (err) {
       console.error("Error fetching DTM data:", err);
       setError(err instanceof Error ? err.message : "Ma'lumotlarni yuklashda xatolik");
@@ -171,7 +141,6 @@ export function useSchoolDTMData(): UseSchoolDTMDataReturn {
     loading,
     error,
     schoolCode,
-    hasApiSettings,
     refetch: fetchData,
     lastUpdated,
   };
