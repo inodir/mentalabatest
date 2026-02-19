@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  getApiSettings,
+  fetchAllDTMUsersWithToken,
   fetchAllDTMUsers,
+  getApiSettings,
   DTMUser,
 } from "@/lib/dtm-api";
 import { useAuth } from "@/hooks/useAuth";
+import { getDTMTokens } from "@/lib/dtm-auth";
 
 export interface DistrictSchoolDTMStats {
   schoolId: string;
@@ -48,13 +50,6 @@ export function useDistrictDTMDashboard() {
     setError(null);
     setProgress(null);
 
-    const apiSettings = getApiSettings();
-    if (!apiSettings) {
-      setError("NO_CONFIG");
-      setLoading(false);
-      return;
-    }
-
     // Get schools from DTM auth user data
     const schools = dtmUser?.schools || [];
     if (schools.length === 0 && dtmUser?.school) {
@@ -79,11 +74,29 @@ export function useDistrictDTMDashboard() {
     const schoolCodes = new Set(schools.map((s) => s.code));
 
     try {
-      // Fetch all DTM users
-      const { entities } = await fetchAllDTMUsers(
-        apiSettings,
-        (loaded, total) => setProgress({ loaded, total })
-      );
+      let entities: DTMUser[];
+
+      // Try DTM auth token first, then fall back to API key
+      const { accessToken } = getDTMTokens();
+      if (accessToken) {
+        const result = await fetchAllDTMUsersWithToken(
+          accessToken,
+          (loaded, total) => setProgress({ loaded, total })
+        );
+        entities = result.entities;
+      } else {
+        const apiSettings = getApiSettings();
+        if (!apiSettings) {
+          setError("NO_CONFIG");
+          setLoading(false);
+          return;
+        }
+        const result = await fetchAllDTMUsers(
+          apiSettings,
+          (loaded, total) => setProgress({ loaded, total })
+        );
+        entities = result.entities;
+      }
 
       // Filter by district school codes
       const districtStudents = entities.filter((u) => schoolCodes.has(u.school_code));

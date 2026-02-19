@@ -148,7 +148,7 @@ export function normalizeUrl(url: string): string {
   return url.endsWith("/") ? url : `${url}/`;
 }
 
-// Fetch DTM users with pagination
+// Fetch DTM users with pagination (using API key)
 export async function fetchDTMUsers(
   settings: DTMApiSettings,
   offset: number = 0,
@@ -165,12 +165,7 @@ export async function fetchDTMUsers(
     },
   });
 
-  const contentType = response.headers.get("content-type");
   const responseText = await response.text();
-
-  console.log("[DTM API] Status:", response.status);
-  console.log("[DTM API] Content-Type:", contentType);
-  console.log("[DTM API] Body preview:", responseText.substring(0, 500));
 
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
@@ -179,13 +174,93 @@ export async function fetchDTMUsers(
     throw new Error(`API_ERROR_${response.status}: ${responseText.substring(0, 200)}`);
   }
 
-  // Parse JSON safely
   try {
     return JSON.parse(responseText);
   } catch {
-    console.error("[DTM API] JSON parse failed. Raw response:", responseText.substring(0, 500));
-    throw new Error(`API returned non-JSON response. Content-Type: ${contentType}`);
+    throw new Error(`API returned non-JSON response`);
   }
+}
+
+// Fetch DTM users with Bearer token (for school/district admins)
+export async function fetchDTMUsersWithToken(
+  accessToken: string,
+  offset: number = 0,
+  limit: number = 50
+): Promise<DTMResponse> {
+  const url = `${DEFAULT_MAIN_URL}api/v1/dtm/users?offset=${offset}&limit=${limit}`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      accept: "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const responseText = await response.text();
+
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error("API_KEY_INVALID");
+    }
+    throw new Error(`API_ERROR_${response.status}: ${responseText.substring(0, 200)}`);
+  }
+
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    throw new Error(`API returned non-JSON response`);
+  }
+}
+
+// Fetch all users with Bearer token (for district/school admins)
+export async function fetchAllDTMUsersWithToken(
+  accessToken: string,
+  onProgress?: (loaded: number, total: number) => void,
+  forceRefresh: boolean = false
+): Promise<{ entities: DTMUser[]; totalCount: number }> {
+  if (!forceRefresh) {
+    const cached = getCachedData<{ entities: DTMUser[]; totalCount: number }>("users");
+    if (cached) {
+      onProgress?.(cached.entities.length, cached.totalCount);
+      return cached;
+    }
+  }
+
+  const limit = 100;
+  const concurrency = 5;
+
+  const firstResponse = await fetchDTMUsersWithToken(accessToken, 0, limit);
+  const totalCount = firstResponse.pageInfo.totalCount;
+  let allEntities: DTMUser[] = [...firstResponse.entities];
+
+  onProgress?.(allEntities.length, totalCount);
+
+  if (allEntities.length >= totalCount) {
+    const result = { entities: allEntities, totalCount };
+    setCachedData("users", result);
+    return result;
+  }
+
+  const remainingPages = Math.ceil((totalCount - limit) / limit);
+  const offsets: number[] = [];
+  for (let i = 1; i <= remainingPages; i++) {
+    offsets.push(i * limit);
+  }
+
+  for (let i = 0; i < offsets.length; i += concurrency) {
+    const batch = offsets.slice(i, i + concurrency);
+    const promises = batch.map(offset => fetchDTMUsersWithToken(accessToken, offset, limit));
+    const results = await Promise.all(promises);
+    for (const response of results) {
+      allEntities = [...allEntities, ...response.entities];
+    }
+    onProgress?.(Math.min(allEntities.length, totalCount), totalCount);
+  }
+
+  const result = { entities: allEntities, totalCount };
+  setCachedData("users", result);
+  return result;
 }
 
 // Calculate stats from entities
