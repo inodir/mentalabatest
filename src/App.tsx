@@ -32,6 +32,7 @@ import StudentHistory from "./pages/school/StudentHistory";
 // District Admin pages
 import DistrictDashboard from "./pages/district/DistrictDashboard";
 import DistrictSchoolDetails from "./pages/district/DistrictSchoolDetails";
+import DistrictSchools from "./pages/district/DistrictSchools";
 
 const queryClient = new QueryClient();
 
@@ -97,8 +98,9 @@ function AppRoutes() {
       <Route path="/school/results" element={<SchoolAdminRoute><TestResults /></SchoolAdminRoute>} />
 
       {/* District Admin routes */}
-      <Route path="/district" element={<DistrictAdminRoute><DistrictDashboard /></DistrictAdminRoute>} />
-      <Route path="/district/schools/:schoolId" element={<DistrictAdminRoute><DistrictSchoolDetails /></DistrictAdminRoute>} />
+       <Route path="/district" element={<DistrictAdminRoute><DistrictDashboard /></DistrictAdminRoute>} />
+       <Route path="/district/schools" element={<DistrictAdminRoute><DistrictSchools /></DistrictAdminRoute>} />
+       <Route path="/district/schools/:schoolId" element={<DistrictAdminRoute><DistrictSchoolDetails /></DistrictAdminRoute>} />
 
       {/* Catch-all */}
       <Route path="*" element={<NotFound />} />
