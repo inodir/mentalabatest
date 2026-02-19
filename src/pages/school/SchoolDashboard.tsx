@@ -23,9 +23,11 @@ export default function SchoolDashboard() {
     loading, 
     error, 
     schoolCode,
-    refetch, 
+    refetch,
     lastUpdated 
   } = useSchoolDTMData();
+
+  const schoolName = dtmUser?.school?.name || dtmUser?.full_name || "Bosh sahifa";
 
   return (
     <AdminLayout variant="school">
@@ -33,7 +35,7 @@ export default function SchoolDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
-              {dtmUser?.full_name || "Bosh sahifa"}
+              {schoolName}
             </h1>
             <p className="text-muted-foreground">
               DTM statistikasi
