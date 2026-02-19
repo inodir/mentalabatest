@@ -38,7 +38,7 @@ const schoolAdminNavItems: NavItem[] = [
 
 const districtAdminNavItems: NavItem[] = [
   { title: "Bosh sahifa", href: "/district", icon: LayoutDashboard },
-  { title: "Maktablar", href: "/district", icon: School },
+  { title: "Maktablar", href: "/district/schools", icon: School },
 ];
  
 interface AdminSidebarProps {
