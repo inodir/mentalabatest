@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { getApiSettings } from "@/lib/dtm-api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,7 @@ type SortField = "full_name" | "district" | "registered_count" | "answered_count
 type SortDir = "asc" | "desc";
 
 export function DTMDistrictsList() {
+  const navigate = useNavigate();
   const [districts, setDistricts] = useState<DTMDistrict[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -337,7 +339,11 @@ export function DTMDistrictsList() {
                       ? Math.round((dist.answered_count / dist.registered_count) * 100)
                       : 0;
                   return (
-                    <TableRow key={dist.id} className="group">
+                    <TableRow
+                      key={dist.id}
+                      className="group cursor-pointer hover:bg-muted/60 transition-colors"
+                      onClick={() => navigate(`/super-admin/dtm-districts/${dist.username}`)}
+                    >
                       <TableCell className="text-center text-muted-foreground text-xs">
                         {idx + 1}
                       </TableCell>
