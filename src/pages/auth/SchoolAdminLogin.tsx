@@ -12,7 +12,7 @@ export default function SchoolAdminLogin() {
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { user, role, loading, signIn } = useAuth();
+  const { user, role, loading, signInDTM } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -30,12 +30,11 @@ export default function SchoolAdminLogin() {
     setIsLoading(true);
 
     try {
-      const email = login.includes("@") ? login : `${login}@mentalaba.uz`;
-      const { error } = await signIn(email, password);
+      const { error } = await signInDTM(login.trim(), password);
       if (error) {
         toast({
           title: "Xatolik",
-          description: "Login yoki parol noto'g'ri",
+          description: error,
           variant: "destructive",
         });
       } else {

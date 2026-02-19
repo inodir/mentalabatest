@@ -1,9 +1,18 @@
-import { useEffect, useState, createContext, useContext, ReactNode, useRef } from "react";
- import { User, Session } from "@supabase/supabase-js";
- import { supabase } from "@/integrations/supabase/client";
- 
- type AppRole = "super_admin" | "school_admin" | "district_admin" | null;
- 
+import { useEffect, useState, createContext, useContext, ReactNode, useRef, useCallback } from "react";
+import { User, Session } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  dtmLogin,
+  dtmLogout,
+  dtmFetchMe,
+  getDTMTokens,
+  getDTMUserData,
+  clearDTMTokens,
+  type DTMUserData,
+} from "@/lib/dtm-auth";
+
+type AppRole = "super_admin" | "school_admin" | "district_admin" | null;
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -11,19 +20,23 @@ interface AuthContextType {
   schoolId: string | null;
   district: string | null;
   loading: boolean;
+  // DTM auth data
+  dtmUser: DTMUserData | null;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signInDTM: (username: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
- 
- const AuthContext = createContext<AuthContextType | undefined>(undefined);
- 
- export function AuthProvider({ children }: { children: ReactNode }) {
-   const [user, setUser] = useState<User | null>(null);
-   const [session, setSession] = useState<Session | null>(null);
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole>(null);
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [district, setDistrict] = useState<string | null>(null);
-  
+  const [dtmUser, setDtmUser] = useState<DTMUserData | null>(null);
+
   const [loading, setLoading] = useState(true);
   const initialLoadDone = useRef(false);
   const isSigningIn = useRef(false);
@@ -48,40 +61,62 @@ interface AuthContextType {
       district: profileResult.data?.district ?? null,
     };
   };
- 
-   useEffect(() => {
+
+  // Set DTM user state and map to auth context fields
+  const applyDTMUser = useCallback((userData: DTMUserData) => {
+    setDtmUser(userData);
+    setRole(userData.role === "school" ? "school_admin" : "district_admin");
+    setDistrict(userData.district);
+    setSchoolId(userData.school?.code ?? null);
+    // Create a minimal "user" object so route guards work
+    setUser({ id: `dtm_${userData.id}` } as User);
+  }, []);
+
+  useEffect(() => {
     let isMounted = true;
 
-    // Listener for ONGOING auth changes (does NOT control loading after initial load)
-     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-       async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
         if (!isMounted) return;
-        
-        // Skip if signIn is handling state updates to prevent race condition
         if (isSigningIn.current) return;
-        
-         setSession(session);
-         setUser(session?.user ?? null);
- 
-        // Only handle ongoing changes after initial load is done
-        if (initialLoadDone.current && session?.user) {
+
+        setSession(session);
+        // Only update Supabase user if no DTM user is active
+        if (!getDTMTokens().accessToken) {
+          setUser(session?.user ?? null);
+        }
+
+        if (initialLoadDone.current && session?.user && !getDTMTokens().accessToken) {
           const userData = await fetchUserData(session.user.id);
           if (isMounted) {
             setRole(userData.role);
             setSchoolId(userData.schoolId);
             setDistrict(userData.district);
           }
-         } else if (!session?.user) {
-            setRole(null);
-            setSchoolId(null);
-            setDistrict(null);
-         }
-       }
-     );
- 
-    // INITIAL load - fetch session and user data before setting loading false
+        } else if (!session?.user && !getDTMTokens().accessToken) {
+          setRole(null);
+          setSchoolId(null);
+          setDistrict(null);
+        }
+      }
+    );
+
     const initializeAuth = async () => {
       try {
+        // Check DTM tokens first
+        const { accessToken } = getDTMTokens();
+        if (accessToken) {
+          const dtmData = await dtmFetchMe();
+          if (isMounted && dtmData) {
+            applyDTMUser(dtmData);
+            return;
+          } else if (isMounted) {
+            // DTM tokens expired, clear them
+            clearDTMTokens();
+          }
+        }
+
+        // Fall back to Supabase auth
         const { data: { session } } = await supabase.auth.getSession();
         if (!isMounted) return;
 
@@ -105,13 +140,14 @@ interface AuthContextType {
     };
 
     initializeAuth();
- 
-     return () => {
+
+    return () => {
       isMounted = false;
-       subscription.unsubscribe();
-     };
-   }, []);
- 
+      subscription.unsubscribe();
+    };
+  }, [applyDTMUser]);
+
+  // Supabase sign in (for super admin)
   const signIn = async (email: string, password: string) => {
     isSigningIn.current = true;
     try {
@@ -132,24 +168,44 @@ interface AuthContextType {
       isSigningIn.current = false;
     }
   };
- 
+
+  // DTM API sign in (for school/district admins)
+  const signInDTM = async (username: string, password: string) => {
+    const result = await dtmLogin(username, password);
+    if (result.error) {
+      return { error: result.error };
+    }
+    applyDTMUser(result.userData);
+    return { error: null };
+  };
+
   const signOut = async () => {
-    // Clear cached data on logout to prevent stale data for next user
+    // Check if DTM user
+    if (getDTMTokens().accessToken || dtmUser) {
+      await dtmLogout();
+      setDtmUser(null);
+      setUser(null);
+      setRole(null);
+      setSchoolId(null);
+      setDistrict(null);
+      return;
+    }
+
+    // Supabase sign out
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && (
-        key.startsWith("school_dashboard_") || 
+        key.startsWith("school_dashboard_") ||
         key.startsWith("school_dtm_data_") ||
         key === "school_dtm_code" ||
         key === "dtm_school_stats"
-        // dtm_api_settings is NOT cleared — persists for 30 days
       )) {
         keysToRemove.push(key);
       }
     }
     keysToRemove.forEach(key => localStorage.removeItem(key));
-    
+
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
@@ -158,20 +214,19 @@ interface AuthContextType {
     setDistrict(null);
   };
 
- 
-   return (
+  return (
     <AuthContext.Provider
-      value={{ user, session, role, schoolId, district, loading, signIn, signOut }}
+      value={{ user, session, role, schoolId, district, loading, dtmUser, signIn, signInDTM, signOut }}
     >
-       {children}
-     </AuthContext.Provider>
-   );
- }
- 
- export function useAuth() {
-   const context = useContext(AuthContext);
-   if (context === undefined) {
-     throw new Error("useAuth must be used within an AuthProvider");
-   }
-   return context;
- }
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+}
