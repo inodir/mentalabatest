@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { getApiSettings } from "@/lib/dtm-api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,7 @@ type SortField = "full_name" | "registered_count" | "answered_count" | "district
 type SortDir = "asc" | "desc";
 
 export function DTMSchoolsList() {
+  const navigate = useNavigate();
   const [schools, setSchools] = useState<DTMSchool[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -343,7 +345,11 @@ export function DTMSchoolsList() {
                       ? Math.round((school.answered_count / school.registered_count) * 100)
                       : 0;
                   return (
-                    <TableRow key={school.id} className="group">
+                    <TableRow
+                      key={school.id}
+                      className="group cursor-pointer hover:bg-muted/60 transition-colors"
+                      onClick={() => navigate(`/super-admin/dtm-schools/${school.username}`)}
+                    >
                       <TableCell className="text-center text-muted-foreground text-xs">
                         {idx + 1}
                       </TableCell>
