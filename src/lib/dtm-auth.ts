@@ -15,6 +15,18 @@ export interface DTMSchoolInfo {
   code: string;
 }
 
+export interface DTMStudentTestInfo {
+  tested: boolean;
+  test_id: number | null;
+  total_ball: number | null;
+  mandatory_ball: number | null;
+  primary_ball: number | null;
+  secondary_ball: number | null;
+  first_subject_point: number | null;
+  second_subject_point: number | null;
+  created_at: string;
+}
+
 export interface DTMStudentItem {
   id: number;
   bot_id: string;
@@ -28,6 +40,7 @@ export interface DTMStudentItem {
   gender: string;
   group_name: string;
   created_at: string;
+  dtm?: DTMStudentTestInfo;
 }
 
 export interface DTMStudentsData {
