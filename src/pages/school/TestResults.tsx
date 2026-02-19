@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -13,43 +12,28 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useSchoolDTMData } from "@/hooks/useSchoolDTMData";
 import { 
   Search, 
   Download, 
-  RefreshCw, 
   FileText, 
   ArrowUpDown, 
   ArrowUp, 
   ArrowDown,
-  ExternalLink,
   AlertCircle
 } from "lucide-react";
-import { DTMUser } from "@/lib/dtm-api";
+import type { DTMStudentItem } from "@/lib/dtm-auth";
 
 export default function TestResults() {
-  const { 
-    students: allStudents, 
-    loading, 
-    refetch,
-    schoolCode,
-    error 
-  } = useSchoolDTMData();
+  const { students: allStudents, loading, schoolCode } = useSchoolDTMData();
   
   const [searchTerm, setSearchTerm] = useState("");
   const [minScore, setMinScore] = useState("");
-  const [sortColumn, setSortColumn] = useState<string>("total_point");
+  const [sortColumn, setSortColumn] = useState<string>("total_ball");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
-  // Filter only students with results
-  const studentsWithResults = allStudents.filter(s => s.has_result);
+  // Filter only students who took the test
+  const testedStudents = allStudents.filter(s => s.dtm?.tested);
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -67,10 +51,10 @@ export default function TestResults() {
       : <ArrowDown className="h-4 w-4 ml-1" />;
   };
 
-  const filteredResults = studentsWithResults.filter((student) => {
+  const filteredResults = testedStudents.filter((student) => {
     const matchesSearch = student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (student.phone && student.phone.includes(searchTerm));
-    const matchesMinScore = !minScore || (student.total_point ?? 0) >= parseInt(minScore);
+    const matchesMinScore = !minScore || (student.dtm?.total_ball ?? 0) >= parseInt(minScore);
     return matchesSearch && matchesMinScore;
   });
 
@@ -83,13 +67,13 @@ export default function TestResults() {
         aVal = a.full_name.toLowerCase();
         bVal = b.full_name.toLowerCase();
         break;
-      case "total_point":
-        aVal = a.total_point ?? 0;
-        bVal = b.total_point ?? 0;
+      case "total_ball":
+        aVal = a.dtm?.total_ball ?? 0;
+        bVal = b.dtm?.total_ball ?? 0;
         break;
       default:
-        aVal = a[sortColumn as keyof DTMUser];
-        bVal = b[sortColumn as keyof DTMUser];
+        aVal = 0;
+        bVal = 0;
     }
     
     if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
@@ -103,7 +87,7 @@ export default function TestResults() {
       i + 1,
       s.full_name,
       s.phone || "-",
-      s.total_point ?? "-",
+      s.dtm?.total_ball ?? "-",
     ]);
 
     const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
@@ -115,16 +99,15 @@ export default function TestResults() {
     a.click();
   };
 
-  // Calculate stats
-  const avgScore = studentsWithResults.length > 0
+  const avgScore = testedStudents.length > 0
     ? Math.round(
-        studentsWithResults.reduce((sum, s) => sum + (s.total_point || 0), 0) /
-          studentsWithResults.length
+        testedStudents.reduce((sum, s) => sum + (s.dtm?.total_ball || 0), 0) /
+          testedStudents.length
       )
     : 0;
   
-  const maxScore = studentsWithResults.length > 0
-    ? Math.max(...studentsWithResults.map(s => s.total_point || 0))
+  const maxScore = testedStudents.length > 0
+    ? Math.max(...testedStudents.map(s => s.dtm?.total_ball || 0))
     : 0;
 
   return (
@@ -142,40 +125,16 @@ export default function TestResults() {
               )}
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetch(true)}
-              disabled={loading || !schoolCode}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-              Yangilash
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={handleExportCSV}
-              disabled={sortedResults.length === 0}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-          </div>
+          <Button 
+            variant="outline" 
+            onClick={handleExportCSV}
+            disabled={sortedResults.length === 0}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </Button>
         </div>
 
-        {/* Error State */}
-        {error && (
-          <Card className="border-destructive">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-destructive">
-                <AlertCircle className="h-5 w-5" />
-                <p>{error}</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* No School Code State */}
         {!schoolCode && (
           <Card>
             <CardContent className="pt-6">
@@ -183,7 +142,7 @@ export default function TestResults() {
                 <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium mb-2">Maktab kodi kiritilmagan</h3>
                 <p className="text-muted-foreground">
-                  DTM natijalarini ko'rish uchun avval Bosh sahifada maktab kodingizni kiriting
+                  DTM natijalarini ko'rish uchun avval tizimga kiring
                 </p>
               </div>
             </CardContent>
@@ -192,16 +151,15 @@ export default function TestResults() {
 
         {schoolCode && (
           <>
-            {/* Stats */}
             <div className="grid gap-4 md:grid-cols-3">
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Natijasi bor o'quvchilar
+                    Topshirgan o'quvchilar
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold">{studentsWithResults.length}</p>
+                  <p className="text-2xl font-bold">{testedStudents.length}</p>
                 </CardContent>
               </Card>
               <Card>
@@ -226,7 +184,6 @@ export default function TestResults() {
               </Card>
             </div>
 
-            {/* Filters */}
             <div className="flex flex-col gap-4 sm:flex-row">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -247,7 +204,6 @@ export default function TestResults() {
               </div>
             </div>
 
-            {/* Results Table */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -257,8 +213,8 @@ export default function TestResults() {
               </CardHeader>
               <CardContent>
                 {loading ? (
-                  <div className="flex h-[300px] items-center justify-center">
-                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+                    Yuklanmoqda...
                   </div>
                 ) : sortedResults.length === 0 ? (
                   <div className="flex h-[200px] items-center justify-center text-muted-foreground">
@@ -282,13 +238,12 @@ export default function TestResults() {
                             <TableHead>Telefon</TableHead>
                             <TableHead 
                               className="cursor-pointer hover:bg-muted/50 text-right"
-                              onClick={() => handleSort("total_point")}
+                              onClick={() => handleSort("total_ball")}
                             >
                               <div className="flex items-center justify-end">
-                                Jami ball {getSortIcon("total_point")}
+                                Jami ball {getSortIcon("total_ball")}
                               </div>
                             </TableHead>
-                            <TableHead className="text-right">Hujjatlar</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -305,47 +260,11 @@ export default function TestResults() {
                               </TableCell>
                               <TableCell className="text-right">
                                 <Badge 
-                                  variant={(student.total_point ?? 0) >= 140 ? "default" : "secondary"}
+                                  variant={(student.dtm?.total_ball ?? 0) >= 140 ? "default" : "secondary"}
                                   className="text-base"
                                 >
-                                  {student.total_point ?? 0}
+                                  {student.dtm?.total_ball ?? 0}
                                 </Badge>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex justify-end gap-1">
-                                  {student.test_file_url && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      asChild
-                                    >
-                                      <a 
-                                        href={student.test_file_url} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                      >
-                                        <ExternalLink className="h-4 w-4 mr-1" />
-                                        Test
-                                      </a>
-                                    </Button>
-                                  )}
-                                  {student.test_result_file_url && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      asChild
-                                    >
-                                      <a 
-                                        href={student.test_result_file_url} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                      >
-                                        <ExternalLink className="h-4 w-4 mr-1" />
-                                        Natija
-                                      </a>
-                                    </Button>
-                                  )}
-                                </div>
                               </TableCell>
                             </TableRow>
                           ))}
