@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DTMSchoolsList } from "@/components/dtm/DTMSchoolsList";
 import {
   Table,
   TableBody,
@@ -705,14 +707,27 @@ export default function SchoolsManagement() {
    return (
      <AdminLayout variant="super">
        <div className="space-y-6">
-         <div className="flex items-center justify-between">
-           <div>
-             <h1 className="text-3xl font-bold tracking-tight">Maktablar</h1>
-             <p className="text-muted-foreground">
-               Platformadagi barcha maktablarni boshqaring
-             </p>
-           </div>
-          <div className="flex gap-2">
+        <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Maktablar</h1>
+              <p className="text-muted-foreground">
+                Platformadagi barcha maktablarni boshqaring
+              </p>
+            </div>
+          </div>
+
+          <Tabs defaultValue="dtm-schools" className="space-y-6">
+            <TabsList>
+              <TabsTrigger value="dtm-schools">DTM maktablar</TabsTrigger>
+              <TabsTrigger value="platform-schools">Platforma maktablari</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="dtm-schools" className="space-y-0">
+              <DTMSchoolsList />
+            </TabsContent>
+
+            <TabsContent value="platform-schools" className="space-y-6">
+          <div className="flex justify-end gap-2">
             <Dialog open={isImportDialogOpen} onOpenChange={(open) => { setIsImportDialogOpen(open); if (!open) resetImport(); }}>
               <DialogTrigger asChild>
                 <Button variant="outline">
@@ -991,8 +1006,7 @@ export default function SchoolsManagement() {
                  </form>
                </DialogContent>
              </Dialog>
-           </div>
-         </div>
+            </div>
  
          {/* Filters */}
          <div className="flex flex-col gap-4 sm:flex-row">
@@ -1078,7 +1092,10 @@ export default function SchoolsManagement() {
             </TableBody>
           </Table>
         </div>
- 
+
+            </TabsContent>
+          </Tabs>
+
          {/* Edit Dialog */}
          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
            <DialogContent className="max-w-lg">
