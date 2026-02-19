@@ -19,7 +19,7 @@ export interface DTMUserData {
   id: number;
   username: string;
   full_name: string;
-  role: "school" | "district";
+  role: "school" | "district" | "admin";
   region: string;
   district: string;
   school_id: number | null;

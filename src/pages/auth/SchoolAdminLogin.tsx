@@ -12,7 +12,7 @@ export default function SchoolAdminLogin() {
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { user, role, loading, signInDTM } = useAuth();
+  const { user, role, loading, signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -30,7 +30,7 @@ export default function SchoolAdminLogin() {
     setIsLoading(true);
 
     try {
-      const { error } = await signInDTM(login.trim(), password);
+      const { error } = await signIn(login.trim(), password);
       if (error) {
         toast({
           title: "Xatolik",

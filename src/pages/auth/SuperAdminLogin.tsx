@@ -9,14 +9,13 @@ import { GraduationCap, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function SuperAdminLogin() {
-  const [email, setEmail] = useState("");
+  const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { user, role, loading, signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Auto-redirect if already logged in
   useEffect(() => {
     if (!loading && user && role) {
       if (role === "super_admin") navigate("/super-admin", { replace: true });
@@ -30,11 +29,11 @@ export default function SuperAdminLogin() {
     setIsLoading(true);
 
     try {
-      const { error } = await signIn(email, password);
+      const { error } = await signIn(login.trim(), password);
       if (error) {
         toast({
           title: "Xatolik",
-          description: "Login yoki parol noto'g'ri",
+          description: error,
           variant: "destructive",
         });
       } else {
@@ -74,13 +73,13 @@ export default function SuperAdminLogin() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="login">Login</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="admin@mentalaba.uz"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="login"
+                type="text"
+                placeholder="admin_login"
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
                 required
               />
             </div>
