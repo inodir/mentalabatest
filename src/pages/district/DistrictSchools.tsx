@@ -21,6 +21,7 @@ import {
   Eye,
   Loader2,
   RefreshCw,
+  Users,
 } from "lucide-react";
 
 export default function DistrictSchools() {
@@ -28,10 +29,21 @@ export default function DistrictSchools() {
   const { stats, loading, retry } = useDistrictDTMDashboard();
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredSchools = (stats?.schoolStats || []).filter(
+  // Use schools from dtmUser directly, enriched with stats if available
+  const schools = (dtmUser?.schools || []).map((school) => {
+    const stat = stats?.schoolStats?.find((s) => s.schoolCode === school.code);
+    return {
+      ...school,
+      totalStudents: stat?.totalStudents ?? 0,
+      studentsWithResults: stat?.studentsWithResults ?? 0,
+      averageScore: stat?.averageScore ?? 0,
+    };
+  });
+
+  const filteredSchools = schools.filter(
     (s) =>
-      s.schoolName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.schoolCode.toLowerCase().includes(searchTerm.toLowerCase())
+      s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -80,13 +92,7 @@ export default function DistrictSchools() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8">
-                        <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredSchools.length === 0 ? (
+                  {filteredSchools.length === 0 && !loading ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         Maktablar topilmadi
@@ -94,23 +100,33 @@ export default function DistrictSchools() {
                     </TableRow>
                   ) : (
                     filteredSchools.map((school) => (
-                      <TableRow key={school.schoolCode}>
-                        <TableCell className="font-medium">{school.schoolName}</TableCell>
+                      <TableRow key={school.code}>
+                        <TableCell className="font-medium">{school.name}</TableCell>
                         <TableCell>
                           <code className="rounded bg-muted px-1.5 py-0.5 text-sm">
-                            {school.schoolCode}
+                            {school.code}
                           </code>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge variant="outline">{school.totalStudents}</Badge>
+                          {loading ? (
+                            <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+                          ) : (
+                            <Badge variant="outline">{school.totalStudents}</Badge>
+                          )}
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge variant={school.studentsWithResults > 0 ? "default" : "secondary"}>
-                            {school.studentsWithResults}
-                          </Badge>
+                          {loading ? (
+                            <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+                          ) : (
+                            <Badge variant={school.studentsWithResults > 0 ? "default" : "secondary"}>
+                              {school.studentsWithResults}
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell className="text-center">
-                          {school.averageScore > 0 ? (
+                          {loading ? (
+                            <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+                          ) : school.averageScore > 0 ? (
                             <Badge variant={
                               school.averageScore >= 150 ? "default" :
                               school.averageScore >= 100 ? "secondary" : "destructive"
@@ -122,7 +138,7 @@ export default function DistrictSchools() {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Link to={`/district/schools/${school.schoolCode}`}>
+                          <Link to={`/district/schools/${school.code}`}>
                             <Button variant="ghost" size="icon" title="Ko'rish">
                               <Eye className="h-4 w-4" />
                             </Button>
