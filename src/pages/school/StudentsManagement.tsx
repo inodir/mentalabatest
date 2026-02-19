@@ -167,7 +167,7 @@ export default function StudentsManagement() {
                 <TableHead>Test holati</TableHead>
                 <TableHead>1-fan</TableHead>
                 <TableHead>2-fan</TableHead>
-                <TableHead>Majburiy fanlar</TableHead>
+                <TableHead className="text-right">Jami ball</TableHead>
                 <TableHead className="text-right">Jami ball</TableHead>
                 <TableHead className="text-center">Natija fayl</TableHead>
               </TableRow>
@@ -175,13 +175,13 @@ export default function StudentsManagement() {
             <TableBody>
               {meLoading ? (
                 <TableRow>
-                  <TableCell colSpan={13} className="py-10 text-center">
+                  <TableCell colSpan={12} className="py-10 text-center">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                   </TableCell>
                 </TableRow>
               ) : filteredStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={13} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={12} className="py-10 text-center text-muted-foreground">
                     {searchTerm || activeFilters > 0 ? "Qidiruv bo'yicha o'quvchi topilmadi" : "O'quvchilar topilmadi"}
                   </TableCell>
                 </TableRow>
@@ -245,22 +245,6 @@ export default function StudentsManagement() {
                                 </Tooltip>
                               </TooltipProvider>
                             ) : <span className="text-muted-foreground">—</span>}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {mandatory.length > 0 ? mandatory.map(sub => (
-                                <TooltipProvider key={sub.subject_id}>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Badge variant="outline" className="text-xs cursor-default">
-                                        {sub.subject_name.replace(/ *\(majburiy\)/, "")}: {sub.earned_ball}/{sub.max_ball}
-                                      </Badge>
-                                    </TooltipTrigger>
-                                    <TooltipContent>{sub.percent}%</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )) : <span className="text-muted-foreground">—</span>}
-                            </div>
                           </TableCell>
                         </>
                       );
