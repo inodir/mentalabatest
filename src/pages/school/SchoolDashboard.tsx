@@ -70,13 +70,6 @@ export default function SchoolDashboard() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowCodeDialog(true)}
-            >
-              Maktab kodini o'zgartirish
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
               onClick={() => refetch(true)}
               disabled={loading || !schoolCode}
             >
