@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,24 +12,69 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
-import { Search, Loader2, ExternalLink, FileDown } from "lucide-react";
+import { Search, Loader2, FileDown, X, Filter } from "lucide-react";
 import type { DTMStudentItem } from "@/lib/dtm-auth";
+import { format } from "date-fns";
 
 export default function StudentsManagement() {
   const { dtmUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
+  const [groupFilter, setGroupFilter] = useState("all");
+  const [genderFilter, setGenderFilter] = useState("all");
+  const [langFilter, setLangFilter] = useState("all");
+  const [testStatusFilter, setTestStatusFilter] = useState("all");
 
   const meStudents: DTMStudentItem[] = dtmUser?.students?.items ?? [];
   const meLoading = !dtmUser;
 
+  // Extract unique values for filters
+  const groups = useMemo(() => [...new Set(meStudents.map(s => s.group_name))].sort(), [meStudents]);
+  const languages = useMemo(() => [...new Set(meStudents.map(s => s.language))], [meStudents]);
+  const genders = useMemo(() => [...new Set(meStudents.map(s => s.gender))], [meStudents]);
+
+  // Collect all unique subject names across students
+  const allSubjectNames = useMemo(() => {
+    const names = new Set<string>();
+    meStudents.forEach(s => s.dtm?.subjects?.forEach(sub => names.add(sub.subject_name)));
+    return [...names];
+  }, [meStudents]);
+
   const filteredStudents = meStudents.filter((student) => {
     const term = searchTerm.toLowerCase();
-    return (
-      student.full_name.toLowerCase().includes(term) ||
-      student.phone.includes(searchTerm)
-    );
+    const matchesSearch = !searchTerm || student.full_name.toLowerCase().includes(term) || student.phone.includes(searchTerm);
+    const matchesGroup = groupFilter === "all" || student.group_name === groupFilter;
+    const matchesGender = genderFilter === "all" || student.gender === genderFilter;
+    const matchesLang = langFilter === "all" || student.language === langFilter;
+    const matchesTest =
+      testStatusFilter === "all" ||
+      (testStatusFilter === "tested" && student.dtm?.tested) ||
+      (testStatusFilter === "not_tested" && (!student.dtm || !student.dtm.tested));
+    return matchesSearch && matchesGroup && matchesGender && matchesLang && matchesTest;
   });
+
+  const activeFilters = [groupFilter, genderFilter, langFilter, testStatusFilter].filter(f => f !== "all").length;
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setGroupFilter("all");
+    setGenderFilter("all");
+    setLangFilter("all");
+    setTestStatusFilter("all");
+  };
+
+  const formatLang = (l: string) => l === "uz" ? "O'zbek" : l === "ru" ? "Rus" : l === "en" ? "Ingliz" : l;
+  const formatGender = (g: string) => g === "female" ? "Ayol" : g === "male" ? "Erkak" : g;
+  const formatDate = (d: string) => {
+    try { return format(new Date(d), "dd.MM.yyyy HH:mm"); } catch { return d; }
+  };
 
   return (
     <AdminLayout variant="school">
@@ -43,20 +88,79 @@ export default function StudentsManagement() {
           </div>
           <div className="text-sm text-muted-foreground">
             Jami: {dtmUser?.students?.total ?? 0} ta o'quvchi
+            {activeFilters > 0 && ` · Filtrlangan: ${filteredStudents.length}`}
           </div>
         </div>
 
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="F.I.O. yoki telefon bo'yicha qidirish..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px] max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="F.I.O. yoki telefon bo'yicha qidirish..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          <Select value={groupFilter} onValueChange={setGroupFilter}>
+            <SelectTrigger className="w-[130px]">
+              <SelectValue placeholder="Guruh" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha guruh</SelectItem>
+              {groups.map(g => (
+                <SelectItem key={g} value={g}>{g}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={genderFilter} onValueChange={setGenderFilter}>
+            <SelectTrigger className="w-[130px]">
+              <SelectValue placeholder="Jinsi" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha jins</SelectItem>
+              {genders.map(g => (
+                <SelectItem key={g} value={g}>{formatGender(g)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={langFilter} onValueChange={setLangFilter}>
+            <SelectTrigger className="w-[130px]">
+              <SelectValue placeholder="Til" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha til</SelectItem>
+              {languages.map(l => (
+                <SelectItem key={l} value={l}>{formatLang(l)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={testStatusFilter} onValueChange={setTestStatusFilter}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Test holati" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha holat</SelectItem>
+              <SelectItem value="tested">Topshirgan</SelectItem>
+              <SelectItem value="not_tested">Topshirmagan</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {activeFilters > 0 && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
+              <X className="h-4 w-4" />
+              Tozalash ({activeFilters})
+            </Button>
+          )}
         </div>
 
-        <div className="rounded-lg border bg-card">
+        {/* Table */}
+        <div className="rounded-lg border bg-card overflow-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -66,10 +170,11 @@ export default function StudentsManagement() {
                 <TableHead>Guruh</TableHead>
                 <TableHead>Jinsi</TableHead>
                 <TableHead>Til</TableHead>
+                <TableHead>Ro'yxatdan o'tgan</TableHead>
                 <TableHead>Test holati</TableHead>
-                <TableHead className="text-right">Majburiy</TableHead>
-                <TableHead className="text-right">Asosiy fan</TableHead>
-                <TableHead className="text-right">Qo'shimcha fan</TableHead>
+                {allSubjectNames.map(name => (
+                  <TableHead key={name} className="text-right whitespace-nowrap">{name}</TableHead>
+                ))}
                 <TableHead className="text-right">Jami ball</TableHead>
                 <TableHead className="text-center">Natija fayl</TableHead>
               </TableRow>
@@ -77,29 +182,30 @@ export default function StudentsManagement() {
             <TableBody>
               {meLoading ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="py-10 text-center">
+                  <TableCell colSpan={10 + allSubjectNames.length} className="py-10 text-center">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                   </TableCell>
                 </TableRow>
               ) : filteredStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="py-10 text-center text-muted-foreground">
-                    {searchTerm ? "Qidiruv bo'yicha o'quvchi topilmadi" : "O'quvchilar topilmadi"}
+                  <TableCell colSpan={10 + allSubjectNames.length} className="py-10 text-center text-muted-foreground">
+                    {searchTerm || activeFilters > 0 ? "Qidiruv bo'yicha o'quvchi topilmadi" : "O'quvchilar topilmadi"}
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredStudents.map((student, index) => (
                   <TableRow key={student.id}>
                     <TableCell className="text-muted-foreground">{index + 1}</TableCell>
-                    <TableCell className="font-medium">{student.full_name}</TableCell>
+                    <TableCell className="font-medium whitespace-nowrap">{student.full_name}</TableCell>
                     <TableCell>{student.phone}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{student.group_name}</Badge>
                     </TableCell>
-                    <TableCell>
-                      {student.gender === "female" ? "Ayol" : student.gender === "male" ? "Erkak" : student.gender}
+                    <TableCell>{formatGender(student.gender)}</TableCell>
+                    <TableCell>{formatLang(student.language)}</TableCell>
+                    <TableCell className="whitespace-nowrap text-muted-foreground text-xs">
+                      {formatDate(student.created_at)}
                     </TableCell>
-                    <TableCell>{student.language === "uz" ? "O'zbek" : student.language === "ru" ? "Rus" : student.language}</TableCell>
                     <TableCell>
                       {student.dtm ? (
                         student.dtm.tested ? (
@@ -111,27 +217,25 @@ export default function StudentsManagement() {
                         <Badge variant="outline">Ma'lumot yo'q</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
-                      {student.dtm?.mandatory_ball != null ? (
-                        <span className="font-medium">{student.dtm.mandatory_ball}</span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {student.dtm?.primary_ball != null ? (
-                        <span className="font-medium">{student.dtm.primary_ball}</span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {student.dtm?.secondary_ball != null ? (
-                        <span className="font-medium">{student.dtm.secondary_ball}</span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
+                    {allSubjectNames.map(name => {
+                      const sub = student.dtm?.subjects?.find(s => s.subject_name === name);
+                      return (
+                        <TableCell key={name} className="text-right">
+                          {sub != null ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="font-medium cursor-default">{sub.earned_ball}/{sub.max_ball}</span>
+                                </TooltipTrigger>
+                                <TooltipContent>{sub.percent}%</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      );
+                    })}
                     <TableCell className="text-right">
                       {student.dtm?.total_ball != null ? (
                         <Badge
