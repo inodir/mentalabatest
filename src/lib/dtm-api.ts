@@ -181,21 +181,27 @@ export async function fetchDTMUsers(
   }
 }
 
-// Fetch DTM users with Bearer token (for school/district admins)
+// Fetch DTM users with Bearer token + API key (for school/district admins)
 export async function fetchDTMUsersWithToken(
   accessToken: string,
   offset: number = 0,
   limit: number = 50
 ): Promise<DTMResponse> {
-  const url = `${DEFAULT_MAIN_URL}api/v1/dtm/users?offset=${offset}&limit=${limit}`;
+  const settings = getApiSettings();
+  const baseUrl = settings ? normalizeUrl(settings.mainUrl) : DEFAULT_MAIN_URL;
+  const url = `${baseUrl}api/v1/dtm/users?offset=${offset}&limit=${limit}`;
 
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      accept: "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  const headers: Record<string, string> = {
+    accept: "application/json",
+    Authorization: `Bearer ${accessToken}`,
+  };
+
+  // Use API key from super admin settings if available
+  if (settings?.apiKey) {
+    headers["x-api-key"] = settings.apiKey;
+  }
+
+  const response = await fetch(url, { method: "GET", headers });
 
   const responseText = await response.text();
 
