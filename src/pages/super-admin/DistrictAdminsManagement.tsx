@@ -26,9 +26,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { REGIONS } from "@/lib/constants";
+import { DTMDistrictsList } from "@/components/dtm/DTMDistrictsList";
 import {
   Plus,
   Search,
@@ -37,6 +39,8 @@ import {
   Eye,
   EyeOff,
   MapPin,
+  Building2,
+  Users,
 } from "lucide-react";
 
 interface DistrictAdmin {
@@ -163,139 +167,162 @@ export default function DistrictAdminsManagement() {
               Tuman rahbarlarini yarating va boshqaring
             </p>
           </div>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Tuman admin qo'shish
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Yangi tuman admin</DialogTitle>
-                <DialogDescription>
-                  Tuman rahbari uchun admin hisobini yarating
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleAddAdmin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Viloyat</Label>
-                  <Select
-                    value={formData.region}
-                    onValueChange={(v) => setFormData({ ...formData, region: v, district: "" })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Viloyatni tanlang" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {REGIONS.map((r) => (
-                        <SelectItem key={r} value={r}>{r}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Tuman</Label>
-                  <Input
-                    placeholder="Tuman nomi"
-                    value={formData.district}
-                    onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Admin F.I.O.</Label>
-                  <Input
-                    placeholder="To'liq ism"
-                    value={formData.admin_full_name}
-                    onChange={(e) => setFormData({ ...formData, admin_full_name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Login</Label>
-                  <Input
-                    placeholder="tuman_login"
-                    value={formData.admin_login}
-                    onChange={(e) => setFormData({ ...formData, admin_login: e.target.value })}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isSaving}>
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Yaratilmoqda...
-                    </>
+        </div>
+
+        <Tabs defaultValue="dtm" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="dtm" className="gap-2">
+              <Building2 className="h-4 w-4" />
+              DTM tumanlar
+            </TabsTrigger>
+            <TabsTrigger value="platform" className="gap-2">
+              <Users className="h-4 w-4" />
+              Platforma adminlari
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="dtm" className="space-y-0">
+            <DTMDistrictsList />
+          </TabsContent>
+
+          <TabsContent value="platform" className="space-y-6">
+            {/* Add button */}
+            <div className="flex justify-end">
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Tuman admin qo'shish
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Yangi tuman admin</DialogTitle>
+                    <DialogDescription>
+                      Tuman rahbari uchun admin hisobini yarating
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleAddAdmin} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Viloyat</Label>
+                      <Select
+                        value={formData.region}
+                        onValueChange={(v) => setFormData({ ...formData, region: v, district: "" })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Viloyatni tanlang" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {REGIONS.map((r) => (
+                            <SelectItem key={r} value={r}>{r}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Tuman</Label>
+                      <Input
+                        placeholder="Tuman nomi"
+                        value={formData.district}
+                        onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Admin F.I.O.</Label>
+                      <Input
+                        placeholder="To'liq ism"
+                        value={formData.admin_full_name}
+                        onChange={(e) => setFormData({ ...formData, admin_full_name: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Login</Label>
+                      <Input
+                        placeholder="tuman_login"
+                        value={formData.admin_login}
+                        onChange={(e) => setFormData({ ...formData, admin_login: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isSaving}>
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Yaratilmoqda...
+                        </>
+                      ) : (
+                        "Yaratish"
+                      )}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Qidirish..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={regionFilter} onValueChange={setRegionFilter}>
+                <SelectTrigger className="w-[250px]">
+                  <SelectValue placeholder="Viloyat" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barcha viloyatlar</SelectItem>
+                  {REGIONS.map((r) => (
+                    <SelectItem key={r} value={r}>{r}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Table */}
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>F.I.O.</TableHead>
+                    <TableHead>Viloyat / Tuman</TableHead>
+                    <TableHead>Login / Parol</TableHead>
+                    <TableHead>Yaratilgan</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8">
+                        <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredAdmins.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        Tuman adminlari topilmadi
+                      </TableCell>
+                    </TableRow>
                   ) : (
-                    "Yaratish"
+                    filteredAdmins.map((admin) => (
+                      <DistrictAdminRow
+                        key={admin.id}
+                        admin={admin}
+                        copyToClipboard={copyToClipboard}
+                      />
+                    ))
                   )}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-col gap-4 sm:flex-row">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Qidirish..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Select value={regionFilter} onValueChange={setRegionFilter}>
-            <SelectTrigger className="w-[250px]">
-              <SelectValue placeholder="Viloyat" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Barcha viloyatlar</SelectItem>
-              {REGIONS.map((r) => (
-                <SelectItem key={r} value={r}>{r}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Table */}
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>F.I.O.</TableHead>
-                <TableHead>Viloyat / Tuman</TableHead>
-                <TableHead>Login / Parol</TableHead>
-                <TableHead>Yaratilgan</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8">
-                    <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-                  </TableCell>
-                </TableRow>
-              ) : filteredAdmins.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                    Tuman adminlari topilmadi
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredAdmins.map((admin) => (
-                  <DistrictAdminRow
-                    key={admin.id}
-                    admin={admin}
-                    copyToClipboard={copyToClipboard}
-                  />
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </AdminLayout>
   );
