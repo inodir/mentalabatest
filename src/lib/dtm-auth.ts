@@ -13,6 +13,22 @@ export interface DTMSchoolInfo {
   district: string;
   name: string;
   code: string;
+  registered_count?: number;
+  answered_count?: number;
+  tested_percent?: number;
+  avg_total_ball?: number;
+  avg_mandatory_ball?: number;
+  avg_primary_ball?: number;
+  avg_secondary_ball?: number;
+}
+
+export interface DTMDistrictInfo {
+  region: string;
+  district: string;
+  registered_count: number;
+  answered_count: number;
+  tested_percent: number;
+  school_count: number;
 }
 
 export interface DTMSubjectScore {
@@ -64,7 +80,7 @@ export interface DTMUserData {
   id: number;
   username: string;
   full_name: string;
-  role: "school" | "district" | "admin";
+  role: "school" | "district" | "admin" | "superadmin";
   region: string;
   district: string;
   school_id: number | null;
@@ -76,6 +92,7 @@ export interface DTMUserData {
     school_count: number;
   };
   schools: DTMSchoolInfo[];
+  districts: DTMDistrictInfo[];
   students?: DTMStudentsData;
 }
 
