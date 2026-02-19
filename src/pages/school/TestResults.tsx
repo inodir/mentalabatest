@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -83,14 +84,20 @@ export default function TestResults() {
   });
 
   const handleExportCSV = () => {
-    const headers = ["#", "F.I.O.", "Telefon", "Majburiy", "Asosiy fan", "Qo'shimcha fan", "Jami ball"];
+    // Collect all unique subject names
+    const subjectNames = new Set<string>();
+    sortedResults.forEach(s => s.dtm?.subjects?.forEach(sub => subjectNames.add(sub.subject_name)));
+    const subjectList = [...subjectNames];
+
+    const headers = ["#", "F.I.O.", "Telefon", ...subjectList, "Jami ball"];
     const rows = sortedResults.map((s, i) => [
       i + 1,
       s.full_name,
       s.phone || "-",
-      s.dtm?.mandatory_ball ?? "-",
-      s.dtm?.primary_ball ?? "-",
-      s.dtm?.secondary_ball ?? "-",
+      ...subjectList.map(name => {
+        const sub = s.dtm?.subjects?.find(x => x.subject_name === name);
+        return sub ? `${sub.earned_ball}/${sub.max_ball}` : "-";
+      }),
       s.dtm?.total_ball ?? "-",
     ]);
 
@@ -240,9 +247,7 @@ export default function TestResults() {
                               </div>
                             </TableHead>
                             <TableHead>Telefon</TableHead>
-                            <TableHead className="text-right">Majburiy</TableHead>
-                            <TableHead className="text-right">Asosiy fan</TableHead>
-                            <TableHead className="text-right">Qo'shimcha fan</TableHead>
+                            <TableHead>Fanlar</TableHead>
                             <TableHead 
                               className="cursor-pointer hover:bg-muted/50 text-right"
                               onClick={() => handleSort("total_ball")}
@@ -266,14 +271,25 @@ export default function TestResults() {
                               <TableCell className="text-muted-foreground">
                                 {student.phone || "-"}
                               </TableCell>
-                              <TableCell className="text-right">
-                                {student.dtm?.mandatory_ball ?? <span className="text-muted-foreground">—</span>}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {student.dtm?.primary_ball ?? <span className="text-muted-foreground">—</span>}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {student.dtm?.secondary_ball ?? <span className="text-muted-foreground">—</span>}
+                              <TableCell>
+                                <div className="flex flex-wrap gap-1 max-w-[300px]">
+                                  {student.dtm?.subjects?.length ? (
+                                    student.dtm.subjects.map(sub => (
+                                      <TooltipProvider key={sub.subject_id}>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Badge variant={sub.earned_ball > 0 ? "default" : "secondary"} className="text-xs cursor-default">
+                                              {sub.subject_name.replace(/ *\(majburiy\)/, " (M)")}: {sub.earned_ball}/{sub.max_ball}
+                                            </Badge>
+                                          </TooltipTrigger>
+                                          <TooltipContent>{sub.subject_name} — {sub.percent}%</TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    ))
+                                  ) : (
+                                    <span className="text-muted-foreground">—</span>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell className="text-right">
                                 <Badge 
