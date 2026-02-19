@@ -11,7 +11,7 @@ import NotFound from "./pages/NotFound";
 import SuperAdminLogin from "./pages/auth/SuperAdminLogin";
 import SchoolAdminLogin from "./pages/auth/SchoolAdminLogin";
 import DistrictAdminLogin from "./pages/auth/DistrictAdminLogin";
-import ChangePassword from "./pages/auth/ChangePassword";
+
 
 // Super Admin pages
 import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
@@ -53,33 +53,19 @@ function SuperAdminRoute({ children }: { children: React.ReactNode }) {
 
 // Protected route wrapper for School Admin
 function SchoolAdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, role, passwordChanged, loading } = useAuth();
+  const { user, role, loading } = useAuth();
   if (loading) return <LoadingSpinner />;
   if (!user) return <Navigate to="/school/login" replace />;
   if (role !== "school_admin") return <Navigate to="/" replace />;
-  if (!passwordChanged) return <Navigate to="/school/change-password" replace />;
   return <>{children}</>;
 }
 
 // Protected route wrapper for District Admin
 function DistrictAdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, role, passwordChanged, loading } = useAuth();
+  const { user, role, loading } = useAuth();
   if (loading) return <LoadingSpinner />;
   if (!user) return <Navigate to="/district/login" replace />;
   if (role !== "district_admin") return <Navigate to="/" replace />;
-  if (!passwordChanged) return <Navigate to="/district/change-password" replace />;
-  return <>{children}</>;
-}
-
-// Route wrapper for password change page
-function ChangePasswordRoute({ children }: { children: React.ReactNode }) {
-  const { user, role, passwordChanged, loading } = useAuth();
-  if (loading) return <LoadingSpinner />;
-  if (!user) return <Navigate to="/school/login" replace />;
-  if (role !== "school_admin" && role !== "district_admin") return <Navigate to="/" replace />;
-  if (passwordChanged) {
-    return <Navigate to={role === "district_admin" ? "/district" : "/school"} replace />;
-  }
   return <>{children}</>;
 }
 
@@ -91,22 +77,6 @@ function AppRoutes() {
       <Route path="/super-admin/login" element={<SuperAdminLogin />} />
       <Route path="/school/login" element={<SchoolAdminLogin />} />
       <Route path="/district/login" element={<DistrictAdminLogin />} />
-      <Route
-        path="/school/change-password"
-        element={
-          <ChangePasswordRoute>
-            <ChangePassword />
-          </ChangePasswordRoute>
-        }
-      />
-      <Route
-        path="/district/change-password"
-        element={
-          <ChangePasswordRoute>
-            <ChangePassword />
-          </ChangePasswordRoute>
-        }
-      />
 
       {/* Super Admin routes */}
       <Route path="/super-admin" element={<SuperAdminRoute><SuperAdminDashboard /></SuperAdminRoute>} />
