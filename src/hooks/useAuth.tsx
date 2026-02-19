@@ -14,7 +14,8 @@ function mapDTMRole(role: DTMUserData["role"]): AppRole {
   switch (role) {
     case "school": return "school_admin";
     case "district": return "district_admin";
-    case "admin": return "super_admin";
+    case "admin":
+    case "superadmin": return "super_admin";
     default: return null;
   }
 }
