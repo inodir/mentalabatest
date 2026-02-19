@@ -18,6 +18,7 @@ import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
 import SchoolsManagement from "./pages/super-admin/SchoolsManagement";
 import SchoolDetails from "./pages/super-admin/SchoolDetails";
 import DTMSchoolDetails from "./pages/super-admin/DTMSchoolDetails";
+import DTMDistrictDetails from "./pages/super-admin/DTMDistrictDetails";
 import Settings from "./pages/super-admin/Settings";
 import DTMUsers from "./pages/super-admin/DTMUsers";
 import DistrictAdminsManagement from "./pages/super-admin/DistrictAdminsManagement";
@@ -87,6 +88,7 @@ function AppRoutes() {
       <Route path="/super-admin/settings" element={<SuperAdminRoute><Settings /></SuperAdminRoute>} />
       <Route path="/super-admin/users" element={<SuperAdminRoute><DTMUsers /></SuperAdminRoute>} />
       <Route path="/super-admin/district-admins" element={<SuperAdminRoute><DistrictAdminsManagement /></SuperAdminRoute>} />
+      <Route path="/super-admin/dtm-districts/:districtUsername" element={<SuperAdminRoute><DTMDistrictDetails /></SuperAdminRoute>} />
 
       {/* School Admin routes */}
       <Route path="/school" element={<SchoolAdminRoute><SchoolDashboard /></SchoolAdminRoute>} />
