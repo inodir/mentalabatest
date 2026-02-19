@@ -20,7 +20,8 @@ import {
   ArrowUpDown, 
   ArrowUp, 
   ArrowDown,
-  AlertCircle
+  AlertCircle,
+  FileDown,
 } from "lucide-react";
 import type { DTMStudentItem } from "@/lib/dtm-auth";
 
@@ -82,11 +83,14 @@ export default function TestResults() {
   });
 
   const handleExportCSV = () => {
-    const headers = ["#", "F.I.O.", "Telefon", "Jami ball"];
+    const headers = ["#", "F.I.O.", "Telefon", "Majburiy", "Asosiy fan", "Qo'shimcha fan", "Jami ball"];
     const rows = sortedResults.map((s, i) => [
       i + 1,
       s.full_name,
       s.phone || "-",
+      s.dtm?.mandatory_ball ?? "-",
+      s.dtm?.primary_ball ?? "-",
+      s.dtm?.secondary_ball ?? "-",
       s.dtm?.total_ball ?? "-",
     ]);
 
@@ -236,6 +240,9 @@ export default function TestResults() {
                               </div>
                             </TableHead>
                             <TableHead>Telefon</TableHead>
+                            <TableHead className="text-right">Majburiy</TableHead>
+                            <TableHead className="text-right">Asosiy fan</TableHead>
+                            <TableHead className="text-right">Qo'shimcha fan</TableHead>
                             <TableHead 
                               className="cursor-pointer hover:bg-muted/50 text-right"
                               onClick={() => handleSort("total_ball")}
@@ -244,6 +251,7 @@ export default function TestResults() {
                                 Jami ball {getSortIcon("total_ball")}
                               </div>
                             </TableHead>
+                            <TableHead className="text-center">Fayl</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -259,12 +267,35 @@ export default function TestResults() {
                                 {student.phone || "-"}
                               </TableCell>
                               <TableCell className="text-right">
+                                {student.dtm?.mandatory_ball ?? <span className="text-muted-foreground">—</span>}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {student.dtm?.primary_ball ?? <span className="text-muted-foreground">—</span>}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {student.dtm?.secondary_ball ?? <span className="text-muted-foreground">—</span>}
+                              </TableCell>
+                              <TableCell className="text-right">
                                 <Badge 
                                   variant={(student.dtm?.total_ball ?? 0) >= 140 ? "default" : "secondary"}
                                   className="text-base"
                                 >
                                   {student.dtm?.total_ball ?? 0}
                                 </Badge>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {student.dtm?.result_file ? (
+                                  <a
+                                    href={student.dtm.result_file}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center text-primary hover:underline"
+                                  >
+                                    <FileDown className="h-4 w-4" />
+                                  </a>
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
                               </TableCell>
                             </TableRow>
                           ))}
