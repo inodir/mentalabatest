@@ -1,12 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  fetchAllDTMUsersWithToken,
   fetchAllDTMUsers,
   getApiSettings,
   DTMUser,
 } from "@/lib/dtm-api";
 import { useAuth } from "@/hooks/useAuth";
-import { getDTMTokens } from "@/lib/dtm-auth";
 
 export interface DistrictSchoolDTMStats {
   schoolId: string;
@@ -76,26 +74,19 @@ export function useDistrictDTMDashboard() {
     try {
       let entities: DTMUser[];
 
-      // Try DTM auth token first, then fall back to API key
-      const { accessToken } = getDTMTokens();
-      if (accessToken) {
-        const result = await fetchAllDTMUsersWithToken(
-          accessToken,
-          (loaded, total) => setProgress({ loaded, total })
-        );
-        entities = result.entities;
-      } else {
-        const apiSettings = getApiSettings();
-        if (!apiSettings) {
-          setError("NO_CONFIG");
-          setLoading(false);
-          return;
-        }
+      // Use API key for /dtm/users endpoint (it requires x-api-key, not bearer)
+      const apiSettings = getApiSettings();
+      if (apiSettings) {
         const result = await fetchAllDTMUsers(
           apiSettings,
           (loaded, total) => setProgress({ loaded, total })
         );
         entities = result.entities;
+      } else {
+        // No API key configured — district admins need API settings
+        setError("NO_CONFIG");
+        setLoading(false);
+        return;
       }
 
       // Filter by district school codes
