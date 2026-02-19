@@ -322,7 +322,7 @@ export default function DistrictDashboard() {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Link to={`/district/schools/${school.schoolId}`}>
+                          <Link to={`/district/schools/${school.schoolCode}`}>
                             <Button variant="ghost" size="icon" title="Ko'rish">
                               <Eye className="h-4 w-4" />
                             </Button>

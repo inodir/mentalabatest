@@ -3,9 +3,8 @@ import {
   getApiSettings, 
   fetchAllDTMUsers, 
   DTMUser, 
-  DTMApiSettings 
 } from "@/lib/dtm-api";
-import { getStoredSchoolCode } from "@/components/school/SchoolCodeDialog";
+import { useAuth } from "@/hooks/useAuth";
 
 export interface SchoolDTMStats {
   totalStudents: number;
@@ -62,6 +61,7 @@ function setCachedDTMData(schoolCode: string, data: Omit<CachedDTMData, "timesta
 }
 
 export function useSchoolDTMData(): UseSchoolDTMDataReturn {
+  const { dtmUser } = useAuth();
   const [stats, setStats] = useState<SchoolDTMStats>({
     totalStudents: 0,
     studentsWithResults: 0,
@@ -72,15 +72,14 @@ export function useSchoolDTMData(): UseSchoolDTMDataReturn {
   const [students, setStudents] = useState<DTMUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [schoolCode, setSchoolCode] = useState<string | null>(null);
   const [hasApiSettings, setHasApiSettings] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const fetchData = useCallback(async (forceRefresh: boolean = false) => {
-    const code = getStoredSchoolCode();
-    setSchoolCode(code);
+  // Get school code from DTM auth
+  const schoolCode = dtmUser?.school?.code ?? null;
 
-    if (!code) {
+  const fetchData = useCallback(async (forceRefresh: boolean = false) => {
+    if (!schoolCode) {
       setLoading(false);
       return;
     }
@@ -96,7 +95,7 @@ export function useSchoolDTMData(): UseSchoolDTMDataReturn {
 
     // Check cache first
     if (!forceRefresh) {
-      const cached = getCachedDTMData(code);
+      const cached = getCachedDTMData(schoolCode);
       if (cached) {
         setStats(cached.stats);
         setStudents(cached.students);
@@ -114,7 +113,7 @@ export function useSchoolDTMData(): UseSchoolDTMDataReturn {
       
       // Filter by school code
       const schoolStudents = entities.filter(
-        (u) => u.school_code === code
+        (u) => u.school_code === schoolCode
       );
 
       setStudents(schoolStudents);
@@ -150,7 +149,7 @@ export function useSchoolDTMData(): UseSchoolDTMDataReturn {
       setLastUpdated(new Date());
 
       // Cache the data
-      setCachedDTMData(code, {
+      setCachedDTMData(schoolCode, {
         stats: newStats,
         students: schoolStudents,
       });
@@ -160,7 +159,7 @@ export function useSchoolDTMData(): UseSchoolDTMDataReturn {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [schoolCode]);
 
   useEffect(() => {
     fetchData();
