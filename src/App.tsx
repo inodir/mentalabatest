@@ -56,18 +56,18 @@ function SuperAdminRoute({ children }: { children: React.ReactNode }) {
 
 // Protected route wrapper for School Admin
 function SchoolAdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, role, loading, dtmUser } = useAuth();
+  const { user, role, loading } = useAuth();
   if (loading) return <LoadingSpinner />;
-  if (!user && !dtmUser) return <Navigate to="/school/login" replace />;
+  if (!user) return <Navigate to="/school/login" replace />;
   if (role !== "school_admin") return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
 // Protected route wrapper for District Admin
 function DistrictAdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, role, loading, dtmUser } = useAuth();
+  const { user, role, loading } = useAuth();
   if (loading) return <LoadingSpinner />;
-  if (!user && !dtmUser) return <Navigate to="/district/login" replace />;
+  if (!user) return <Navigate to="/district/login" replace />;
   if (role !== "district_admin") return <Navigate to="/" replace />;
   return <>{children}</>;
 }
