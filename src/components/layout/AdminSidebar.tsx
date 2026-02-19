@@ -61,12 +61,12 @@ interface AdminSidebarProps {
    };
  
    return (
-     <aside
-       className={cn(
-         "flex h-screen flex-col border-r bg-sidebar transition-all duration-300",
-         collapsed ? "w-16" : "w-64"
-       )}
-     >
+    <aside
+      className={cn(
+        "sticky top-0 flex h-screen flex-col border-r bg-sidebar transition-all duration-300 shrink-0",
+        collapsed ? "w-16" : "w-64"
+      )}
+    >
        {/* Header */}
        <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
          {!collapsed && (
