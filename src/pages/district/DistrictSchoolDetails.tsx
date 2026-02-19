@@ -14,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import {
   getApiSettings,
@@ -33,26 +33,17 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 
-interface School {
-  id: string;
-  region: string;
-  district: string;
-  school_name: string;
-  school_code: string;
-  admin_full_name: string;
-  admin_login: string;
-  is_active: boolean;
-}
-
 export default function DistrictSchoolDetails() {
-  const { schoolId } = useParams<{ schoolId: string }>();
-  const [school, setSchool] = useState<School | null>(null);
+  const { schoolId: schoolCode } = useParams<{ schoolId: string }>();
+  const { dtmUser } = useAuth();
   const [dtmUsers, setDtmUsers] = useState<DTMUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dtmLoading, setDtmLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [resultsSearchTerm, setResultsSearchTerm] = useState("");
   const { toast } = useToast();
+
+  // Find school info from DTM auth data
+  const schoolInfo = dtmUser?.schools?.find(s => s.code === schoolCode) || dtmUser?.school;
 
   const registeredUsers = dtmUsers.filter((u) => !u.has_result);
   const usersWithResults = dtmUsers.filter((u) => u.has_result);
@@ -71,45 +62,16 @@ export default function DistrictSchoolDetails() {
         )
       : 0;
 
-  useEffect(() => {
-    if (schoolId) fetchSchoolInfo();
-  }, [schoolId]);
-
-  useEffect(() => {
-    if (school?.school_code) fetchDTMData();
-  }, [school?.school_code]);
-
-  const fetchSchoolInfo = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("schools")
-        .select("*")
-        .eq("id", schoolId)
-        .single();
-      if (error) throw error;
-      setSchool(data);
-    } catch (error) {
-      console.error("Error fetching school:", error);
-      toast({
-        title: "Xatolik",
-        description: "Maktab ma'lumotlarini yuklashda xatolik",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const fetchDTMData = useCallback(
     async (forceRefresh = false) => {
-      if (!school?.school_code) return;
+      if (!schoolCode) return;
       const settings = getApiSettings();
       if (!settings) return;
 
-      setDtmLoading(true);
+      setLoading(true);
       try {
         const { entities } = await fetchAllDTMUsers(settings, undefined, forceRefresh);
-        const schoolStudents = entities.filter((u) => u.school_code === school.school_code);
+        const schoolStudents = entities.filter((u) => u.school_code === schoolCode);
         setDtmUsers(schoolStudents);
       } catch (err) {
         console.error("Error fetching DTM data:", err);
@@ -119,11 +81,15 @@ export default function DistrictSchoolDetails() {
           variant: "destructive",
         });
       } finally {
-        setDtmLoading(false);
+        setLoading(false);
       }
     },
-    [school?.school_code, toast]
+    [schoolCode, toast]
   );
+
+  useEffect(() => {
+    fetchDTMData();
+  }, [fetchDTMData]);
 
   const filteredRegistered = registeredUsers.filter(
     (u) =>
@@ -152,7 +118,7 @@ export default function DistrictSchoolDetails() {
     const rows = filteredRegistered.map((u) => [
       u.full_name, u.phone || "", u.district || "", format(new Date(u.created_at), "dd.MM.yyyy"),
     ]);
-    downloadCSV(headers, rows, `${school?.school_name || "maktab"}_royxat.csv`);
+    downloadCSV(headers, rows, `${schoolInfo?.name || schoolCode}_royxat.csv`);
   };
 
   const handleExportResultsCSV = () => {
@@ -167,31 +133,8 @@ export default function DistrictSchoolDetails() {
         u.total_point ?? 0,
       ];
     });
-    downloadCSV(headers, rows, `${school?.school_name || "maktab"}_natijalar.csv`);
+    downloadCSV(headers, rows, `${schoolInfo?.name || schoolCode}_natijalar.csv`);
   };
-
-  if (loading) {
-    return (
-      <AdminLayout variant="district">
-        <div className="flex min-h-[400px] items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </AdminLayout>
-    );
-  }
-
-  if (!school) {
-    return (
-      <AdminLayout variant="district">
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Maktab topilmadi</p>
-          <Link to="/district">
-            <Button variant="link">Orqaga qaytish</Button>
-          </Link>
-        </div>
-      </AdminLayout>
-    );
-  }
 
   return (
     <AdminLayout variant="district">
@@ -204,22 +147,21 @@ export default function DistrictSchoolDetails() {
             </Button>
           </Link>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold tracking-tight">{school.school_name}</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {schoolInfo?.name || schoolCode}
+            </h1>
             <p className="text-muted-foreground">
-              {school.region}, {school.district} • Kod: {school.school_code}
+              {schoolInfo?.region}, {schoolInfo?.district} • Kod: {schoolCode}
             </p>
           </div>
           <Button
             variant="outline"
             size="icon"
             onClick={() => fetchDTMData(true)}
-            disabled={dtmLoading}
+            disabled={loading}
           >
-            <RefreshCw className={`h-4 w-4 ${dtmLoading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
-          <Badge variant={school.is_active ? "default" : "secondary"}>
-            {school.is_active ? "Faol" : "Nofaol"}
-          </Badge>
         </div>
 
         {/* Stats */}
@@ -231,7 +173,7 @@ export default function DistrictSchoolDetails() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {dtmLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : totalStudents}
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : totalStudents}
               </div>
             </CardContent>
           </Card>
@@ -242,7 +184,7 @@ export default function DistrictSchoolDetails() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {dtmLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : totalWithResults}
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : totalWithResults}
               </div>
             </CardContent>
           </Card>
@@ -253,28 +195,11 @@ export default function DistrictSchoolDetails() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {dtmLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : `${avgScore}/189`}
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : `${avgScore}/189`}
               </div>
             </CardContent>
           </Card>
         </div>
-
-        {/* Admin info */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Admin ma'lumotlari</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-2 text-sm md:grid-cols-2">
-            <div>
-              <span className="text-muted-foreground">F.I.O.: </span>
-              <span className="font-medium">{school.admin_full_name}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Login: </span>
-              <span className="font-medium">{school.admin_login}</span>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Tabs */}
         <Tabs defaultValue="results" className="space-y-4">
@@ -319,7 +244,7 @@ export default function DistrictSchoolDetails() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {dtmLoading ? (
+                  {loading ? (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center py-8">
                         <Loader2 className="mx-auto h-6 w-6 animate-spin" />
@@ -378,7 +303,7 @@ export default function DistrictSchoolDetails() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {dtmLoading ? (
+                  {loading ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8">
                         <Loader2 className="mx-auto h-6 w-6 animate-spin" />

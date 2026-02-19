@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,43 +14,27 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useSchoolDTMData } from "@/hooks/useSchoolDTMData";
-import { 
-  SchoolCodeDialog, 
-  getStoredSchoolCode 
-} from "@/components/school/SchoolCodeDialog";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function SchoolDashboard() {
-  const [showCodeDialog, setShowCodeDialog] = useState(false);
+  const { dtmUser } = useAuth();
   const { 
     stats, 
-    students,
     loading, 
     error, 
     schoolCode,
-    hasApiSettings,
     refetch, 
     lastUpdated 
   } = useSchoolDTMData();
-
-  useEffect(() => {
-    // Check if school code is set
-    const storedCode = getStoredSchoolCode();
-    if (!storedCode) {
-      setShowCodeDialog(true);
-    }
-  }, []);
-
-  const handleSchoolCodeSaved = (code: string) => {
-    setShowCodeDialog(false);
-    refetch(true);
-  };
 
   return (
     <AdminLayout variant="school">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Bosh sahifa</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {dtmUser?.full_name || "Bosh sahifa"}
+            </h1>
             <p className="text-muted-foreground">
               DTM statistikasi
               {schoolCode && (
@@ -86,24 +69,6 @@ export default function SchoolDashboard() {
               <div className="flex items-center gap-2 text-destructive">
                 <AlertCircle className="h-5 w-5" />
                 <p>{error}</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* No School Code State */}
-        {!schoolCode && !showCodeDialog && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">Maktab kodi kiritilmagan</h3>
-                <p className="text-muted-foreground mb-4">
-                  DTM ma'lumotlarini ko'rish uchun maktab kodingizni kiriting
-                </p>
-                <Button onClick={() => setShowCodeDialog(true)}>
-                  Maktab kodini kiriting
-                </Button>
               </div>
             </CardContent>
           </Card>
@@ -187,16 +152,9 @@ export default function SchoolDashboard() {
                 )}
               </CardContent>
             </Card>
-
           </>
         )}
       </div>
-
-      {/* School Code Dialog */}
-      <SchoolCodeDialog
-        open={showCodeDialog}
-        onSchoolCodeSaved={handleSchoolCodeSaved}
-      />
     </AdminLayout>
   );
 }

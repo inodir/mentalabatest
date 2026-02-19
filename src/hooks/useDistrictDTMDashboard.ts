@@ -3,9 +3,8 @@ import {
   getApiSettings,
   fetchAllDTMUsers,
   DTMUser,
-  DTMApiSettings,
 } from "@/lib/dtm-api";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export interface DistrictSchoolDTMStats {
   schoolId: string;
@@ -38,6 +37,7 @@ interface UseDistrictDTMDashboardResult {
 }
 
 export function useDistrictDTMDashboard() {
+  const { dtmUser } = useAuth();
   const [stats, setStats] = useState<DistrictDTMStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<DistrictDashboardError>(null);
@@ -55,43 +55,42 @@ export function useDistrictDTMDashboard() {
       return;
     }
 
+    // Get schools from DTM auth user data
+    const schools = dtmUser?.schools || [];
+    if (schools.length === 0 && dtmUser?.school) {
+      schools.push(dtmUser.school);
+    }
+
+    if (schools.length === 0) {
+      setStats({
+        totalStudents: 0,
+        studentsWithResults: 0,
+        studentsWithoutResults: 0,
+        totalSchools: 0,
+        averageScore: 0,
+        recentUsers: [],
+        schoolStats: [],
+        isApproximate: false,
+      });
+      setLoading(false);
+      return;
+    }
+
+    const schoolCodes = new Set(schools.map((s) => s.code));
+
     try {
-      // 1. Get district schools from DB (RLS filters by district automatically)
-      const { data: schools, error: schoolsError } = await supabase
-        .from("schools")
-        .select("id, school_name, school_code")
-        .order("school_name");
-
-      if (schoolsError) throw schoolsError;
-      if (!schools || schools.length === 0) {
-        setStats({
-          totalStudents: 0,
-          studentsWithResults: 0,
-          studentsWithoutResults: 0,
-          totalSchools: 0,
-          averageScore: 0,
-          recentUsers: [],
-          schoolStats: [],
-          isApproximate: false,
-        });
-        setLoading(false);
-        return;
-      }
-
-      const schoolCodes = new Set(schools.map((s) => s.school_code));
-
-      // 2. Fetch all DTM users
+      // Fetch all DTM users
       const { entities } = await fetchAllDTMUsers(
         apiSettings,
         (loaded, total) => setProgress({ loaded, total })
       );
 
-      // 3. Filter by district school codes
+      // Filter by district school codes
       const districtStudents = entities.filter((u) => schoolCodes.has(u.school_code));
 
-      // 4. Per-school stats
+      // Per-school stats
       const schoolStats: DistrictSchoolDTMStats[] = schools.map((school) => {
-        const students = districtStudents.filter((u) => u.school_code === school.school_code);
+        const students = districtStudents.filter((u) => u.school_code === school.code);
         const withResults = students.filter((u) => u.has_result);
         const withPoints = students.filter((u) => u.total_point != null);
         const avg = withPoints.length > 0
@@ -99,16 +98,16 @@ export function useDistrictDTMDashboard() {
           : 0;
 
         return {
-          schoolId: school.id,
-          schoolName: school.school_name,
-          schoolCode: school.school_code,
+          schoolId: String(school.id),
+          schoolName: school.name,
+          schoolCode: school.code,
           totalStudents: students.length,
           studentsWithResults: withResults.length,
           averageScore: avg,
         };
       });
 
-      // 5. Aggregated stats
+      // Aggregated stats
       const withResults = districtStudents.filter((u) => u.has_result);
       const withPoints = districtStudents.filter((u) => u.total_point != null);
       const avgScore = withPoints.length > 0
@@ -140,11 +139,13 @@ export function useDistrictDTMDashboard() {
       setLoading(false);
       setProgress(null);
     }
-  }, []);
+  }, [dtmUser]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (dtmUser) {
+      fetchData();
+    }
+  }, [fetchData, dtmUser]);
 
   const retry = useCallback(() => {
     fetchData();
