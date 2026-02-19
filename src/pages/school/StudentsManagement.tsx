@@ -165,7 +165,9 @@ export default function StudentsManagement() {
                 <TableHead>Til</TableHead>
                 <TableHead>Ro'yxatdan o'tgan</TableHead>
                 <TableHead>Test holati</TableHead>
-                <TableHead>Fanlar</TableHead>
+                <TableHead>1-fan</TableHead>
+                <TableHead>2-fan</TableHead>
+                <TableHead>Majburiy fanlar</TableHead>
                 <TableHead className="text-right">Jami ball</TableHead>
                 <TableHead className="text-center">Natija fayl</TableHead>
               </TableRow>
@@ -173,13 +175,13 @@ export default function StudentsManagement() {
             <TableBody>
               {meLoading ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="py-10 text-center">
+                  <TableCell colSpan={13} className="py-10 text-center">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                   </TableCell>
                 </TableRow>
               ) : filteredStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={13} className="py-10 text-center text-muted-foreground">
                     {searchTerm || activeFilters > 0 ? "Qidiruv bo'yicha o'quvchi topilmadi" : "O'quvchilar topilmadi"}
                   </TableCell>
                 </TableRow>
@@ -208,26 +210,61 @@ export default function StudentsManagement() {
                         <Badge variant="outline">Ma'lumot yo'q</Badge>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1 max-w-[300px]">
-                        {student.dtm?.subjects?.length ? (
-                          student.dtm.subjects.map(sub => (
-                            <TooltipProvider key={sub.subject_id}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Badge variant={sub.earned_ball > 0 ? "default" : "secondary"} className="text-xs cursor-default">
-                                    {sub.subject_name.replace(/ *\(majburiy\)/, " (M)")}: {sub.earned_ball}/{sub.max_ball}
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent>{sub.subject_name} — {sub.percent}%</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ))
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </div>
-                    </TableCell>
+                    {(() => {
+                      const subjects = student.dtm?.subjects ?? [];
+                      const mandatory = subjects.filter(s => s.subject_name.includes("majburiy"));
+                      const elective = subjects.filter(s => !s.subject_name.includes("majburiy"));
+                      const fan1 = elective[0];
+                      const fan2 = elective[1];
+                      return (
+                        <>
+                          <TableCell>
+                            {fan1 ? (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant={fan1.earned_ball > 0 ? "default" : "secondary"} className="text-xs cursor-default">
+                                      {fan1.subject_name}: {fan1.earned_ball}/{fan1.max_ball}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{fan1.percent}%</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : <span className="text-muted-foreground">—</span>}
+                          </TableCell>
+                          <TableCell>
+                            {fan2 ? (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant={fan2.earned_ball > 0 ? "default" : "secondary"} className="text-xs cursor-default">
+                                      {fan2.subject_name}: {fan2.earned_ball}/{fan2.max_ball}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{fan2.percent}%</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : <span className="text-muted-foreground">—</span>}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {mandatory.length > 0 ? mandatory.map(sub => (
+                                <TooltipProvider key={sub.subject_id}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge variant="outline" className="text-xs cursor-default">
+                                        {sub.subject_name.replace(/ *\(majburiy\)/, "")}: {sub.earned_ball}/{sub.max_ball}
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent>{sub.percent}%</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )) : <span className="text-muted-foreground">—</span>}
+                            </div>
+                          </TableCell>
+                        </>
+                      );
+                    })()}
                     <TableCell className="text-right">
                       {student.dtm?.total_ball != null ? (
                         <Badge
