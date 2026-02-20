@@ -5,8 +5,6 @@ import {
   Users, 
   FileText, 
   TrendingUp, 
-  CheckCircle,
-  XCircle,
   Percent,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -41,10 +39,8 @@ export default function SchoolDashboard() {
 
         {schoolCode && (
           <>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               <StatCard title="Jami o'quvchilar" value={stats.totalStudents} icon={Users} />
-              <StatCard title="Natijasi bor" value={stats.studentsWithResults} icon={CheckCircle} />
-              <StatCard title="Natijasi yo'q" value={stats.studentsWithoutResults} icon={XCircle} />
               <StatCard title="Test topshirganlar" value={`${stats.testedPercent}%`} icon={Percent} />
               <StatCard title="O'rtacha ball" value={stats.averageScore} icon={TrendingUp} />
             </div>
