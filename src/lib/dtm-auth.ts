@@ -1,5 +1,12 @@
 // DTM API Authentication Helper
-const DTM_API_BASE = "https://dtm-api.misterdev.uz";
+import { getApiSettings } from "./dtm-api";
+
+const DEFAULT_DTM_API_BASE = "https://dtm-api.misterdev.uz";
+
+function getDTMApiBase(): string {
+  const settings = getApiSettings();
+  return settings?.mainUrl || DEFAULT_DTM_API_BASE;
+}
 
 const TOKEN_KEYS = {
   accessToken: "dtm_access_token",
@@ -144,7 +151,7 @@ export async function dtmLogin(
 ): Promise<{ userData: DTMUserData; error: null } | { userData: null; error: string }> {
   try {
     // Step 1: Login to get tokens
-    const loginRes = await fetch(`${DTM_API_BASE}/api/v1/auth/auth/login`, {
+    const loginRes = await fetch(`${getDTMApiBase()}/api/v1/auth/auth/login`, {
       method: "POST",
       headers: {
         accept: "application/json",
@@ -164,7 +171,7 @@ export async function dtmLogin(
     setDTMTokens(loginData.access_token, loginData.refresh_token);
 
     // Step 2: Fetch user data
-    const meRes = await fetch(`${DTM_API_BASE}/api/v1/auth/me`, {
+    const meRes = await fetch(`${getDTMApiBase()}/api/v1/auth/me`, {
       headers: {
         accept: "application/json",
         Authorization: `Bearer ${loginData.access_token}`,
@@ -192,7 +199,7 @@ export async function dtmRefreshToken(): Promise<boolean> {
   if (!refreshToken) return false;
 
   try {
-    const res = await fetch(`${DTM_API_BASE}/api/v1/auth/auth/refresh`, {
+    const res = await fetch(`${getDTMApiBase()}/api/v1/auth/auth/refresh`, {
       method: "POST",
       headers: {
         accept: "application/json",
@@ -219,7 +226,7 @@ export async function dtmFetchMe(): Promise<DTMUserData | null> {
   const { accessToken } = getDTMTokens();
   if (!accessToken) return null;
 
-  let res = await fetch(`${DTM_API_BASE}/api/v1/auth/me`, {
+  let res = await fetch(`${getDTMApiBase()}/api/v1/auth/me`, {
     headers: {
       accept: "application/json",
       Authorization: `Bearer ${accessToken}`,
@@ -234,7 +241,7 @@ export async function dtmFetchMe(): Promise<DTMUserData | null> {
       return null;
     }
     const { accessToken: newToken } = getDTMTokens();
-    res = await fetch(`${DTM_API_BASE}/api/v1/auth/me`, {
+    res = await fetch(`${getDTMApiBase()}/api/v1/auth/me`, {
       headers: {
         accept: "application/json",
         Authorization: `Bearer ${newToken}`,
@@ -257,7 +264,7 @@ export async function dtmLogout(): Promise<void> {
   const { refreshToken } = getDTMTokens();
   if (refreshToken) {
     try {
-      await fetch(`${DTM_API_BASE}/api/v1/auth/auth/logout`, {
+      await fetch(`${getDTMApiBase()}/api/v1/auth/auth/logout`, {
         method: "POST",
         headers: {
           accept: "application/json",
