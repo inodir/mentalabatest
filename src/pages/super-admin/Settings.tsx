@@ -10,8 +10,8 @@ import { getApiSettings, saveApiSettings, isValidUrl, normalizeUrl, fetchDTMUser
 import { Settings as SettingsIcon, CheckCircle, XCircle, Loader2, Eye, EyeOff } from "lucide-react";
 
 export default function Settings() {
-  const [mainUrl, setMainUrl] = useState("https://dtm-api.misterdev.uz/");
-  const [apiKey, setApiKey] = useState("");
+  const [mainUrl, setMainUrl] = useState(import.meta.env.VITE_DTM_API_URL || "https://dtm-api.misterdev.uz/");
+  const [apiKey, setApiKey] = useState(import.meta.env.VITE_DTM_API_KEY || "");
   const [showApiKey, setShowApiKey] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null);

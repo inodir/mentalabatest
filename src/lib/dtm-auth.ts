@@ -1,7 +1,7 @@
 // DTM API Authentication Helper
 import { getApiSettings } from "./dtm-api";
 
-const DEFAULT_DTM_API_BASE = "https://dtm-api.misterdev.uz";
+const DEFAULT_DTM_API_BASE = (import.meta.env.VITE_DTM_API_URL || "https://dtm-api.misterdev.uz").replace(/\/+$/, "");
 
 function getDTMApiBase(): string {
   const settings = getApiSettings();
