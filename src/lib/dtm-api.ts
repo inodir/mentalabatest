@@ -1,5 +1,6 @@
 // DTM API Client Helper
-const DEFAULT_MAIN_URL = "https://dtm-api.misterdev.uz/";
+const DEFAULT_MAIN_URL = import.meta.env.VITE_DTM_API_URL || "https://dtm-api.misterdev.uz/";
+const ENV_API_KEY = import.meta.env.VITE_DTM_API_KEY || "";
 
 export interface DTMTestScore {
   name: string;
@@ -101,28 +102,38 @@ export function clearDTMCache(): void {
 // API settings cache TTL: 30 days
 const API_SETTINGS_TTL = 30 * 24 * 60 * 60 * 1000;
 
-// Get API settings from localStorage
+// Get API settings from localStorage, falling back to env vars
 export function getApiSettings(): DTMApiSettings | null {
   const settings = localStorage.getItem("dtm_api_settings");
-  if (!settings) return null;
   
-  try {
-    const parsed = JSON.parse(settings);
-    if (!parsed.apiKey) return null;
-    
-    // Check 30-day expiry
-    if (parsed.savedAt && Date.now() - parsed.savedAt > API_SETTINGS_TTL) {
-      localStorage.removeItem("dtm_api_settings");
-      return null;
+  if (settings) {
+    try {
+      const parsed = JSON.parse(settings);
+      if (parsed.apiKey) {
+        // Check 30-day expiry
+        if (parsed.savedAt && Date.now() - parsed.savedAt > API_SETTINGS_TTL) {
+          localStorage.removeItem("dtm_api_settings");
+        } else {
+          return {
+            mainUrl: parsed.mainUrl || DEFAULT_MAIN_URL,
+            apiKey: parsed.apiKey,
+          };
+        }
+      }
+    } catch {
+      // fall through to env vars
     }
-    
-    return {
-      mainUrl: parsed.mainUrl || DEFAULT_MAIN_URL,
-      apiKey: parsed.apiKey,
-    };
-  } catch {
-    return null;
   }
+
+  // Fallback to env vars
+  if (ENV_API_KEY) {
+    return {
+      mainUrl: DEFAULT_MAIN_URL,
+      apiKey: ENV_API_KEY,
+    };
+  }
+
+  return null;
 }
 
 // Save API settings to localStorage with timestamp
