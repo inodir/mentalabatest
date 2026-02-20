@@ -5,7 +5,8 @@ const DEFAULT_DTM_API_BASE = "https://dtm-api.misterdev.uz";
 
 function getDTMApiBase(): string {
   const settings = getApiSettings();
-  return settings?.mainUrl || DEFAULT_DTM_API_BASE;
+  const url = settings?.mainUrl || DEFAULT_DTM_API_BASE;
+  return url.endsWith("/") ? url.slice(0, -1) : url;
 }
 
 const TOKEN_KEYS = {
