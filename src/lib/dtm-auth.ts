@@ -100,6 +100,36 @@ export interface DTMUserData {
     school_count: number;
     gender_stats?: Record<string, number>;
     language_stats?: Record<string, number>;
+    subject_mastery?: {
+      subject_id: number;
+      subject: string;
+      questions_count: number;
+      earned_sum: number;
+      avg_point: number;
+      mastery_percent: number;
+    }[];
+    subject_mastery_chart?: { labels: string[]; data: number[] };
+    mandatory_chart?: { labels: string[]; data: number[] };
+    ball_distribution?: { labels: string[]; data: number[] };
+    risk_stats?: {
+      pass_line: number;
+      tested_count: number;
+      risk_count: number;
+      risk_percent: number;
+    };
+    gender_result_stats?: Record<string, {
+      count: number;
+      avg_total_ball: number;
+      passed_count: number;
+      passed_percent: number;
+    }>;
+    dtm_readiness?: {
+      pass_line: number;
+      tested_count: number;
+      avg_total_ball: number;
+      passed_count: number;
+      readiness_index: number;
+    };
   };
   schools: DTMSchoolInfo[];
   districts: DTMDistrictInfo[];

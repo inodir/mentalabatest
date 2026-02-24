@@ -10,6 +10,10 @@ import { Label } from "@/components/ui/label";
 import { useDTMDashboard } from "@/hooks/useDTMDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import { GenderLanguageCharts } from "@/components/dashboard/GenderLanguageCharts";
+import { SubjectMasteryChart } from "@/components/dashboard/SubjectMasteryChart";
+import { BallDistributionChart } from "@/components/dashboard/BallDistributionChart";
+import { DTMReadinessCards } from "@/components/dashboard/DTMReadinessCards";
+import { MandatoryChart } from "@/components/dashboard/MandatoryChart";
 import { Users, FileText, TrendingUp, School, Settings, RefreshCw, AlertCircle, Loader2 } from "lucide-react";
 import {
   BarChart,
@@ -175,10 +179,25 @@ export default function SuperAdminDashboard() {
 
         {/* Gender & Language Stats */}
         {!loading && dtmUser?.stats && (
-          <GenderLanguageCharts
-            genderStats={dtmUser.stats.gender_stats}
-            languageStats={dtmUser.stats.language_stats}
-          />
+          <>
+            <GenderLanguageCharts
+              genderStats={dtmUser.stats.gender_stats}
+              languageStats={dtmUser.stats.language_stats}
+            />
+
+            <DTMReadinessCards
+              riskStats={dtmUser.stats.risk_stats}
+              dtmReadiness={dtmUser.stats.dtm_readiness}
+              genderResultStats={dtmUser.stats.gender_result_stats}
+            />
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <SubjectMasteryChart subjectMastery={dtmUser.stats.subject_mastery} />
+              <MandatoryChart mandatoryChart={dtmUser.stats.mandatory_chart} />
+            </div>
+
+            <BallDistributionChart ballDistribution={dtmUser.stats.ball_distribution} />
+          </>
         )}
 
         {/* Charts */}
