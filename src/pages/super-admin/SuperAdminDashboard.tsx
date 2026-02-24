@@ -136,46 +136,40 @@ export default function SuperAdminDashboard() {
           ) : (
             <>
               <StatCard
-                title="Jami foydalanuvchilar"
-                value={stats?.totalUsers.toLocaleString() || 0}
+                title="Ro'yxatdan o'tganlar"
+                value={dtmUser?.stats?.registered_count?.toLocaleString() || 0}
                 icon={Users}
-                description={stats?.isApproximate ? "API dan" : undefined}
+                description="/me dan"
               />
               <StatCard
-                title="Natijali foydalanuvchilar"
-                value={stats?.resultUsersCount.toLocaleString() || 0}
+                title="Javob berganlar"
+                value={dtmUser?.stats?.answered_count?.toLocaleString() || 0}
                 icon={FileText}
-                description={stats?.isApproximate ? `~${stats?.loadedCount} dan` : undefined}
               />
               <StatCard
-                title="Natijasiz foydalanuvchilar"
-                value={stats?.noResultUsersCount.toLocaleString() || 0}
-                icon={Users}
-                description={stats?.isApproximate ? `~${stats?.loadedCount} dan` : undefined}
+                title="Test topshirganlar %"
+                value={`${dtmUser?.stats?.tested_percent?.toFixed(1) || 0}%`}
+                icon={TrendingUp}
               />
               <StatCard
                 title="Jami maktablar"
-                value={stats?.totalSchools.toLocaleString() || 0}
+                value={dtmUser?.stats?.school_count?.toLocaleString() || 0}
                 icon={School}
-                description={stats?.isApproximate ? `~${stats?.loadedCount} dan` : undefined}
               />
             </>
           )}
         </div>
 
-        {/* Second row stats */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {loading ? (
-            <Card><CardContent className="p-6"><Skeleton className="h-20" /></CardContent></Card>
-          ) : (
+        {/* O'rtacha ball - faqat dtm_readiness mavjud bo'lganda */}
+        {!loading && dtmUser?.stats?.dtm_readiness && (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <StatCard
               title="O'rtacha ball"
-              value={stats?.averageTotalPoint || 0}
+              value={dtmUser.stats.dtm_readiness.avg_total_ball?.toFixed(1) || 0}
               icon={TrendingUp}
-              description={stats?.isApproximate ? `~${stats?.loadedCount} foydalanuvchi asosida` : undefined}
             />
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Gender & Language Stats */}
         {!loading && dtmUser?.stats && (
