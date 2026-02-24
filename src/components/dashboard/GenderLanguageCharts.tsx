@@ -21,13 +21,13 @@ const LANGUAGE_LABELS: Record<string, string> = {
 };
 
 const GENDER_COLORS = [
-  "hsl(var(--primary))",
-  "hsl(var(--accent-foreground))",
+  "hsl(217 91% 45%)",
+  "hsl(340 65% 55%)",
 ];
 
 const LANGUAGE_COLORS = [
-  "hsl(var(--primary))",
-  "hsl(var(--accent-foreground))",
+  "hsl(217 91% 45%)",
+  "hsl(340 65% 55%)",
   "hsl(142 71% 45%)",
   "hsl(38 92% 50%)",
 ];
