@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useDTMDashboard } from "@/hooks/useDTMDashboard";
+import { useAuth } from "@/hooks/useAuth";
+import { GenderLanguageCharts } from "@/components/dashboard/GenderLanguageCharts";
 import { Users, FileText, TrendingUp, School, Settings, RefreshCw, AlertCircle, Loader2 } from "lucide-react";
 import {
   BarChart,
@@ -22,6 +24,7 @@ import {
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
   const { stats, loading, error, mode, setMode, progress, retry } = useDTMDashboard();
+  const { dtmUser } = useAuth();
 
   // Render error state
   if (error) {
@@ -169,6 +172,14 @@ export default function SuperAdminDashboard() {
             />
           )}
         </div>
+
+        {/* Gender & Language Stats */}
+        {!loading && dtmUser?.stats && (
+          <GenderLanguageCharts
+            genderStats={dtmUser.stats.gender_stats}
+            languageStats={dtmUser.stats.language_stats}
+          />
+        )}
 
         {/* Charts */}
         <div className="grid gap-4 lg:grid-cols-2">
