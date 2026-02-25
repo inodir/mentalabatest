@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getApiSettings } from "@/lib/dtm-api";
+import { getApiSettings, fetchAllDTMUsers, DTMUser } from "@/lib/dtm-api";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,8 @@ export function DTMSchoolsList() {
   const navigate = useNavigate();
   const [schools, setSchools] = useState<DTMSchool[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fullExporting, setFullExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [regionFilter, setRegionFilter] = useState("all");
@@ -148,6 +151,90 @@ export function DTMSchoolsList() {
     a.href = url;
     a.download = "dtm_maktablar.csv";
     a.click();
+  };
+
+  const handleFullExport = async () => {
+    const settings = getApiSettings();
+    if (!settings) {
+      toast.error("API sozlamalari topilmadi");
+      return;
+    }
+
+    setFullExporting(true);
+    setExportProgress("O'quvchilar yuklanmoqda...");
+
+    try {
+      const { entities: allUsers } = await fetchAllDTMUsers(
+        settings,
+        (loaded, total) => {
+          setExportProgress(`O'quvchilar yuklanmoqda... ${loaded}/${total}`);
+        },
+        true
+      );
+
+      setExportProgress("CSV tayyorlanmoqda...");
+
+      // Build school code -> school info map
+      const schoolMap = new Map<string, DTMSchool>();
+      for (const s of filtered) {
+        schoolMap.set(s.username, s);
+      }
+
+      // Filter users belonging to filtered schools
+      const filteredSchoolCodes = new Set(filtered.map((s) => s.username));
+      const relevantUsers = allUsers.filter((u) => filteredSchoolCodes.has(u.school_code));
+
+      const csvHeaders = [
+        "Maktab nomi",
+        "Maktab kodi",
+        "Viloyat",
+        "Tuman",
+        "O'quvchi FIO",
+        "Telefon",
+        "Natija bor",
+        "Umumiy ball",
+        "Ro'yxatdan o'tgan sana",
+      ];
+
+      const escapeCSV = (val: string) => {
+        if (val.includes(",") || val.includes('"') || val.includes("\n")) {
+          return `"${val.replace(/"/g, '""')}"`;
+        }
+        return val;
+      };
+
+      const csvRows = relevantUsers.map((user) => {
+        const school = schoolMap.get(user.school_code);
+        return [
+          escapeCSV(school?.full_name || "—"),
+          user.school_code,
+          escapeCSV(school?.region || "—"),
+          escapeCSV(school?.district || "—"),
+          escapeCSV(user.full_name || "—"),
+          user.phone || "—",
+          user.has_result ? "Ha" : "Yo'q",
+          user.total_point != null ? String(user.total_point) : "—",
+          user.created_at ? new Date(user.created_at).toLocaleDateString("uz-UZ") : "—",
+        ];
+      });
+
+      const csv = [csvHeaders, ...csvRows].map((r) => r.join(",")).join("\n");
+      const bom = "\uFEFF";
+      const blob = new Blob([bom + csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `dtm_full_export_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+
+      toast.success(`${relevantUsers.length} ta o'quvchi eksport qilindi`);
+    } catch (err) {
+      console.error("Full export error:", err);
+      toast.error("Eksport qilishda xatolik yuz berdi");
+    } finally {
+      setFullExporting(false);
+      setExportProgress("");
+    }
   };
 
   if (error) {
@@ -264,6 +351,24 @@ export function DTMSchoolsList() {
           </Button>
           <Button variant="outline" size="icon" onClick={handleExport} disabled={loading || filtered.length === 0} title="CSV Export">
             <Download className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="default"
+            onClick={handleFullExport}
+            disabled={fullExporting || loading || filtered.length === 0}
+            title="To'liq eksport (o'quvchilar bilan)"
+          >
+            {fullExporting ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                {exportProgress || "Yuklanmoqda..."}
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                To'liq eksport
+              </>
+            )}
           </Button>
         </div>
       </div>
