@@ -298,17 +298,17 @@ export default function DTMUsers() {
   const [sortColumn, setSortColumn] = useState<string>("created_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
-  // Check if any dropdown filter is active (not search)
-  const hasActiveFilter = filters.schoolCode !== "all" || filters.hasResult !== "all";
+  // Check if any filter or search is active
+  const hasActiveFilter = filters.schoolCode !== "all" || filters.hasResult !== "all" || filters.searchTerm.trim().length > 0;
 
-  // Auto-load all users when a filter is activated
+  // Auto-load all users when a filter/search is activated
   useEffect(() => {
     if (hasActiveFilter && !allUsersLoaded && !allUsersLoading) {
       loadAllUsers();
     }
   }, [hasActiveFilter, allUsersLoaded, allUsersLoading, loadAllUsers]);
 
-  // Use allUsers when filter is active and loaded, otherwise current page
+  // Use allUsers when filter/search is active and loaded, otherwise current page
   const sourceUsers = hasActiveFilter && allUsersLoaded ? allUsers : users;
 
   const handleSort = (column: string) => {
