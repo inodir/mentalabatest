@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   getApiSettings,
   fetchDTMUsers,
+  fetchAllDTMUsers,
   DTMUser,
   DTMApiSettings,
   DTMPageInfo,
@@ -23,10 +24,17 @@ interface UseDTMUsersResult {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   filteredUsers: DTMUser[];
+  allUsers: DTMUser[];
+  allUsersLoading: boolean;
+  loadAllUsers: () => void;
+  allUsersLoaded: boolean;
 }
 
 export function useDTMUsers(initialLimit: number = 50): UseDTMUsersResult {
   const [users, setUsers] = useState<DTMUser[]>([]);
+  const [allUsers, setAllUsers] = useState<DTMUser[]>([]);
+  const [allUsersLoaded, setAllUsersLoaded] = useState(false);
+  const [allUsersLoading, setAllUsersLoading] = useState(false);
   const [pageInfo, setPageInfo] = useState<DTMPageInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<UsersError>(null);
@@ -66,11 +74,31 @@ export function useDTMUsers(initialLimit: number = 50): UseDTMUsersResult {
     }
   }, []);
 
+  const loadAllUsers = useCallback(async () => {
+    if (allUsersLoaded || allUsersLoading) return;
+
+    const apiSettings = getApiSettings();
+    if (!apiSettings) return;
+
+    setAllUsersLoading(true);
+    try {
+      const result = await fetchAllDTMUsers(apiSettings);
+      setAllUsers(result.entities);
+      setAllUsersLoaded(true);
+    } catch {
+      // Silently fail, filters will work on current page
+    } finally {
+      setAllUsersLoading(false);
+    }
+  }, [allUsersLoaded, allUsersLoading]);
+
   useEffect(() => {
     fetchData(page, limit);
   }, [page, limit, fetchData]);
 
   const retry = useCallback(() => {
+    setAllUsersLoaded(false);
+    setAllUsers([]);
     fetchData(page, limit);
   }, [fetchData, page, limit]);
 
@@ -102,5 +130,9 @@ export function useDTMUsers(initialLimit: number = 50): UseDTMUsersResult {
     searchTerm,
     setSearchTerm,
     filteredUsers,
+    allUsers,
+    allUsersLoading,
+    loadAllUsers,
+    allUsersLoaded,
   };
 }

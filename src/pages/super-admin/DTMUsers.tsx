@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminLayout } from "@/components/layout/AdminLayout";
@@ -282,6 +282,10 @@ export default function DTMUsers() {
     setPage,
     setLimit,
     retry,
+    allUsers,
+    allUsersLoading,
+    loadAllUsers,
+    allUsersLoaded,
   } = useDTMUsers(50);
 
   const [filters, setFilters] = useState<DTMFilters>({
@@ -294,6 +298,19 @@ export default function DTMUsers() {
   const [sortColumn, setSortColumn] = useState<string>("created_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
+  // Check if any dropdown filter is active (not search)
+  const hasActiveFilter = filters.schoolCode !== "all" || filters.hasResult !== "all";
+
+  // Auto-load all users when a filter is activated
+  useEffect(() => {
+    if (hasActiveFilter && !allUsersLoaded && !allUsersLoading) {
+      loadAllUsers();
+    }
+  }, [hasActiveFilter, allUsersLoaded, allUsersLoading, loadAllUsers]);
+
+  // Use allUsers when filter is active and loaded, otherwise current page
+  const sourceUsers = hasActiveFilter && allUsersLoaded ? allUsers : users;
+
   const handleSort = (column: string) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -304,7 +321,7 @@ export default function DTMUsers() {
   };
 
   // Apply filters
-  const filteredUsers = filterDTMUsers(users, filters);
+  const filteredUsers = filterDTMUsers(sourceUsers, filters);
 
   // Apply sorting
   const sortedUsers = [...filteredUsers].sort((a, b) => {
@@ -408,7 +425,17 @@ export default function DTMUsers() {
                   Jami: {pageInfo.totalCount.toLocaleString()}
                 </Badge>
               )}
-              {filteredUsers.length !== users.length && (
+              {hasActiveFilter && allUsersLoading && (
+                <Badge variant="outline" className="ml-2">
+                  Barcha foydalanuvchilar yuklanmoqda...
+                </Badge>
+              )}
+              {hasActiveFilter && allUsersLoaded && (
+                <Badge variant="outline" className="ml-2">
+                  Filtrlangan: {filteredUsers.length} / {allUsers.length}
+                </Badge>
+              )}
+              {!hasActiveFilter && filteredUsers.length !== users.length && (
                 <Badge variant="outline" className="ml-2">
                   Filtrlangan: {filteredUsers.length}
                 </Badge>
@@ -449,7 +476,7 @@ export default function DTMUsers() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {loading ? (
+            {loading || (hasActiveFilter && allUsersLoading) ? (
               <div className="space-y-3">
                 {[...Array(10)].map((_, i) => (
                   <Skeleton key={i} className="h-16 w-full" />
@@ -665,7 +692,7 @@ export default function DTMUsers() {
             )}
 
             {/* Pagination */}
-            {pageInfo && totalPages > 1 && (
+            {pageInfo && totalPages > 1 && !hasActiveFilter && (
               <div className="flex items-center justify-between mt-4 pt-4 border-t">
                 <p className="text-sm text-muted-foreground">
                   <Badge variant="outline">
