@@ -115,10 +115,10 @@ export function DTMUsersFilters({
 
           {/* School filter */}
           <Select value={filters.schoolCode} onValueChange={(v) => updateFilter("schoolCode", v)}>
-            <SelectTrigger className="w-[150px]">
-              <div className="flex items-center gap-2">
-                <School className="h-4 w-4" />
-                <SelectValue placeholder="Maktab" />
+          <SelectTrigger className="w-[220px]">
+              <div className="flex items-center gap-2 truncate">
+                <School className="h-4 w-4 shrink-0" />
+                <span className="truncate"><SelectValue placeholder="Maktab" /></span>
               </div>
             </SelectTrigger>
             <SelectContent>
