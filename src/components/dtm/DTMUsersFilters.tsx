@@ -122,7 +122,7 @@ export function DTMUsersFilters({
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Barcha maktablar ({schoolCodes.length})</SelectItem>
+              <SelectItem value="all">Barcha maktablar</SelectItem>
               {schoolCodes.map((s) => (
                 <SelectItem key={s.code} value={s.code}>
                   {s.name ? `${s.name} (${s.code})` : s.code}
