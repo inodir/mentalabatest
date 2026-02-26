@@ -42,7 +42,7 @@ export default function StudentsManagement() {
 
   const filteredStudents = meStudents.filter((student) => {
     const term = searchTerm.toLowerCase();
-    const matchesSearch = !searchTerm || student.full_name.toLowerCase().includes(term) || student.phone.includes(searchTerm);
+    const matchesSearch = !searchTerm || student.full_name.toLowerCase().includes(term) || student.phone.includes(searchTerm) || student.bot_id?.toLowerCase().includes(term);
     const matchesGroup = groupFilter === "all" || student.group_name === groupFilter;
     const matchesGender = genderFilter === "all" || student.gender === genderFilter;
     const matchesLang = langFilter === "all" || student.language === langFilter;

@@ -70,7 +70,7 @@ export function DTMUsersFilters({
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Ism, maktab kodi yoki telefon bo'yicha qidirish..."
+              placeholder="Ism, bot ID, telefon yoki maktab kodi bo'yicha qidirish..."
               value={filters.searchTerm}
               onChange={(e) => updateFilter("searchTerm", e.target.value)}
               className="pl-9"
@@ -160,7 +160,9 @@ export function filterDTMUsers(users: DTMUser[], filters: DTMFilters): DTMUser[]
       const matchesSearch =
         user.full_name?.toLowerCase().includes(term) ||
         user.school_code?.toLowerCase().includes(term) ||
-        user.phone?.includes(term);
+        user.phone?.includes(term) ||
+        user.bot_id?.toLowerCase().includes(term) ||
+        user.chat_id?.toLowerCase().includes(term);
       if (!matchesSearch) return false;
     }
 
