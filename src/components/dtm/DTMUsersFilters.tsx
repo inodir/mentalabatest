@@ -19,12 +19,18 @@ export interface DTMFilters {
   hasResult: string;
 }
 
+interface SchoolOption {
+  code: string;
+  name?: string;
+}
+
 interface DTMUsersFiltersProps {
   users: DTMUser[];
   filters: DTMFilters;
   onFiltersChange: (filters: DTMFilters) => void;
   limit: number;
   onLimitChange: (limit: number) => void;
+  allSchools?: SchoolOption[];
 }
 
 export function DTMUsersFilters({
@@ -33,17 +39,22 @@ export function DTMUsersFilters({
   onFiltersChange,
   limit,
   onLimitChange,
+  allSchools,
 }: DTMUsersFiltersProps) {
   // Extract unique values for dropdowns
   const schoolCodes = useMemo(() => {
+    if (allSchools && allSchools.length > 0) {
+      return allSchools
+        .map((s) => ({ code: s.code, name: s.name }))
+        .sort((a, b) => a.code.localeCompare(b.code));
+    }
+    // Fallback: extract from current page users
     const schoolCodesSet = new Set<string>();
-
     users.forEach((user) => {
       if (user.school_code) schoolCodesSet.add(user.school_code);
     });
-
-    return [...schoolCodesSet].sort();
-  }, [users]);
+    return [...schoolCodesSet].sort().map((code) => ({ code, name: undefined }));
+  }, [users, allSchools]);
 
   const updateFilter = (key: keyof DTMFilters, value: string) => {
     onFiltersChange({ ...filters, [key]: value });
@@ -111,10 +122,10 @@ export function DTMUsersFilters({
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Barcha maktablar</SelectItem>
-              {schoolCodes.map((code) => (
-                <SelectItem key={code} value={code}>
-                  {code}
+              <SelectItem value="all">Barcha maktablar ({schoolCodes.length})</SelectItem>
+              {schoolCodes.map((s) => (
+                <SelectItem key={s.code} value={s.code}>
+                  {s.name ? `${s.name} (${s.code})` : s.code}
                 </SelectItem>
               ))}
             </SelectContent>

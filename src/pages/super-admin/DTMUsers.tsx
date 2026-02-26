@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -266,6 +267,11 @@ const UserDetailCard = ({ user }: { user: DTMUser }) => {
 
 export default function DTMUsers() {
   const navigate = useNavigate();
+  const { dtmUser } = useAuth();
+  const allSchools = useMemo(() =>
+    (dtmUser?.schools || []).map((s) => ({ code: s.code, name: s.name })),
+    [dtmUser?.schools]
+  );
   const {
     users,
     pageInfo,
@@ -431,6 +437,7 @@ export default function DTMUsers() {
             setLimit(newLimit);
             setPage(0);
           }}
+          allSchools={allSchools}
         />
 
         {/* Users Table */}
