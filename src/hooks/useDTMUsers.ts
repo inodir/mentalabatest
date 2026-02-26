@@ -77,14 +77,15 @@ export function useDTMUsers(initialLimit: number = 50): UseDTMUsersResult {
   // Filter users by search term (client-side)
   const filteredUsers = users.filter((user) => {
     if (!searchTerm.trim()) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      user.full_name?.toLowerCase().includes(term) ||
-      user.school_code?.toLowerCase().includes(term) ||
-      user.phone?.includes(term) ||
-      user.bot_id?.toLowerCase().includes(term) ||
-      user.chat_id?.toLowerCase().includes(term)
-    );
+    const terms = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
+    const searchableText = [
+      user.full_name,
+      user.school_code,
+      user.phone,
+      user.bot_id,
+      user.chat_id,
+    ].filter(Boolean).join(" ").toLowerCase();
+    return terms.every((term) => searchableText.includes(term));
   });
 
   return {

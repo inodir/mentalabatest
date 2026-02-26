@@ -156,13 +156,15 @@ export function filterDTMUsers(users: DTMUser[], filters: DTMFilters): DTMUser[]
   return users.filter((user) => {
     // Text search
     if (filters.searchTerm.trim()) {
-      const term = filters.searchTerm.toLowerCase();
-      const matchesSearch =
-        user.full_name?.toLowerCase().includes(term) ||
-        user.school_code?.toLowerCase().includes(term) ||
-        user.phone?.includes(term) ||
-        user.bot_id?.toLowerCase().includes(term) ||
-        user.chat_id?.toLowerCase().includes(term);
+      const terms = filters.searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
+      const searchableText = [
+        user.full_name,
+        user.school_code,
+        user.phone,
+        user.bot_id,
+        user.chat_id,
+      ].filter(Boolean).join(" ").toLowerCase();
+      const matchesSearch = terms.every((term) => searchableText.includes(term));
       if (!matchesSearch) return false;
     }
 
