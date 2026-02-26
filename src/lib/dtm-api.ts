@@ -17,6 +17,7 @@ export interface DTMUser {
   id: number;
   full_name: string;
   chat_id?: string;
+  bot_id?: string;
   has_result: boolean;
   phone?: string;
   district?: string;

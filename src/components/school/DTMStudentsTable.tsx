@@ -25,10 +25,15 @@ export function DTMStudentsTable({
 }: DTMStudentsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredStudents = students.filter((student) =>
-    student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (student.phone && student.phone.includes(searchTerm))
-  );
+  const filteredStudents = students.filter((student) => {
+    const term = searchTerm.toLowerCase();
+    return (
+      student.full_name.toLowerCase().includes(term) ||
+      (student.phone && student.phone.includes(searchTerm)) ||
+      (student.bot_id && student.bot_id.toLowerCase().includes(term)) ||
+      (student.chat_id && student.chat_id.toLowerCase().includes(term))
+    );
+  });
 
   return (
     <Card>
@@ -41,8 +46,8 @@ export function DTMStudentsTable({
           <div className="flex gap-2">
             <div className="relative flex-1 sm:w-64">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Ism yoki telefon bo'yicha qidirish..."
+                <Input
+                placeholder="Ism, bot ID yoki telefon bo'yicha qidirish..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9"
