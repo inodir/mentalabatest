@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getApiSettings, fetchAllDTMUsers, fetchAllDTMUsersWithToken, getCachedData, DTMUser } from "@/lib/dtm-api";
 import { getDTMTokens } from "@/lib/dtm-auth";
@@ -68,60 +68,7 @@ export function DTMSchoolsList() {
   const [preloadedUsers, setPreloadedUsers] = useState<DTMUser[]>([]);
   const [preloadingUsers, setPreloadingUsers] = useState(false);
 
-  // Derive filter options from /me data
-  const meFilterOptions = useMemo(() => {
-    const regionsSet = new Set<string>();
-    const districtsSet = new Set<string>();
-    const languagesSet = new Set<string>();
-    const groupsSet = new Set<string>();
-    const gendersSet = new Set<string>();
-
-    // From schools
-    if (dtmUser?.schools) {
-      dtmUser.schools.forEach((s) => {
-        if (s.region) regionsSet.add(s.region);
-        if (s.district) districtsSet.add(s.district);
-      });
-    }
-
-    // From students items (first batch from /me)
-    if (dtmUser?.students?.items) {
-      dtmUser.students.items.forEach((item) => {
-        if (item.language) languagesSet.add(item.language);
-        if (item.group_name) groupsSet.add(item.group_name);
-        if (item.gender) gendersSet.add(item.gender);
-        if (item.region) regionsSet.add(item.region);
-        if (item.district) districtsSet.add(item.district);
-      });
-    }
-
-    // From stats
-    if (dtmUser?.stats?.language_stats) {
-      Object.keys(dtmUser.stats.language_stats).forEach((l) => languagesSet.add(l));
-    }
-    if (dtmUser?.stats?.gender_stats) {
-      Object.keys(dtmUser.stats.gender_stats).forEach((g) => gendersSet.add(g));
-    }
-
-    // Also enrich from preloaded users
-    if (preloadedUsers.length > 0) {
-      preloadedUsers.forEach((u) => {
-        if (u.language) languagesSet.add(u.language);
-        if (u.group_name) groupsSet.add(u.group_name);
-        if (u.gender) gendersSet.add(u.gender);
-        if (u.region) regionsSet.add(u.region);
-        if (u.district) districtsSet.add(u.district);
-      });
-    }
-
-    return {
-      regions: [...regionsSet].sort(),
-      districts: [...districtsSet].sort(),
-      languages: [...languagesSet].sort(),
-      groups: [...groupsSet].sort(),
-      genders: [...gendersSet].sort(),
-    };
-  }, [dtmUser, preloadedUsers]);
+  // meFilterOptions removed — filter options now derived inside ExportColumnsDialog
 
   const fetchSchools = useCallback(async () => {
     const settings = getApiSettings();
@@ -488,7 +435,6 @@ export function DTMSchoolsList() {
         open={exportDialogOpen}
         onOpenChange={(open) => {
           setExportDialogOpen(open);
-          // Preload users when dialog opens so filter options are populated
           if (open && preloadedUsers.length === 0 && !preloadingUsers) {
             const cached = getCachedData<{ entities: DTMUser[]; totalCount: number }>("users");
             if (cached?.entities?.length) {
@@ -509,6 +455,8 @@ export function DTMSchoolsList() {
         exporting={fullExporting}
         exportProgress={exportProgress}
         allUsers={preloadedUsers}
+        schools={schools.map((s) => ({ code: s.username, name: s.full_name, region: s.region, district: s.district }))}
+        meStudents={(dtmUser?.students?.items as unknown as DTMUser[]) || []}
       />
 
       {/* Table */}
