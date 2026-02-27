@@ -42,7 +42,7 @@ export default function StudentsManagement() {
 
   const filteredStudents = meStudents.filter((student) => {
     const term = searchTerm.toLowerCase();
-    const matchesSearch = !searchTerm || student.full_name.toLowerCase().includes(term) || student.phone.includes(searchTerm) || student.bot_id?.toLowerCase().includes(term);
+    const matchesSearch = !searchTerm || student.full_name.toLowerCase().includes(term) || student.bot_id?.toLowerCase().includes(term);
     const matchesGroup = groupFilter === "all" || student.group_name === groupFilter;
     const matchesGender = genderFilter === "all" || student.gender === genderFilter;
     const matchesLang = langFilter === "all" || student.language === langFilter;
@@ -90,7 +90,7 @@ export default function StudentsManagement() {
           <div className="relative flex-1 min-w-[200px] max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="F.I.O. yoki telefon bo'yicha qidirish..."
+              placeholder="F.I.O. bo'yicha qidirish..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
@@ -159,7 +159,6 @@ export default function StudentsManagement() {
               <TableRow>
                 <TableHead className="w-12">#</TableHead>
                 <TableHead>F.I.O.</TableHead>
-                <TableHead>Tel raqami</TableHead>
                 <TableHead>Guruh</TableHead>
                 <TableHead>Jinsi</TableHead>
                 <TableHead>Til</TableHead>
@@ -173,13 +172,13 @@ export default function StudentsManagement() {
             <TableBody>
               {meLoading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="py-10 text-center">
+                  <TableCell colSpan={9} className="py-10 text-center">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                   </TableCell>
                 </TableRow>
               ) : filteredStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
                     {searchTerm || activeFilters > 0 ? "Qidiruv bo'yicha o'quvchi topilmadi" : "O'quvchilar topilmadi"}
                   </TableCell>
                 </TableRow>
@@ -188,7 +187,6 @@ export default function StudentsManagement() {
                   <TableRow key={student.id}>
                     <TableCell className="text-muted-foreground">{index + 1}</TableCell>
                     <TableCell className="font-medium whitespace-nowrap">{student.full_name}</TableCell>
-                    <TableCell>{student.phone}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{student.group_name}</Badge>
                     </TableCell>
