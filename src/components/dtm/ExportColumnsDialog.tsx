@@ -22,8 +22,16 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Download, Filter, Search, School, X, FileArchive, Users } from "lucide-react";
+import { Download, Filter, Search, School, X, FileArchive, Users, Eye, EyeOff } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export interface ExportColumn {
   key: string;
@@ -150,6 +158,7 @@ export function ExportColumnsDialog({
   );
   const [filters, setFilters] = useState<ExportFilters>(INITIAL_FILTERS);
   const [schoolSearch, setSchoolSearch] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
 
   const filteredSchools = useMemo(() => {
     if (!schoolSearch.trim()) return schools;
@@ -245,7 +254,7 @@ export function ExportColumnsDialog({
 
     // Count schools
     const schoolSet = new Set(result.map((u) => u.school_code).filter(Boolean));
-    return { users: result.length, schools: schoolSet.size };
+    return { users: result.length, schools: schoolSet.size, items: result };
   }, [allUsers, filters]);
 
   return (
@@ -467,14 +476,67 @@ export function ExportColumnsDialog({
 
         {/* Preview result */}
         {previewCount !== null && (
-          <div className="flex items-center gap-3 rounded-lg border bg-muted/40 px-4 py-3">
-            <Users className="h-5 w-5 text-primary" />
-            <div className="text-sm">
-              <span className="font-semibold text-foreground">{previewCount.users.toLocaleString()}</span>
-              <span className="text-muted-foreground"> ta o'quvchi, </span>
-              <span className="font-semibold text-foreground">{previewCount.schools}</span>
-              <span className="text-muted-foreground"> ta maktab topildi</span>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <Users className="h-5 w-5 text-primary" />
+                <div className="text-sm">
+                  <span className="font-semibold text-foreground">{previewCount.users.toLocaleString()}</span>
+                  <span className="text-muted-foreground"> ta o'quvchi, </span>
+                  <span className="font-semibold text-foreground">{previewCount.schools}</span>
+                  <span className="text-muted-foreground"> ta maktab topildi</span>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowPreview(!showPreview)}
+                className="text-xs gap-1.5"
+              >
+                {showPreview ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                {showPreview ? "Yopish" : "Ko'rish"}
+              </Button>
             </div>
+
+            {showPreview && previewCount.items.length > 0 && (
+              <ScrollArea className="h-[250px] rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="w-10 text-center">#</TableHead>
+                      <TableHead>F.I.O.</TableHead>
+                      <TableHead>Maktab</TableHead>
+                      <TableHead>Tuman</TableHead>
+                      <TableHead>Guruh</TableHead>
+                      <TableHead>Til</TableHead>
+                      <TableHead className="text-center">Natija</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {previewCount.items.slice(0, 100).map((user, idx) => (
+                      <TableRow key={user.id || idx}>
+                        <TableCell className="text-center text-xs text-muted-foreground">{idx + 1}</TableCell>
+                        <TableCell className="text-sm font-medium">{user.full_name}</TableCell>
+                        <TableCell className="text-xs">{user.school_name || user.school_code}</TableCell>
+                        <TableCell className="text-xs">{user.district || "—"}</TableCell>
+                        <TableCell className="text-xs">{user.group_name || "—"}</TableCell>
+                        <TableCell className="text-xs">{LANG_LABELS[user.language] || user.language || "—"}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant={(user.dtm?.tested ?? user.has_result) ? "default" : "secondary"} className="text-xs">
+                            {(user.dtm?.tested ?? user.has_result) ? "Ha" : "Yo'q"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                {previewCount.items.length > 100 && (
+                  <p className="text-xs text-muted-foreground text-center py-2">
+                    Dastlabki 100 ta ko'rsatilmoqda ({previewCount.items.length.toLocaleString()} tadan)
+                  </p>
+                )}
+              </ScrollArea>
+            )}
           </div>
         )}
 
