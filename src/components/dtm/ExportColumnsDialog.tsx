@@ -39,7 +39,7 @@ export const ALL_EXPORT_COLUMNS: ExportColumn[] = [
   { key: "full_name", label: "O'quvchi FIO", defaultChecked: true },
   { key: "phone", label: "Telefon", defaultChecked: true },
   { key: "gender", label: "Jinsi", defaultChecked: false },
-  { key: "group_name", label: "Guruh nomi", defaultChecked: false },
+  { key: "group_name", label: "Guruh nomi", defaultChecked: true },
   { key: "chat_id", label: "Chat ID", defaultChecked: false },
   { key: "bot_id", label: "Bot ID", defaultChecked: false },
   { key: "has_result", label: "Natija bor", defaultChecked: true },
