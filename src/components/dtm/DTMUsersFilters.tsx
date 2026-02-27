@@ -10,13 +10,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, School, CheckCircle2, Filter, X } from "lucide-react";
+import { Search, School, CheckCircle2, Filter, X, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export interface DTMFilters {
   searchTerm: string;
   schoolCode: string;
   hasResult: string;
+  groupName: string;
 }
 
 interface SchoolOption {
@@ -31,6 +32,7 @@ interface DTMUsersFiltersProps {
   limit: number;
   onLimitChange: (limit: number) => void;
   allSchools?: SchoolOption[];
+  allGroupNames?: string[];
 }
 
 export function DTMUsersFilters({
@@ -40,6 +42,7 @@ export function DTMUsersFilters({
   limit,
   onLimitChange,
   allSchools,
+  allGroupNames = [],
 }: DTMUsersFiltersProps) {
   // Extract unique values for dropdowns
   const schoolCodes = useMemo(() => {
@@ -65,12 +68,14 @@ export function DTMUsersFilters({
       searchTerm: "",
       schoolCode: "all",
       hasResult: "all",
+      groupName: "all",
     });
   };
 
   const activeFiltersCount = [
     filters.schoolCode !== "all",
     filters.hasResult !== "all",
+    filters.groupName !== "all",
   ].filter(Boolean).length;
 
   return (
@@ -146,6 +151,24 @@ export function DTMUsersFilters({
             </SelectContent>
           </Select>
 
+          {/* Group name filter */}
+          {allGroupNames.length > 0 && (
+            <Select value={filters.groupName} onValueChange={(v) => updateFilter("groupName", v)}>
+              <SelectTrigger className="w-[180px]">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  <SelectValue placeholder="Guruh" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Barcha guruhlar</SelectItem>
+                {allGroupNames.map((g) => (
+                  <SelectItem key={g} value={g}>{g}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           {/* Clear filters button */}
           {activeFiltersCount > 0 && (
             <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
@@ -188,6 +211,11 @@ export function filterDTMUsers(users: DTMUser[], filters: DTMFilters): DTMUser[]
     if (filters.hasResult !== "all") {
       const hasResult = filters.hasResult === "true";
       if (user.has_result !== hasResult) return false;
+    }
+
+    // Group name filter
+    if (filters.groupName !== "all" && user.group_name !== filters.groupName) {
+      return false;
     }
 
     return true;
