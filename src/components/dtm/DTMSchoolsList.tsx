@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getApiSettings, fetchAllDTMUsers, DTMUser } from "@/lib/dtm-api";
+import { getApiSettings, fetchAllDTMUsers, getCachedData, DTMUser } from "@/lib/dtm-api";
 import { ExportColumnsDialog, ALL_EXPORT_COLUMNS, type ExportFilters } from "./ExportColumnsDialog";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -394,6 +394,7 @@ export function DTMSchoolsList() {
         onExport={handleFullExport}
         exporting={fullExporting}
         exportProgress={exportProgress}
+        allUsers={getCachedData<{ entities: DTMUser[]; totalCount: number }>("users")?.entities || []}
       />
 
       {/* Table */}
