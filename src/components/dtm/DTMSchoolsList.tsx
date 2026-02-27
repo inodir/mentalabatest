@@ -62,6 +62,8 @@ export function DTMSchoolsList() {
   const [districtFilter, setDistrictFilter] = useState("all");
   const [sortField, setSortField] = useState<SortField>("registered_count");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [preloadedUsers, setPreloadedUsers] = useState<DTMUser[]>([]);
+  const [preloadingUsers, setPreloadingUsers] = useState(false);
 
   const fetchSchools = useCallback(async () => {
     const settings = getApiSettings();
@@ -420,11 +422,29 @@ export function DTMSchoolsList() {
 
       <ExportColumnsDialog
         open={exportDialogOpen}
-        onOpenChange={setExportDialogOpen}
+        onOpenChange={(open) => {
+          setExportDialogOpen(open);
+          // Preload users when dialog opens so filter options are populated
+          if (open && preloadedUsers.length === 0 && !preloadingUsers) {
+            const cached = getCachedData<{ entities: DTMUser[]; totalCount: number }>("users");
+            if (cached?.entities?.length) {
+              setPreloadedUsers(cached.entities);
+            } else {
+              const settings = getApiSettings();
+              if (settings) {
+                setPreloadingUsers(true);
+                fetchAllDTMUsers(settings, undefined, false)
+                  .then(({ entities }) => setPreloadedUsers(entities))
+                  .catch(() => {})
+                  .finally(() => setPreloadingUsers(false));
+              }
+            }
+          }
+        }}
         onExport={handleFullExport}
         exporting={fullExporting}
         exportProgress={exportProgress}
-        allUsers={getCachedData<{ entities: DTMUser[]; totalCount: number }>("users")?.entities || []}
+        allUsers={preloadedUsers}
         schools={filtered.map((s) => ({ code: s.username, name: s.full_name }))}
       />
 
