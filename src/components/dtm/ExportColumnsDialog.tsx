@@ -54,6 +54,7 @@ export interface ExportFilters {
   language: string;
   hasResult: string;
   groupName: string;
+  district: string;
   schoolCodes: string[];
 }
 
@@ -63,6 +64,7 @@ const INITIAL_FILTERS: ExportFilters = {
   language: "all",
   hasResult: "all",
   groupName: "all",
+  district: "all",
   schoolCodes: [],
 };
 
@@ -105,6 +107,12 @@ export function ExportColumnsDialog({
   const languages = useMemo(() => {
     const set = new Set<string>();
     allUsers.forEach((u) => { if (u.language) set.add(u.language); });
+    return [...set].sort();
+  }, [allUsers]);
+
+  const districts = useMemo(() => {
+    const set = new Set<string>();
+    allUsers.forEach((u) => { if (u.district) set.add(u.district); });
     return [...set].sort();
   }, [allUsers]);
 
@@ -159,7 +167,7 @@ export function ExportColumnsDialog({
   };
 
   const hasActiveFilters = filters.gender !== "all" || filters.language !== "all" ||
-    filters.hasResult !== "all" || filters.groupName !== "all" || 
+    filters.hasResult !== "all" || filters.groupName !== "all" || filters.district !== "all" ||
     filters.searchTerm.trim().length > 0 || filters.schoolCodes.length > 0;
 
   return (
@@ -268,6 +276,18 @@ export function ExportColumnsDialog({
           </div>
 
           <div className="grid grid-cols-2 gap-2">
+            <Select value={filters.district} onValueChange={(v) => updateFilter("district", v)}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Tuman/Shahar" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Barcha tuman/shahar</SelectItem>
+                {districts.map((d) => (
+                  <SelectItem key={d} value={d}>{d}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Select value={filters.gender} onValueChange={(v) => updateFilter("gender", v)}>
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="Jinsi" />

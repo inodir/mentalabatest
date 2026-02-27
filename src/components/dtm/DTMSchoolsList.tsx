@@ -212,6 +212,9 @@ export function DTMSchoolsList() {
       if (exportFilters.groupName !== "all") {
         relevantUsers = relevantUsers.filter((u) => u.group_name === exportFilters.groupName);
       }
+      if (exportFilters.district !== "all") {
+        relevantUsers = relevantUsers.filter((u) => u.district === exportFilters.district);
+      }
 
       const colDefs = ALL_EXPORT_COLUMNS.filter((c) => selectedColumns.includes(c.key));
       const escapeCSV = (val: string) => {
