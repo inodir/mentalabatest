@@ -46,13 +46,13 @@ export const ALL_EXPORT_COLUMNS: ExportColumn[] = [
   { key: "district", label: "Tuman", defaultChecked: true },
   { key: "full_name", label: "O'quvchi FIO", defaultChecked: true },
   { key: "phone", label: "Telefon", defaultChecked: true },
-  { key: "gender", label: "Jinsi", defaultChecked: false },
+  { key: "gender", label: "Jinsi", defaultChecked: true },
   { key: "group_name", label: "Guruh nomi", defaultChecked: true },
   { key: "chat_id", label: "Chat ID", defaultChecked: false },
   { key: "bot_id", label: "Bot ID", defaultChecked: false },
   { key: "has_result", label: "Natija bor", defaultChecked: true },
   { key: "total_point", label: "Umumiy ball", defaultChecked: true },
-  { key: "language", label: "Til", defaultChecked: false },
+  { key: "language", label: "Til", defaultChecked: true },
   { key: "created_at", label: "Ro'yxatdan o'tgan sana", defaultChecked: true },
 ];
 
@@ -170,6 +170,15 @@ export function ExportColumnsDialog({
     });
   }, [allUsers, meStudents, schoolMap]);
 
+  // Also build group options from ALL users (not just meStudents) for complete list
+  const allGroupNames = useMemo(() => {
+    const set = new Set<string>();
+    allUsers.forEach((u) => { if (u.group_name) set.add(u.group_name); });
+    meStudents.forEach((u) => { if (u.group_name) set.add(u.group_name); });
+    enrichedUsers.forEach((u) => { if (u.group_name) set.add(u.group_name); });
+    return [...set].sort();
+  }, [allUsers, meStudents, enrichedUsers]);
+
   // ========== CASCADING FILTER OPTIONS ==========
   // Use schools data for region/district (always complete), meStudents for group/language/gender
 
@@ -201,9 +210,9 @@ export function ExportColumnsDialog({
     return source.sort((a, b) => a.name.localeCompare(b.name));
   }, [schools, filters.region, filters.district]);
 
-  // 4. Groups — from meStudents filtered by current cascade
+  // 4. Groups — from enrichedUsers (includes all API data + meStudents)
   const groupOptions = useMemo(() => {
-    let source = meStudents.length > 0 ? meStudents : enrichedUsers;
+    let source = enrichedUsers;
     if (filters.region !== "all") source = source.filter((u) => u.region === filters.region);
     if (filters.district !== "all") source = source.filter((u) => u.district === filters.district);
     if (filters.schoolCodes.length > 0) {
@@ -212,12 +221,14 @@ export function ExportColumnsDialog({
     }
     const set = new Set<string>();
     source.forEach((u) => { if (u.group_name) set.add(u.group_name); });
-    return [...set].sort();
-  }, [meStudents, enrichedUsers, filters.region, filters.district, filters.schoolCodes]);
+    // Also include from allGroupNames for completeness
+    if (source === enrichedUsers) allGroupNames.forEach((g) => set.add(g));
+    return [...set].filter(Boolean).sort();
+  }, [enrichedUsers, allGroupNames, filters.region, filters.district, filters.schoolCodes]);
 
   // 5. Languages — filtered by cascade + group
   const languageOptions = useMemo(() => {
-    let source = meStudents.length > 0 ? meStudents : enrichedUsers;
+    let source = enrichedUsers;
     if (filters.region !== "all") source = source.filter((u) => u.region === filters.region);
     if (filters.district !== "all") source = source.filter((u) => u.district === filters.district);
     if (filters.schoolCodes.length > 0) {
@@ -227,8 +238,8 @@ export function ExportColumnsDialog({
     if (filters.groupName !== "all") source = source.filter((u) => u.group_name === filters.groupName);
     const set = new Set<string>();
     source.forEach((u) => { if (u.language) set.add(u.language); });
-    return [...set].sort();
-  }, [meStudents, enrichedUsers, filters.region, filters.district, filters.schoolCodes, filters.groupName]);
+    return [...set].filter(Boolean).sort();
+  }, [enrichedUsers, filters.region, filters.district, filters.schoolCodes, filters.groupName]);
 
   // Genders
   const genderOptions = useMemo(() => {
@@ -347,7 +358,7 @@ export function ExportColumnsDialog({
             Eksport sozlamalari
           </DialogTitle>
           <DialogDescription>
-            Filtrlarni tanlang, ustunlarni belgilang — ZIP fayl yuklab olinadi
+            Filtrlarni tanlang yoki hech narsa tanlamay barcha o'quvchilarni eksport qiling
           </DialogDescription>
         </DialogHeader>
 
