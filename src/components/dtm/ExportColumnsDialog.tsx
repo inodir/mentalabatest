@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { DTMUser } from "@/lib/dtm-api";
 import {
   Dialog,
   DialogContent,
@@ -66,6 +67,7 @@ interface ExportColumnsDialogProps {
   onExport: (selectedColumns: string[], filters: ExportFilters) => void;
   exporting: boolean;
   exportProgress?: string;
+  allUsers?: DTMUser[];
 }
 
 export function ExportColumnsDialog({
@@ -74,7 +76,13 @@ export function ExportColumnsDialog({
   onExport,
   exporting,
   exportProgress,
+  allUsers = [],
 }: ExportColumnsDialogProps) {
+  const groupNames = useMemo(() => {
+    const set = new Set<string>();
+    allUsers.forEach((u) => { if (u.group_name) set.add(u.group_name); });
+    return [...set].sort();
+  }, [allUsers]);
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(ALL_EXPORT_COLUMNS.filter((c) => c.defaultChecked).map((c) => c.key))
   );
@@ -167,9 +175,9 @@ export function ExportColumnsDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Barcha guruhlar</SelectItem>
-                <SelectItem value="A">A guruh</SelectItem>
-                <SelectItem value="B">B guruh</SelectItem>
-                <SelectItem value="C">C guruh</SelectItem>
+                {groupNames.map((g) => (
+                  <SelectItem key={g} value={g}>{g} guruh</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
