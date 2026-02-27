@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Download, Filter, Search, School, X, FileArchive } from "lucide-react";
+import { Download, Filter, Search, School, X, FileArchive, Users } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 export interface ExportColumn {
@@ -215,6 +215,38 @@ export function ExportColumnsDialog({
   const hasActiveFilters = filters.gender !== "all" || filters.language !== "all" ||
     filters.hasResult !== "all" || filters.groupName !== "all" || filters.region !== "all" ||
     filters.district !== "all" || filters.searchTerm.trim().length > 0 || filters.schoolCodes.length > 0;
+
+  // Preview: compute filtered count from preloaded users
+  const previewCount = useMemo(() => {
+    if (allUsers.length === 0) return null;
+    let result = allUsers;
+
+    // School filter
+    if (filters.schoolCodes.length > 0) {
+      const codes = new Set(filters.schoolCodes);
+      result = result.filter((u) => codes.has(u.school_code));
+    }
+    if (filters.searchTerm.trim()) {
+      const terms = filters.searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
+      result = result.filter((u) => {
+        const text = [u.full_name, u.phone, u.bot_id].filter(Boolean).join(" ").toLowerCase();
+        return terms.every((t) => text.includes(t));
+      });
+    }
+    if (filters.gender !== "all") result = result.filter((u) => u.gender === filters.gender);
+    if (filters.language !== "all") result = result.filter((u) => u.language === filters.language);
+    if (filters.hasResult !== "all") {
+      const tested = filters.hasResult === "true";
+      result = result.filter((u) => (u.dtm?.tested ?? u.has_result) === tested);
+    }
+    if (filters.groupName !== "all") result = result.filter((u) => u.group_name === filters.groupName);
+    if (filters.region !== "all") result = result.filter((u) => u.region === filters.region);
+    if (filters.district !== "all") result = result.filter((u) => u.district === filters.district);
+
+    // Count schools
+    const schoolSet = new Set(result.map((u) => u.school_code).filter(Boolean));
+    return { users: result.length, schools: schoolSet.size };
+  }, [allUsers, filters]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -433,20 +465,33 @@ export function ExportColumnsDialog({
           </div>
         </div>
 
+        {/* Preview result */}
+        {previewCount !== null && (
+          <div className="flex items-center gap-3 rounded-lg border bg-muted/40 px-4 py-3">
+            <Users className="h-5 w-5 text-primary" />
+            <div className="text-sm">
+              <span className="font-semibold text-foreground">{previewCount.users.toLocaleString()}</span>
+              <span className="text-muted-foreground"> ta o'quvchi, </span>
+              <span className="font-semibold text-foreground">{previewCount.schools}</span>
+              <span className="text-muted-foreground"> ta maktab topildi</span>
+            </div>
+          </div>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={exporting}>
             Bekor qilish
           </Button>
           <Button
             onClick={() => onExport(Array.from(selected), filters)}
-            disabled={selected.size === 0 || exporting}
+            disabled={selected.size === 0 || exporting || (previewCount !== null && previewCount.users === 0)}
           >
             {exporting ? (
               exportProgress || "Yuklanmoqda..."
             ) : (
               <>
                 <FileArchive className="mr-2 h-4 w-4" />
-                ZIP eksport ({selected.size} ustun)
+                ZIP eksport ({previewCount ? `${previewCount.users.toLocaleString()} o'quvchi` : `${selected.size} ustun`})
               </>
             )}
           </Button>

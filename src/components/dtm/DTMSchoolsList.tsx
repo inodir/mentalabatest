@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { getApiSettings, fetchAllDTMUsers, getCachedData, DTMUser } from "@/lib/dtm-api";
+import { getApiSettings, fetchAllDTMUsers, fetchAllDTMUsersWithToken, getCachedData, DTMUser } from "@/lib/dtm-api";
+import { getDTMTokens } from "@/lib/dtm-auth";
 import { useAuth } from "@/hooks/useAuth";
 import JSZip from "jszip";
 import { ExportColumnsDialog, ALL_EXPORT_COLUMNS, type ExportFilters } from "./ExportColumnsDialog";
@@ -216,9 +217,9 @@ export function DTMSchoolsList() {
   };
 
   const handleFullExport = async (selectedColumns: string[], exportFilters: ExportFilters) => {
-    const settings = getApiSettings();
-    if (!settings) {
-      toast.error("API sozlamalari topilmadi");
+    const { accessToken } = getDTMTokens();
+    if (!accessToken) {
+      toast.error("Avtorizatsiya topilmadi. Qaytadan login qiling.");
       return;
     }
 
@@ -226,8 +227,8 @@ export function DTMSchoolsList() {
     setExportProgress("O'quvchilar yuklanmoqda...");
 
     try {
-      const { entities: allUsers } = await fetchAllDTMUsers(
-        settings,
+      const { entities: allUsers } = await fetchAllDTMUsersWithToken(
+        accessToken,
         (loaded, total) => {
           setExportProgress(`O'quvchilar yuklanmoqda... ${loaded}/${total}`);
         },
@@ -493,10 +494,10 @@ export function DTMSchoolsList() {
             if (cached?.entities?.length) {
               setPreloadedUsers(cached.entities);
             } else {
-              const settings = getApiSettings();
-              if (settings) {
+              const { accessToken } = getDTMTokens();
+              if (accessToken) {
                 setPreloadingUsers(true);
-                fetchAllDTMUsers(settings, undefined, false)
+                fetchAllDTMUsersWithToken(accessToken, undefined, false)
                   .then(({ entities }) => setPreloadedUsers(entities))
                   .catch(() => {})
                   .finally(() => setPreloadingUsers(false));
