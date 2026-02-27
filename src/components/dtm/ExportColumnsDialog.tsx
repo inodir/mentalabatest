@@ -1,5 +1,5 @@
 // Export dialog with cascading dependent filters, preview with pagination, and ZIP support
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { DTMUser } from "@/lib/dtm-api";
 import {
   Dialog,
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Download, Filter, Search, School, X, FileArchive, Users, Eye, EyeOff, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, Filter, Search, School, X, FileArchive, Users, Eye, EyeOff, ChevronLeft, ChevronRight, RefreshCw, AlertCircle, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -97,6 +97,9 @@ interface ExportColumnsDialogProps {
   exporting: boolean;
   exportProgress?: string;
   allUsers?: DTMUser[];
+  usersLoading?: boolean;
+  usersError?: string | null;
+  onRetryLoadUsers?: () => void;
   /** Schools from /me or management API — used for region/district mapping */
   schools?: SchoolInfo[];
   /** Students sample from /me — used to derive group/language/gender options */
@@ -110,6 +113,9 @@ export function ExportColumnsDialog({
   exporting,
   exportProgress,
   allUsers = [],
+  usersLoading = false,
+  usersError = null,
+  onRetryLoadUsers,
   schools = [],
   meStudents = [],
 }: ExportColumnsDialogProps) {
@@ -129,27 +135,37 @@ export function ExportColumnsDialog({
 
   // Enrich allUsers with region/language/gender/group from meStudents + schools
   const enrichedUsers = useMemo(() => {
-    // Build a lookup from meStudents (has all fields)
-    const meMap = new Map<string, DTMUser>();
+    if (allUsers.length === 0) return [];
+
+    // Build lookups from meStudents by multiple keys for better matching
+    const meByPhone = new Map<string, DTMUser>();
+    const meByBotId = new Map<string, DTMUser>();
+    const meByName = new Map<string, DTMUser>();
     meStudents.forEach((s) => {
-      const key = s.bot_id || s.phone || String(s.id);
-      meMap.set(key, s);
+      if (s.phone) meByPhone.set(s.phone, s);
+      if (s.bot_id) meByBotId.set(s.bot_id, s);
+      if (s.full_name) meByName.set(s.full_name.toLowerCase().trim(), s);
     });
 
+    const findMeStudent = (u: DTMUser): DTMUser | undefined => {
+      if (u.phone && meByPhone.has(u.phone)) return meByPhone.get(u.phone);
+      if (u.bot_id && meByBotId.has(u.bot_id)) return meByBotId.get(u.bot_id);
+      if (u.full_name) return meByName.get(u.full_name.toLowerCase().trim());
+      return undefined;
+    };
+
     return allUsers.map((u) => {
-      // Try to find matching meStudent
-      const key = u.bot_id || u.phone || String(u.id);
-      const me = meMap.get(key);
+      const me = findMeStudent(u);
       const school = schoolMap.get(u.school_code);
 
       return {
         ...u,
-        region: u.region || me?.region || school?.region || "",
-        district: u.district || me?.district || school?.district || "",
+        region: u.region || school?.region || me?.region || "",
+        district: u.district || school?.district || me?.district || "",
         language: u.language || me?.language || "",
         gender: u.gender || me?.gender || "",
         group_name: u.group_name || me?.group_name || "",
-        school_name: u.school_name || me?.school_name || school?.name || u.school_code,
+        school_name: u.school_name || school?.name || me?.school_name || u.school_code,
       };
     });
   }, [allUsers, meStudents, schoolMap]);
@@ -554,8 +570,30 @@ export function ExportColumnsDialog({
 
         <Separator />
 
-        {/* ===== PREVIEW ===== */}
-        {allUsers.length > 0 && (
+        {/* ===== LOADING / ERROR / PREVIEW ===== */}
+        {usersLoading && (
+          <div className="flex items-center justify-center gap-3 rounded-lg border bg-muted/40 px-4 py-6">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span className="text-sm text-muted-foreground">O'quvchilar yuklanmoqda...</span>
+          </div>
+        )}
+
+        {usersError && !usersLoading && (
+          <div className="flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
+            <div className="flex items-center gap-2 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4" />
+              {usersError}
+            </div>
+            {onRetryLoadUsers && (
+              <Button variant="outline" size="sm" onClick={onRetryLoadUsers} className="text-xs gap-1.5">
+                <RefreshCw className="h-3.5 w-3.5" />
+                Qayta yuklash
+              </Button>
+            )}
+          </div>
+        )}
+
+        {!usersLoading && !usersError && allUsers.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-4 py-3">
               <div className="flex items-center gap-3">
@@ -565,6 +603,9 @@ export function ExportColumnsDialog({
                   <span className="text-muted-foreground"> ta o'quvchi, </span>
                   <span className="font-semibold text-foreground">{filteredData.schools}</span>
                   <span className="text-muted-foreground"> ta maktab</span>
+                  {hasActiveFilters && (
+                    <span className="text-muted-foreground"> (jami: {allUsers.length.toLocaleString()})</span>
+                  )}
                 </div>
               </div>
               <Button
@@ -652,6 +693,12 @@ export function ExportColumnsDialog({
                 )}
               </>
             )}
+
+            {showPreview && filteredData.items.length === 0 && (
+              <div className="text-center py-6 text-sm text-muted-foreground border rounded-lg">
+                Filtrlar bo'yicha o'quvchi topilmadi
+              </div>
+            )}
           </div>
         )}
 
@@ -661,7 +708,7 @@ export function ExportColumnsDialog({
           </Button>
           <Button
             onClick={() => onExport(Array.from(selected), filters, filteredData.items)}
-            disabled={selected.size === 0 || exporting || (allUsers.length > 0 && filteredData.users === 0)}
+            disabled={selected.size === 0 || exporting || usersLoading || filteredData.users === 0}
           >
             {exporting ? (
               exportProgress || "Yuklanmoqda..."
