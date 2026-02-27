@@ -93,7 +93,7 @@ interface SchoolInfo {
 interface ExportColumnsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onExport: (selectedColumns: string[], filters: ExportFilters) => void;
+  onExport: (selectedColumns: string[], filters: ExportFilters, filteredUsers: DTMUser[]) => void;
   exporting: boolean;
   exportProgress?: string;
   allUsers?: DTMUser[];
@@ -660,7 +660,7 @@ export function ExportColumnsDialog({
             Bekor qilish
           </Button>
           <Button
-            onClick={() => onExport(Array.from(selected), filters)}
+            onClick={() => onExport(Array.from(selected), filters, filteredData.items)}
             disabled={selected.size === 0 || exporting || (allUsers.length > 0 && filteredData.users === 0)}
           >
             {exporting ? (

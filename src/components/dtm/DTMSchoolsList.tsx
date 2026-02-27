@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getApiSettings, fetchAllDTMUsers, fetchAllDTMUsersWithToken, getCachedData, DTMUser } from "@/lib/dtm-api";
+import { getApiSettings, fetchAllDTMUsersWithToken, getCachedData, DTMUser } from "@/lib/dtm-api";
 import { getDTMTokens } from "@/lib/dtm-auth";
 import { useAuth } from "@/hooks/useAuth";
 import JSZip from "jszip";
@@ -163,65 +163,16 @@ export function DTMSchoolsList() {
     a.click();
   };
 
-  const handleFullExport = async (selectedColumns: string[], exportFilters: ExportFilters) => {
-    const { accessToken } = getDTMTokens();
-    if (!accessToken) {
-      toast.error("Avtorizatsiya topilmadi. Qaytadan login qiling.");
-      return;
-    }
-
+  const handleFullExport = async (selectedColumns: string[], _exportFilters: ExportFilters, filteredUsers: DTMUser[]) => {
     setFullExporting(true);
-    setExportProgress("O'quvchilar yuklanmoqda...");
+    setExportProgress("ZIP tayyorlanmoqda...");
 
     try {
-      const { entities: allUsers } = await fetchAllDTMUsersWithToken(
-        accessToken,
-        (loaded, total) => {
-          setExportProgress(`O'quvchilar yuklanmoqda... ${loaded}/${total}`);
-        },
-        true
-      );
-
-      setExportProgress("ZIP tayyorlanmoqda...");
+      const relevantUsers = filteredUsers;
 
       const schoolMap = new Map<string, DTMSchool>();
       for (const s of filtered) {
         schoolMap.set(s.username, s);
-      }
-
-      // Determine which schools to export
-      const targetSchoolCodes = exportFilters.schoolCodes.length > 0
-        ? new Set(exportFilters.schoolCodes)
-        : new Set(filtered.map((s) => s.username));
-
-      let relevantUsers = allUsers.filter((u) => targetSchoolCodes.has(u.school_code));
-
-      // Apply additional filters
-      if (exportFilters.searchTerm.trim()) {
-        const terms = exportFilters.searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
-        relevantUsers = relevantUsers.filter((u) => {
-          const text = [u.full_name, u.phone, u.bot_id].filter(Boolean).join(" ").toLowerCase();
-          return terms.every((t) => text.includes(t));
-        });
-      }
-      if (exportFilters.gender !== "all") {
-        relevantUsers = relevantUsers.filter((u) => u.gender === exportFilters.gender);
-      }
-      if (exportFilters.language !== "all") {
-        relevantUsers = relevantUsers.filter((u) => u.language === exportFilters.language);
-      }
-      if (exportFilters.hasResult !== "all") {
-        const tested = exportFilters.hasResult === "true";
-        relevantUsers = relevantUsers.filter((u) => (u.dtm?.tested ?? u.has_result) === tested);
-      }
-      if (exportFilters.groupName !== "all") {
-        relevantUsers = relevantUsers.filter((u) => u.group_name === exportFilters.groupName);
-      }
-      if (exportFilters.region !== "all") {
-        relevantUsers = relevantUsers.filter((u) => u.region === exportFilters.region);
-      }
-      if (exportFilters.district !== "all") {
-        relevantUsers = relevantUsers.filter((u) => u.district === exportFilters.district);
       }
 
       const colDefs = ALL_EXPORT_COLUMNS.filter((c) => selectedColumns.includes(c.key));
