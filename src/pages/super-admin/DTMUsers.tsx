@@ -272,6 +272,11 @@ export default function DTMUsers() {
     (dtmUser?.schools || []).map((s) => ({ code: s.code, name: s.name })),
     [dtmUser?.schools]
   );
+  const allGroupNames = useMemo(() => {
+    const set = new Set<string>();
+    (dtmUser?.students?.items ?? []).forEach((s) => { if (s.group_name) set.add(s.group_name); });
+    return [...set].sort();
+  }, [dtmUser?.students?.items]);
   const {
     users,
     pageInfo,
@@ -292,6 +297,7 @@ export default function DTMUsers() {
     searchTerm: "",
     schoolCode: "all",
     hasResult: "all",
+    groupName: "all",
   });
 
   const [expandedUser, setExpandedUser] = useState<number | null>(null);
@@ -299,7 +305,7 @@ export default function DTMUsers() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   // Check if any filter or search is active
-  const hasActiveFilter = filters.schoolCode !== "all" || filters.hasResult !== "all" || filters.searchTerm.trim().length > 0;
+  const hasActiveFilter = filters.schoolCode !== "all" || filters.hasResult !== "all" || filters.groupName !== "all" || filters.searchTerm.trim().length > 0;
 
   // Auto-load all users when a filter/search is activated
   useEffect(() => {
@@ -465,6 +471,7 @@ export default function DTMUsers() {
             setPage(0);
           }}
           allSchools={allSchools}
+          allGroupNames={allGroupNames}
         />
 
         {/* Users Table */}
