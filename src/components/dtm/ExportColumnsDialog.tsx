@@ -1,5 +1,5 @@
-// Export dialog with school filtering and ZIP support
-import { useState, useMemo } from "react";
+// Export dialog with cascading dependent filters, preview with pagination, and ZIP support
+import { useState, useMemo, useCallback } from "react";
 import { DTMUser } from "@/lib/dtm-api";
 import {
   Dialog,
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Download, Filter, Search, School, X, FileArchive, Users, Eye, EyeOff } from "lucide-react";
+import { Download, Filter, Search, School, X, FileArchive, Users, Eye, EyeOff, ChevronLeft, ChevronRight } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -78,12 +78,10 @@ const INITIAL_FILTERS: ExportFilters = {
   schoolCodes: [],
 };
 
-interface SchoolOption {
-  code: string;
-  name: string;
-  region?: string;
-  district?: string;
-}
+const GENDER_LABELS: Record<string, string> = { male: "Erkak", female: "Ayol" };
+const LANG_LABELS: Record<string, string> = { uz: "O'zbekcha", ru: "Ruscha", en: "Inglizcha" };
+
+const PREVIEW_PAGE_SIZE = 50;
 
 interface ExportColumnsDialogProps {
   open: boolean;
@@ -92,12 +90,6 @@ interface ExportColumnsDialogProps {
   exporting: boolean;
   exportProgress?: string;
   allUsers?: DTMUser[];
-  schools?: SchoolOption[];
-  availableRegions?: string[];
-  availableDistricts?: string[];
-  availableLanguages?: string[];
-  availableGroups?: string[];
-  availableGenders?: string[];
 }
 
 export function ExportColumnsDialog({
@@ -107,133 +99,152 @@ export function ExportColumnsDialog({
   exporting,
   exportProgress,
   allUsers = [],
-  schools = [],
-  availableRegions = [],
-  availableDistricts = [],
-  availableLanguages = [],
-  availableGroups = [],
-  availableGenders = [],
 }: ExportColumnsDialogProps) {
-  // Use provided options, fallback to deriving from allUsers
-  const groupNames = useMemo(() => {
-    if (availableGroups.length > 0) return availableGroups;
-    const set = new Set<string>();
-    allUsers.forEach((u) => { if (u.group_name) set.add(u.group_name); });
-    return [...set].sort();
-  }, [allUsers, availableGroups]);
-
-  const genders = useMemo(() => {
-    if (availableGenders.length > 0) return availableGenders;
-    const set = new Set<string>();
-    allUsers.forEach((u) => { if (u.gender) set.add(u.gender); });
-    return [...set].sort();
-  }, [allUsers, availableGenders]);
-
-  const languages = useMemo(() => {
-    if (availableLanguages.length > 0) return availableLanguages;
-    const set = new Set<string>();
-    allUsers.forEach((u) => { if (u.language) set.add(u.language); });
-    return [...set].sort();
-  }, [allUsers, availableLanguages]);
-
-  const regions = useMemo(() => {
-    if (availableRegions.length > 0) return availableRegions;
-    const set = new Set<string>();
-    allUsers.forEach((u) => { if (u.region) set.add(u.region); });
-    return [...set].sort();
-  }, [allUsers, availableRegions]);
-
-  const districts = useMemo(() => {
-    if (availableDistricts.length > 0) return availableDistricts;
-    const set = new Set<string>();
-    allUsers.forEach((u) => { if (u.district) set.add(u.district); });
-    return [...set].sort();
-  }, [allUsers, availableDistricts]);
-
-  const GENDER_LABELS: Record<string, string> = { male: "Erkak", female: "Ayol" };
-  const LANG_LABELS: Record<string, string> = { uz: "O'zbekcha", ru: "Ruscha", en: "Inglizcha" };
-
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(ALL_EXPORT_COLUMNS.filter((c) => c.defaultChecked).map((c) => c.key))
   );
   const [filters, setFilters] = useState<ExportFilters>(INITIAL_FILTERS);
-  const [schoolSearch, setSchoolSearch] = useState("");
   const [showPreview, setShowPreview] = useState(false);
+  const [previewPage, setPreviewPage] = useState(0);
 
-  const filteredSchools = useMemo(() => {
-    if (!schoolSearch.trim()) return schools;
-    const term = schoolSearch.toLowerCase();
-    return schools.filter(
-      (s) => s.name.toLowerCase().includes(term) || s.code.toLowerCase().includes(term)
-    );
-  }, [schools, schoolSearch]);
+  // ========== CASCADING FILTER OPTIONS ==========
+  // Each level filters options based on the selections above it
 
-  const toggle = (key: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
+  // 1. All unique regions from data
+  const regionOptions = useMemo(() => {
+    const set = new Set<string>();
+    allUsers.forEach((u) => { if (u.region) set.add(u.region); });
+    return [...set].sort();
+  }, [allUsers]);
+
+  // 2. Districts filtered by selected region
+  const districtOptions = useMemo(() => {
+    let source = allUsers;
+    if (filters.region !== "all") {
+      source = source.filter((u) => u.region === filters.region);
+    }
+    const set = new Set<string>();
+    source.forEach((u) => { if (u.district) set.add(u.district); });
+    return [...set].sort();
+  }, [allUsers, filters.region]);
+
+  // 3. Schools filtered by selected region + district
+  const schoolOptions = useMemo(() => {
+    let source = allUsers;
+    if (filters.region !== "all") source = source.filter((u) => u.region === filters.region);
+    if (filters.district !== "all") source = source.filter((u) => u.district === filters.district);
+    const map = new Map<string, string>();
+    source.forEach((u) => {
+      if (u.school_code && !map.has(u.school_code)) {
+        map.set(u.school_code, u.school_name || u.school_code);
+      }
     });
-  };
+    return [...map.entries()]
+      .map(([code, name]) => ({ code, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [allUsers, filters.region, filters.district]);
 
-  const selectAll = () => setSelected(new Set(ALL_EXPORT_COLUMNS.map((c) => c.key)));
-  const deselectAll = () => setSelected(new Set());
+  // 4. Groups filtered by region + district + selected schools
+  const groupOptions = useMemo(() => {
+    let source = allUsers;
+    if (filters.region !== "all") source = source.filter((u) => u.region === filters.region);
+    if (filters.district !== "all") source = source.filter((u) => u.district === filters.district);
+    if (filters.schoolCodes.length > 0) {
+      const codes = new Set(filters.schoolCodes);
+      source = source.filter((u) => codes.has(u.school_code));
+    }
+    const set = new Set<string>();
+    source.forEach((u) => { if (u.group_name) set.add(u.group_name); });
+    return [...set].sort();
+  }, [allUsers, filters.region, filters.district, filters.schoolCodes]);
 
-  const updateFilter = (key: keyof ExportFilters, value: string) => {
+  // 5. Languages filtered by region + district + schools + group
+  const languageOptions = useMemo(() => {
+    let source = allUsers;
+    if (filters.region !== "all") source = source.filter((u) => u.region === filters.region);
+    if (filters.district !== "all") source = source.filter((u) => u.district === filters.district);
+    if (filters.schoolCodes.length > 0) {
+      const codes = new Set(filters.schoolCodes);
+      source = source.filter((u) => codes.has(u.school_code));
+    }
+    if (filters.groupName !== "all") source = source.filter((u) => u.group_name === filters.groupName);
+    const set = new Set<string>();
+    source.forEach((u) => { if (u.language) set.add(u.language); });
+    return [...set].sort();
+  }, [allUsers, filters.region, filters.district, filters.schoolCodes, filters.groupName]);
+
+  // Genders (independent, but filtered by cascade for consistency)
+  const genderOptions = useMemo(() => {
+    const set = new Set<string>();
+    allUsers.forEach((u) => { if (u.gender) set.add(u.gender); });
+    return [...set].sort();
+  }, [allUsers]);
+
+  // ========== CASCADING UPDATE LOGIC ==========
+  const updateFilter = useCallback((key: keyof ExportFilters, value: string) => {
     setFilters((prev) => {
       const next = { ...prev, [key]: value };
-      // Reset district when region changes
+      // Reset downstream filters when an upstream one changes
       if (key === "region") {
         next.district = "all";
+        next.schoolCodes = [];
+        next.groupName = "all";
+        next.language = "all";
+      } else if (key === "district") {
+        next.schoolCodes = [];
+        next.groupName = "all";
+        next.language = "all";
+      } else if (key === "groupName") {
+        next.language = "all";
       }
       return next;
     });
-  };
+    setPreviewPage(0);
+  }, []);
 
-  // Filter districts based on selected region
-  const filteredDistricts = useMemo(() => {
-    if (filters.region === "all") return districts;
-    const districtSet = new Set<string>();
-    schools.forEach((s) => {
-      if (s.region === filters.region && s.district) districtSet.add(s.district);
-    });
-    allUsers.forEach((u) => {
-      if (u.region === filters.region && u.district) districtSet.add(u.district);
-    });
-    return districtSet.size > 0 ? [...districtSet].sort() : districts;
-  }, [filters.region, districts, schools, allUsers]);
-
-  const toggleSchool = (code: string) => {
+  const toggleSchool = useCallback((code: string) => {
     setFilters((prev) => {
       const codes = prev.schoolCodes.includes(code)
         ? prev.schoolCodes.filter((c) => c !== code)
         : [...prev.schoolCodes, code];
-      return { ...prev, schoolCodes: codes };
+      // Reset group + language when schools change
+      return { ...prev, schoolCodes: codes, groupName: "all", language: "all" };
     });
-  };
+    setPreviewPage(0);
+  }, []);
 
   const selectAllSchools = () => {
-    setFilters((prev) => ({ ...prev, schoolCodes: filteredSchools.map((s) => s.code) }));
+    setFilters((prev) => ({
+      ...prev,
+      schoolCodes: schoolOptions.map((s) => s.code),
+      groupName: "all",
+      language: "all",
+    }));
+    setPreviewPage(0);
   };
 
   const deselectAllSchools = () => {
-    setFilters((prev) => ({ ...prev, schoolCodes: [] }));
+    setFilters((prev) => ({ ...prev, schoolCodes: [], groupName: "all", language: "all" }));
+    setPreviewPage(0);
   };
 
-  const hasActiveFilters = filters.gender !== "all" || filters.language !== "all" ||
-    filters.hasResult !== "all" || filters.groupName !== "all" || filters.region !== "all" ||
-    filters.district !== "all" || filters.searchTerm.trim().length > 0 || filters.schoolCodes.length > 0;
-
-  // Preview: compute filtered count from preloaded users
-  const previewCount = useMemo(() => {
-    if (allUsers.length === 0) return null;
+  // ========== FILTERED RESULTS ==========
+  const filteredData = useMemo(() => {
+    if (allUsers.length === 0) return { users: 0, schools: 0, items: [] as DTMUser[] };
     let result = allUsers;
 
-    // School filter
+    if (filters.region !== "all") result = result.filter((u) => u.region === filters.region);
+    if (filters.district !== "all") result = result.filter((u) => u.district === filters.district);
     if (filters.schoolCodes.length > 0) {
       const codes = new Set(filters.schoolCodes);
       result = result.filter((u) => codes.has(u.school_code));
+    }
+    if (filters.groupName !== "all") result = result.filter((u) => u.group_name === filters.groupName);
+    if (filters.language !== "all") result = result.filter((u) => u.language === filters.language);
+    if (filters.gender !== "all") result = result.filter((u) => u.gender === filters.gender);
+    if (filters.hasResult !== "all") {
+      const tested = filters.hasResult === "true";
+      result = result.filter((u) => (u.dtm?.tested ?? u.has_result) === tested);
     }
     if (filters.searchTerm.trim()) {
       const terms = filters.searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
@@ -242,20 +253,32 @@ export function ExportColumnsDialog({
         return terms.every((t) => text.includes(t));
       });
     }
-    if (filters.gender !== "all") result = result.filter((u) => u.gender === filters.gender);
-    if (filters.language !== "all") result = result.filter((u) => u.language === filters.language);
-    if (filters.hasResult !== "all") {
-      const tested = filters.hasResult === "true";
-      result = result.filter((u) => (u.dtm?.tested ?? u.has_result) === tested);
-    }
-    if (filters.groupName !== "all") result = result.filter((u) => u.group_name === filters.groupName);
-    if (filters.region !== "all") result = result.filter((u) => u.region === filters.region);
-    if (filters.district !== "all") result = result.filter((u) => u.district === filters.district);
 
-    // Count schools
     const schoolSet = new Set(result.map((u) => u.school_code).filter(Boolean));
     return { users: result.length, schools: schoolSet.size, items: result };
   }, [allUsers, filters]);
+
+  // ========== COLUMNS ==========
+  const toggle = (key: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+  const selectAll = () => setSelected(new Set(ALL_EXPORT_COLUMNS.map((c) => c.key)));
+  const deselectAll = () => setSelected(new Set());
+
+  const hasActiveFilters = filters.gender !== "all" || filters.language !== "all" ||
+    filters.hasResult !== "all" || filters.groupName !== "all" || filters.region !== "all" ||
+    filters.district !== "all" || filters.searchTerm.trim().length > 0 || filters.schoolCodes.length > 0;
+
+  // Preview pagination
+  const totalPreviewPages = Math.max(1, Math.ceil(filteredData.items.length / PREVIEW_PAGE_SIZE));
+  const previewItems = filteredData.items.slice(
+    previewPage * PREVIEW_PAGE_SIZE,
+    (previewPage + 1) * PREVIEW_PAGE_SIZE
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -266,199 +289,214 @@ export function ExportColumnsDialog({
             Eksport sozlamalari
           </DialogTitle>
           <DialogDescription>
-            Maktablarni tanlang, ustunlarni belgilang — ZIP fayl yuklab olinadi
+            Filtrlarni tanlang, ustunlarni belgilang — ZIP fayl yuklab olinadi
           </DialogDescription>
         </DialogHeader>
 
-        {/* School filter section */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <School className="h-4 w-4 text-muted-foreground" />
-              Maktablar
-              {filters.schoolCodes.length > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {filters.schoolCodes.length} ta tanlangan
-                </Badge>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button variant="ghost" size="sm" onClick={selectAllSchools} className="text-xs h-7">
-                Barchasi
-              </Button>
-              <Button variant="ghost" size="sm" onClick={deselectAllSchools} className="text-xs h-7">
-                Tozalash
-              </Button>
-            </div>
-          </div>
-
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Maktab nomi yoki kodi bo'yicha qidirish..."
-              value={schoolSearch}
-              onChange={(e) => setSchoolSearch(e.target.value)}
-              className="pl-9 h-9"
-            />
-          </div>
-
-          {/* Selected schools badges */}
-          {filters.schoolCodes.length > 0 && filters.schoolCodes.length <= 10 && (
-            <div className="flex flex-wrap gap-1.5">
-              {filters.schoolCodes.map((code) => {
-                const school = schools.find((s) => s.code === code);
-                return (
-                  <Badge key={code} variant="outline" className="text-xs gap-1 pr-1">
-                    {school?.name || code}
-                    <button onClick={() => toggleSchool(code)} className="ml-1 hover:text-destructive">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                );
-              })}
-            </div>
-          )}
-
-          <ScrollArea className="h-[160px] rounded-md border p-2">
-            <div className="space-y-1">
-              {filteredSchools.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">Maktab topilmadi</p>
-              ) : (
-                filteredSchools.map((s) => (
-                  <div
-                    key={s.code}
-                    className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/60 cursor-pointer"
-                    onClick={() => toggleSchool(s.code)}
-                  >
-                    <Checkbox
-                      checked={filters.schoolCodes.includes(s.code)}
-                      onCheckedChange={() => toggleSchool(s.code)}
-                    />
-                    <span className="text-sm flex-1 truncate">{s.name}</span>
-                    <code className="text-xs text-muted-foreground font-mono">{s.code}</code>
-                  </div>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </div>
-
-        <Separator />
-
-        {/* Other filters */}
+        {/* ===== CASCADING FILTERS ===== */}
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm font-medium">
             <Filter className="h-4 w-4 text-muted-foreground" />
-            Qo'shimcha filtrlar
+            Filtrlar
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setFilters(INITIAL_FILTERS); setPreviewPage(0); }}
+                className="text-xs h-6 ml-auto"
+              >
+                Tozalash
+              </Button>
+            )}
           </div>
 
+          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="FIO, telefon bo'yicha qidirish..."
               value={filters.searchTerm}
-              onChange={(e) => updateFilter("searchTerm", e.target.value)}
+              onChange={(e) => {
+                setFilters((prev) => ({ ...prev, searchTerm: e.target.value }));
+                setPreviewPage(0);
+              }}
               className="pl-9 h-9"
             />
           </div>
 
+          {/* Row 1: Region → District */}
           <div className="grid grid-cols-2 gap-2">
-            <Select value={filters.region} onValueChange={(v) => updateFilter("region", v)}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Viloyat" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Barcha viloyatlar</SelectItem>
-                {regions.map((r) => (
-                  <SelectItem key={r} value={r}>{r}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Viloyat/Shahar</Label>
+              <Select value={filters.region} onValueChange={(v) => updateFilter("region", v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barchasi ({regionOptions.length})</SelectItem>
+                  {regionOptions.map((r) => (
+                    <SelectItem key={r} value={r}>{r}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Select value={filters.district} onValueChange={(v) => updateFilter("district", v)}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Tuman/Shahar" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Barcha tuman/shahar</SelectItem>
-                {filteredDistricts.map((d) => (
-                  <SelectItem key={d} value={d}>{d}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.gender} onValueChange={(v) => updateFilter("gender", v)}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Jinsi" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Barcha jins</SelectItem>
-                {genders.map((g) => (
-                  <SelectItem key={g} value={g}>{GENDER_LABELS[g] || g}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.language} onValueChange={(v) => updateFilter("language", v)}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Til" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Barcha tillar</SelectItem>
-                {languages.map((l) => (
-                  <SelectItem key={l} value={l}>{LANG_LABELS[l] || l}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.hasResult} onValueChange={(v) => updateFilter("hasResult", v)}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Natija" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Barchasi</SelectItem>
-                <SelectItem value="true">Natijasi bor</SelectItem>
-                <SelectItem value="false">Natijasi yo'q</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.groupName} onValueChange={(v) => updateFilter("groupName", v)}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Guruh" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Barcha guruhlar</SelectItem>
-                {groupNames.map((g) => (
-                  <SelectItem key={g} value={g}>{g} guruh</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Tuman</Label>
+              <Select value={filters.district} onValueChange={(v) => updateFilter("district", v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barchasi ({districtOptions.length})</SelectItem>
+                  {districtOptions.map((d) => (
+                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={() => { setFilters(INITIAL_FILTERS); setSchoolSearch(""); }} className="text-xs">
-              Barcha filtrlarni tozalash
-            </Button>
-          )}
+          {/* Row 2: Schools multi-select */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <School className="h-3.5 w-3.5" />
+                Maktablar
+                {filters.schoolCodes.length > 0 && (
+                  <Badge variant="secondary" className="text-xs h-5 px-1.5">
+                    {filters.schoolCodes.length} ta
+                  </Badge>
+                )}
+              </Label>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="sm" onClick={selectAllSchools} className="text-xs h-6 px-2">
+                  Barchasi
+                </Button>
+                <Button variant="ghost" size="sm" onClick={deselectAllSchools} className="text-xs h-6 px-2">
+                  Tozalash
+                </Button>
+              </div>
+            </div>
+
+            {/* Selected schools badges */}
+            {filters.schoolCodes.length > 0 && filters.schoolCodes.length <= 8 && (
+              <div className="flex flex-wrap gap-1">
+                {filters.schoolCodes.map((code) => {
+                  const school = schoolOptions.find((s) => s.code === code);
+                  return (
+                    <Badge key={code} variant="outline" className="text-xs gap-1 pr-1">
+                      {school?.name || code}
+                      <button onClick={() => toggleSchool(code)} className="ml-0.5 hover:text-destructive">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
+
+            <ScrollArea className="h-[120px] rounded-md border p-1.5">
+              <div className="space-y-0.5">
+                {schoolOptions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">
+                    {allUsers.length === 0 ? "Ma'lumotlar yuklanmoqda..." : "Maktab topilmadi"}
+                  </p>
+                ) : (
+                  schoolOptions.map((s) => (
+                    <div
+                      key={s.code}
+                      className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-muted/60 cursor-pointer"
+                      onClick={() => toggleSchool(s.code)}
+                    >
+                      <Checkbox
+                        checked={filters.schoolCodes.includes(s.code)}
+                        onCheckedChange={() => toggleSchool(s.code)}
+                      />
+                      <span className="text-sm flex-1 truncate">{s.name}</span>
+                      <code className="text-xs text-muted-foreground font-mono">{s.code}</code>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+
+          {/* Row 3: Group → Language → Gender → Result */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Guruh</Label>
+              <Select value={filters.groupName} onValueChange={(v) => updateFilter("groupName", v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barchasi ({groupOptions.length})</SelectItem>
+                  {groupOptions.map((g) => (
+                    <SelectItem key={g} value={g}>{g} guruh</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Til</Label>
+              <Select value={filters.language} onValueChange={(v) => updateFilter("language", v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barchasi ({languageOptions.length})</SelectItem>
+                  {languageOptions.map((l) => (
+                    <SelectItem key={l} value={l}>{LANG_LABELS[l] || l}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Jinsi</Label>
+              <Select value={filters.gender} onValueChange={(v) => setFilters((prev) => ({ ...prev, gender: v }))}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barchasi</SelectItem>
+                  {genderOptions.map((g) => (
+                    <SelectItem key={g} value={g}>{GENDER_LABELS[g] || g}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Natija holati</Label>
+              <Select value={filters.hasResult} onValueChange={(v) => setFilters((prev) => ({ ...prev, hasResult: v }))}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barchasi</SelectItem>
+                  <SelectItem value="true">Natijasi bor</SelectItem>
+                  <SelectItem value="false">Natijasi yo'q</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
 
         <Separator />
 
-        {/* Columns section */}
+        {/* ===== COLUMNS ===== */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Ustunlar</span>
             <div className="flex gap-2">
-              <Button variant="ghost" size="sm" onClick={selectAll} className="text-xs h-7">
-                Barchasi
-              </Button>
-              <Button variant="ghost" size="sm" onClick={deselectAll} className="text-xs h-7">
-                Tozalash
-              </Button>
+              <Button variant="ghost" size="sm" onClick={selectAll} className="text-xs h-7">Barchasi</Button>
+              <Button variant="ghost" size="sm" onClick={deselectAll} className="text-xs h-7">Tozalash</Button>
             </div>
           </div>
-
-          <div className="grid grid-cols-2 gap-2.5 max-h-[160px] overflow-y-auto py-1">
+          <div className="grid grid-cols-2 gap-2.5 max-h-[140px] overflow-y-auto py-1">
             {ALL_EXPORT_COLUMNS.map((col) => (
               <div key={col.key} className="flex items-center gap-2">
                 <Checkbox
@@ -466,31 +504,31 @@ export function ExportColumnsDialog({
                   checked={selected.has(col.key)}
                   onCheckedChange={() => toggle(col.key)}
                 />
-                <Label htmlFor={`col-${col.key}`} className="text-sm cursor-pointer">
-                  {col.label}
-                </Label>
+                <Label htmlFor={`col-${col.key}`} className="text-sm cursor-pointer">{col.label}</Label>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Preview result */}
-        {previewCount !== null && (
+        <Separator />
+
+        {/* ===== PREVIEW ===== */}
+        {allUsers.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-4 py-3">
               <div className="flex items-center gap-3">
                 <Users className="h-5 w-5 text-primary" />
                 <div className="text-sm">
-                  <span className="font-semibold text-foreground">{previewCount.users.toLocaleString()}</span>
+                  <span className="font-semibold text-foreground">{filteredData.users.toLocaleString()}</span>
                   <span className="text-muted-foreground"> ta o'quvchi, </span>
-                  <span className="font-semibold text-foreground">{previewCount.schools}</span>
-                  <span className="text-muted-foreground"> ta maktab topildi</span>
+                  <span className="font-semibold text-foreground">{filteredData.schools}</span>
+                  <span className="text-muted-foreground"> ta maktab</span>
                 </div>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowPreview(!showPreview)}
+                onClick={() => { setShowPreview(!showPreview); setPreviewPage(0); }}
                 className="text-xs gap-1.5"
               >
                 {showPreview ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -498,44 +536,79 @@ export function ExportColumnsDialog({
               </Button>
             </div>
 
-            {showPreview && previewCount.items.length > 0 && (
-              <ScrollArea className="h-[250px] rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="w-10 text-center">#</TableHead>
-                      <TableHead>F.I.O.</TableHead>
-                      <TableHead>Maktab</TableHead>
-                      <TableHead>Tuman</TableHead>
-                      <TableHead>Guruh</TableHead>
-                      <TableHead>Til</TableHead>
-                      <TableHead className="text-center">Natija</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {previewCount.items.slice(0, 100).map((user, idx) => (
-                      <TableRow key={user.id || idx}>
-                        <TableCell className="text-center text-xs text-muted-foreground">{idx + 1}</TableCell>
-                        <TableCell className="text-sm font-medium">{user.full_name}</TableCell>
-                        <TableCell className="text-xs">{user.school_name || user.school_code}</TableCell>
-                        <TableCell className="text-xs">{user.district || "—"}</TableCell>
-                        <TableCell className="text-xs">{user.group_name || "—"}</TableCell>
-                        <TableCell className="text-xs">{LANG_LABELS[user.language] || user.language || "—"}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={(user.dtm?.tested ?? user.has_result) ? "default" : "secondary"} className="text-xs">
-                            {(user.dtm?.tested ?? user.has_result) ? "Ha" : "Yo'q"}
-                          </Badge>
-                        </TableCell>
+            {showPreview && filteredData.items.length > 0 && (
+              <>
+                <ScrollArea className="h-[280px] rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="w-10 text-center">#</TableHead>
+                        <TableHead>F.I.O.</TableHead>
+                        <TableHead>Maktab</TableHead>
+                        <TableHead>Tuman</TableHead>
+                        <TableHead>Guruh</TableHead>
+                        <TableHead>Til</TableHead>
+                        <TableHead className="text-center">Natija</TableHead>
+                        <TableHead className="text-right">Ball</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                {previewCount.items.length > 100 && (
-                  <p className="text-xs text-muted-foreground text-center py-2">
-                    Dastlabki 100 ta ko'rsatilmoqda ({previewCount.items.length.toLocaleString()} tadan)
-                  </p>
+                    </TableHeader>
+                    <TableBody>
+                      {previewItems.map((user, idx) => (
+                        <TableRow key={user.id || idx}>
+                          <TableCell className="text-center text-xs text-muted-foreground">
+                            {previewPage * PREVIEW_PAGE_SIZE + idx + 1}
+                          </TableCell>
+                          <TableCell className="text-sm font-medium">{user.full_name}</TableCell>
+                          <TableCell className="text-xs">{user.school_name || user.school_code}</TableCell>
+                          <TableCell className="text-xs">{user.district || "—"}</TableCell>
+                          <TableCell className="text-xs">{user.group_name || "—"}</TableCell>
+                          <TableCell className="text-xs">{LANG_LABELS[user.language || ""] || user.language || "—"}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant={(user.dtm?.tested ?? user.has_result) ? "default" : "secondary"} className="text-xs">
+                              {(user.dtm?.tested ?? user.has_result) ? "Ha" : "Yo'q"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right text-xs font-mono">
+                            {user.total_point != null ? user.total_point : "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+
+                {/* Pagination */}
+                {totalPreviewPages > 1 && (
+                  <div className="flex items-center justify-between px-1">
+                    <p className="text-xs text-muted-foreground">
+                      {previewPage * PREVIEW_PAGE_SIZE + 1}–{Math.min((previewPage + 1) * PREVIEW_PAGE_SIZE, filteredData.items.length)} / {filteredData.items.length.toLocaleString()}
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7"
+                        disabled={previewPage === 0}
+                        onClick={() => setPreviewPage((p) => p - 1)}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-xs text-muted-foreground px-2">
+                        {previewPage + 1} / {totalPreviewPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7"
+                        disabled={previewPage >= totalPreviewPages - 1}
+                        onClick={() => setPreviewPage((p) => p + 1)}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                 )}
-              </ScrollArea>
+              </>
             )}
           </div>
         )}
@@ -546,14 +619,14 @@ export function ExportColumnsDialog({
           </Button>
           <Button
             onClick={() => onExport(Array.from(selected), filters)}
-            disabled={selected.size === 0 || exporting || (previewCount !== null && previewCount.users === 0)}
+            disabled={selected.size === 0 || exporting || (allUsers.length > 0 && filteredData.users === 0)}
           >
             {exporting ? (
               exportProgress || "Yuklanmoqda..."
             ) : (
               <>
                 <FileArchive className="mr-2 h-4 w-4" />
-                ZIP eksport ({previewCount ? `${previewCount.users.toLocaleString()} o'quvchi` : `${selected.size} ustun`})
+                ZIP eksport ({filteredData.users.toLocaleString()} o'quvchi)
               </>
             )}
           </Button>

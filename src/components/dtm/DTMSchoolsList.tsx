@@ -509,12 +509,6 @@ export function DTMSchoolsList() {
         exporting={fullExporting}
         exportProgress={exportProgress}
         allUsers={preloadedUsers}
-        schools={filtered.map((s) => ({ code: s.username, name: s.full_name, region: s.region, district: s.district }))}
-        availableRegions={meFilterOptions.regions}
-        availableDistricts={meFilterOptions.districts}
-        availableLanguages={meFilterOptions.languages}
-        availableGroups={meFilterOptions.groups}
-        availableGenders={meFilterOptions.genders}
       />
 
       {/* Table */}
