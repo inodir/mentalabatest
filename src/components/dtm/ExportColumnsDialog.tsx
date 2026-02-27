@@ -96,6 +96,21 @@ export function ExportColumnsDialog({
     return [...set].sort();
   }, [allUsers]);
 
+  const genders = useMemo(() => {
+    const set = new Set<string>();
+    allUsers.forEach((u) => { if (u.gender) set.add(u.gender); });
+    return [...set].sort();
+  }, [allUsers]);
+
+  const languages = useMemo(() => {
+    const set = new Set<string>();
+    allUsers.forEach((u) => { if (u.language) set.add(u.language); });
+    return [...set].sort();
+  }, [allUsers]);
+
+  const GENDER_LABELS: Record<string, string> = { male: "Erkak", female: "Ayol" };
+  const LANG_LABELS: Record<string, string> = { uz: "O'zbekcha", ru: "Ruscha", en: "Inglizcha" };
+
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(ALL_EXPORT_COLUMNS.filter((c) => c.defaultChecked).map((c) => c.key))
   );
@@ -259,8 +274,9 @@ export function ExportColumnsDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Barcha jins</SelectItem>
-                <SelectItem value="male">Erkak</SelectItem>
-                <SelectItem value="female">Ayol</SelectItem>
+                {genders.map((g) => (
+                  <SelectItem key={g} value={g}>{GENDER_LABELS[g] || g}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -270,9 +286,9 @@ export function ExportColumnsDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Barcha tillar</SelectItem>
-                <SelectItem value="uz">O'zbekcha</SelectItem>
-                <SelectItem value="ru">Ruscha</SelectItem>
-                <SelectItem value="en">Inglizcha</SelectItem>
+                {languages.map((l) => (
+                  <SelectItem key={l} value={l}>{LANG_LABELS[l] || l}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
