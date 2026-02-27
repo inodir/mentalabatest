@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getApiSettings, fetchAllDTMUsers, DTMUser } from "@/lib/dtm-api";
+import { ExportColumnsDialog, ALL_EXPORT_COLUMNS } from "./ExportColumnsDialog";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -53,6 +54,7 @@ export function DTMSchoolsList() {
   const [loading, setLoading] = useState(true);
   const [fullExporting, setFullExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState("");
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [regionFilter, setRegionFilter] = useState("all");
@@ -153,7 +155,7 @@ export function DTMSchoolsList() {
     a.click();
   };
 
-  const handleFullExport = async () => {
+  const handleFullExport = async (selectedColumns: string[]) => {
     const settings = getApiSettings();
     if (!settings) {
       toast.error("API sozlamalari topilmadi");
@@ -184,17 +186,7 @@ export function DTMSchoolsList() {
       const filteredSchoolCodes = new Set(filtered.map((s) => s.username));
       const relevantUsers = allUsers.filter((u) => filteredSchoolCodes.has(u.school_code));
 
-      const csvHeaders = [
-        "Maktab nomi",
-        "Maktab kodi",
-        "Viloyat",
-        "Tuman",
-        "O'quvchi FIO",
-        "Telefon",
-        "Natija bor",
-        "Umumiy ball",
-        "Ro'yxatdan o'tgan sana",
-      ];
+      const colDefs = ALL_EXPORT_COLUMNS.filter((c) => selectedColumns.includes(c.key));
 
       const escapeCSV = (val: string) => {
         if (val.includes(",") || val.includes('"') || val.includes("\n")) {
@@ -203,19 +195,30 @@ export function DTMSchoolsList() {
         return val;
       };
 
+      const getColumnValue = (user: DTMUser, key: string, school?: DTMSchool): string => {
+        switch (key) {
+          case "school_name": return escapeCSV(school?.full_name || "—");
+          case "school_code": return user.school_code || "—";
+          case "region": return escapeCSV(school?.region || "—");
+          case "district": return escapeCSV(school?.district || user.district || "—");
+          case "full_name": return escapeCSV(user.full_name || "—");
+          case "phone": return user.phone || "—";
+          case "gender": return escapeCSV(String(user.gender || "—"));
+          case "group_name": return escapeCSV(String(user.group_name || "—"));
+          case "chat_id": return user.chat_id || "—";
+          case "bot_id": return user.bot_id || "—";
+          case "has_result": return user.has_result ? "Ha" : "Yo'q";
+          case "total_point": return user.total_point != null ? String(user.total_point) : "—";
+          case "test_language": return escapeCSV(String(user.test_language || "—"));
+          case "created_at": return user.created_at ? new Date(user.created_at).toLocaleDateString("uz-UZ") : "—";
+          default: return "—";
+        }
+      };
+
+      const csvHeaders = colDefs.map((c) => c.label);
       const csvRows = relevantUsers.map((user) => {
         const school = schoolMap.get(user.school_code);
-        return [
-          escapeCSV(school?.full_name || "—"),
-          user.school_code,
-          escapeCSV(school?.region || "—"),
-          escapeCSV(school?.district || "—"),
-          escapeCSV(user.full_name || "—"),
-          user.phone || "—",
-          user.has_result ? "Ha" : "Yo'q",
-          user.total_point != null ? String(user.total_point) : "—",
-          user.created_at ? new Date(user.created_at).toLocaleDateString("uz-UZ") : "—",
-        ];
+        return colDefs.map((c) => getColumnValue(user, c.key, school));
       });
 
       const csv = [csvHeaders, ...csvRows].map((r) => r.join(",")).join("\n");
@@ -228,6 +231,7 @@ export function DTMSchoolsList() {
       a.click();
 
       toast.success(`${relevantUsers.length} ta o'quvchi eksport qilindi`);
+      setExportDialogOpen(false);
     } catch (err) {
       console.error("Full export error:", err);
       toast.error("Eksport qilishda xatolik yuz berdi");
@@ -354,24 +358,23 @@ export function DTMSchoolsList() {
           </Button>
           <Button
             variant="default"
-            onClick={handleFullExport}
+            onClick={() => setExportDialogOpen(true)}
             disabled={fullExporting || loading || filtered.length === 0}
             title="To'liq eksport (o'quvchilar bilan)"
           >
-            {fullExporting ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                {exportProgress || "Yuklanmoqda..."}
-              </>
-            ) : (
-              <>
-                <Download className="mr-2 h-4 w-4" />
-                To'liq eksport
-              </>
-            )}
+            <Download className="mr-2 h-4 w-4" />
+            To'liq eksport
           </Button>
         </div>
       </div>
+
+      <ExportColumnsDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        onExport={handleFullExport}
+        exporting={fullExporting}
+        exportProgress={exportProgress}
+      />
 
       {/* Table */}
       <Card>
