@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { getApiSettings, fetchAllDTMUsers, getCachedData, DTMUser } from "@/lib/dtm-api";
+import { useAuth } from "@/hooks/useAuth";
 import JSZip from "jszip";
 import { ExportColumnsDialog, ALL_EXPORT_COLUMNS, type ExportFilters } from "./ExportColumnsDialog";
 import { toast } from "sonner";
@@ -51,6 +52,7 @@ type SortDir = "asc" | "desc";
 
 export function DTMSchoolsList() {
   const navigate = useNavigate();
+  const { dtmUser } = useAuth();
   const [schools, setSchools] = useState<DTMSchool[]>([]);
   const [loading, setLoading] = useState(true);
   const [fullExporting, setFullExporting] = useState(false);
@@ -64,6 +66,61 @@ export function DTMSchoolsList() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [preloadedUsers, setPreloadedUsers] = useState<DTMUser[]>([]);
   const [preloadingUsers, setPreloadingUsers] = useState(false);
+
+  // Derive filter options from /me data
+  const meFilterOptions = useMemo(() => {
+    const regionsSet = new Set<string>();
+    const districtsSet = new Set<string>();
+    const languagesSet = new Set<string>();
+    const groupsSet = new Set<string>();
+    const gendersSet = new Set<string>();
+
+    // From schools
+    if (dtmUser?.schools) {
+      dtmUser.schools.forEach((s) => {
+        if (s.region) regionsSet.add(s.region);
+        if (s.district) districtsSet.add(s.district);
+      });
+    }
+
+    // From students items (first batch from /me)
+    if (dtmUser?.students?.items) {
+      dtmUser.students.items.forEach((item) => {
+        if (item.language) languagesSet.add(item.language);
+        if (item.group_name) groupsSet.add(item.group_name);
+        if (item.gender) gendersSet.add(item.gender);
+        if (item.region) regionsSet.add(item.region);
+        if (item.district) districtsSet.add(item.district);
+      });
+    }
+
+    // From stats
+    if (dtmUser?.stats?.language_stats) {
+      Object.keys(dtmUser.stats.language_stats).forEach((l) => languagesSet.add(l));
+    }
+    if (dtmUser?.stats?.gender_stats) {
+      Object.keys(dtmUser.stats.gender_stats).forEach((g) => gendersSet.add(g));
+    }
+
+    // Also enrich from preloaded users
+    if (preloadedUsers.length > 0) {
+      preloadedUsers.forEach((u) => {
+        if (u.language) languagesSet.add(u.language);
+        if (u.group_name) groupsSet.add(u.group_name);
+        if (u.gender) gendersSet.add(u.gender);
+        if (u.region) regionsSet.add(u.region);
+        if (u.district) districtsSet.add(u.district);
+      });
+    }
+
+    return {
+      regions: [...regionsSet].sort(),
+      districts: [...districtsSet].sort(),
+      languages: [...languagesSet].sort(),
+      groups: [...groupsSet].sort(),
+      genders: [...gendersSet].sort(),
+    };
+  }, [dtmUser, preloadedUsers]);
 
   const fetchSchools = useCallback(async () => {
     const settings = getApiSettings();
@@ -211,6 +268,9 @@ export function DTMSchoolsList() {
       }
       if (exportFilters.groupName !== "all") {
         relevantUsers = relevantUsers.filter((u) => u.group_name === exportFilters.groupName);
+      }
+      if (exportFilters.region !== "all") {
+        relevantUsers = relevantUsers.filter((u) => u.region === exportFilters.region);
       }
       if (exportFilters.district !== "all") {
         relevantUsers = relevantUsers.filter((u) => u.district === exportFilters.district);
@@ -448,7 +508,12 @@ export function DTMSchoolsList() {
         exporting={fullExporting}
         exportProgress={exportProgress}
         allUsers={preloadedUsers}
-        schools={filtered.map((s) => ({ code: s.username, name: s.full_name }))}
+        schools={filtered.map((s) => ({ code: s.username, name: s.full_name, region: s.region, district: s.district }))}
+        availableRegions={meFilterOptions.regions}
+        availableDistricts={meFilterOptions.districts}
+        availableLanguages={meFilterOptions.languages}
+        availableGroups={meFilterOptions.groups}
+        availableGenders={meFilterOptions.genders}
       />
 
       {/* Table */}
