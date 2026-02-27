@@ -92,15 +92,11 @@ export default function DistrictSchoolDetails() {
   }, [fetchDTMData]);
 
   const filteredRegistered = registeredUsers.filter(
-    (u) =>
-      u.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (u.phone || "").includes(searchTerm)
+    (u) => u.full_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredResults = usersWithResults.filter(
-    (u) =>
-      u.full_name.toLowerCase().includes(resultsSearchTerm.toLowerCase()) ||
-      (u.phone || "").includes(resultsSearchTerm)
+    (u) => u.full_name.toLowerCase().includes(resultsSearchTerm.toLowerCase())
   );
 
   const downloadCSV = (headers: string[], rows: (string | number)[][], filename: string) => {
@@ -114,20 +110,20 @@ export default function DistrictSchoolDetails() {
   };
 
   const handleExportRegisteredCSV = () => {
-    const headers = ["F.I.O.", "Telefon", "Tuman", "Ro'yxatdan o'tgan sana"];
+    const headers = ["F.I.O.", "Tuman", "Ro'yxatdan o'tgan sana"];
     const rows = filteredRegistered.map((u) => [
-      u.full_name, u.phone || "", u.district || "", format(new Date(u.created_at), "dd.MM.yyyy"),
+      u.full_name, u.district || "", format(new Date(u.created_at), "dd.MM.yyyy"),
     ]);
     downloadCSV(headers, rows, `${schoolInfo?.name || schoolCode}_royxat.csv`);
   };
 
   const handleExportResultsCSV = () => {
-    const headers = ["F.I.O.", "Telefon", "Majburiy fanlar", "1-fan", "1-fan ball", "2-fan", "2-fan ball", "Jami ball"];
+    const headers = ["F.I.O.", "Majburiy fanlar", "1-fan", "1-fan ball", "2-fan", "2-fan ball", "Jami ball"];
     const rows = filteredResults.map((u) => {
       const mandatory = u.test_results?.mandatory || [];
       const mandatoryTotal = mandatory.reduce((s, m) => s + m.point, 0);
       return [
-        u.full_name, u.phone || "", mandatoryTotal,
+        u.full_name, mandatoryTotal,
         u.test_results?.primary?.name || "", u.test_results?.primary?.point || 0,
         u.test_results?.secondary?.name || "", u.test_results?.secondary?.point || 0,
         u.total_point ?? 0,
@@ -237,8 +233,7 @@ export default function DistrictSchoolDetails() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>F.I.O.</TableHead>
-                    <TableHead>Telefon</TableHead>
+                     <TableHead>F.I.O.</TableHead>
                     <TableHead>Tuman</TableHead>
                     <TableHead>Sana</TableHead>
                   </TableRow>
@@ -246,13 +241,13 @@ export default function DistrictSchoolDetails() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8">
+                      <TableCell colSpan={3} className="text-center py-8">
                         <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                       </TableCell>
                     </TableRow>
                   ) : filteredRegistered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
                         O'quvchilar topilmadi
                       </TableCell>
                     </TableRow>
@@ -260,7 +255,6 @@ export default function DistrictSchoolDetails() {
                     filteredRegistered.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.full_name}</TableCell>
-                        <TableCell>{user.phone || "—"}</TableCell>
                         <TableCell>{user.district || "—"}</TableCell>
                         <TableCell>{format(new Date(user.created_at), "dd.MM.yyyy")}</TableCell>
                       </TableRow>
@@ -294,8 +288,7 @@ export default function DistrictSchoolDetails() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>F.I.O.</TableHead>
-                    <TableHead>Telefon</TableHead>
+                     <TableHead>F.I.O.</TableHead>
                     <TableHead className="text-center">Majburiy</TableHead>
                     <TableHead>1-fan (ball)</TableHead>
                     <TableHead>2-fan (ball)</TableHead>
@@ -305,13 +298,13 @@ export default function DistrictSchoolDetails() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8">
+                      <TableCell colSpan={5} className="text-center py-8">
                         <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                       </TableCell>
                     </TableRow>
                   ) : filteredResults.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                         Natijalar topilmadi
                       </TableCell>
                     </TableRow>
@@ -322,7 +315,6 @@ export default function DistrictSchoolDetails() {
                       return (
                         <TableRow key={user.id}>
                           <TableCell className="font-medium">{user.full_name}</TableCell>
-                          <TableCell>{user.phone || "—"}</TableCell>
                           <TableCell className="text-center">
                             <Badge variant="outline">{mandatoryTotal}/33</Badge>
                           </TableCell>
