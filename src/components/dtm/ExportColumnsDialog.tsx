@@ -54,6 +54,7 @@ export interface ExportFilters {
   language: string;
   hasResult: string;
   groupName: string;
+  region: string;
   district: string;
   schoolCodes: string[];
 }
@@ -64,6 +65,7 @@ const INITIAL_FILTERS: ExportFilters = {
   language: "all",
   hasResult: "all",
   groupName: "all",
+  region: "all",
   district: "all",
   schoolCodes: [],
 };
@@ -71,6 +73,8 @@ const INITIAL_FILTERS: ExportFilters = {
 interface SchoolOption {
   code: string;
   name: string;
+  region?: string;
+  district?: string;
 }
 
 interface ExportColumnsDialogProps {
@@ -81,6 +85,11 @@ interface ExportColumnsDialogProps {
   exportProgress?: string;
   allUsers?: DTMUser[];
   schools?: SchoolOption[];
+  availableRegions?: string[];
+  availableDistricts?: string[];
+  availableLanguages?: string[];
+  availableGroups?: string[];
+  availableGenders?: string[];
 }
 
 export function ExportColumnsDialog({
@@ -91,30 +100,47 @@ export function ExportColumnsDialog({
   exportProgress,
   allUsers = [],
   schools = [],
+  availableRegions = [],
+  availableDistricts = [],
+  availableLanguages = [],
+  availableGroups = [],
+  availableGenders = [],
 }: ExportColumnsDialogProps) {
+  // Use provided options, fallback to deriving from allUsers
   const groupNames = useMemo(() => {
+    if (availableGroups.length > 0) return availableGroups;
     const set = new Set<string>();
     allUsers.forEach((u) => { if (u.group_name) set.add(u.group_name); });
     return [...set].sort();
-  }, [allUsers]);
+  }, [allUsers, availableGroups]);
 
   const genders = useMemo(() => {
+    if (availableGenders.length > 0) return availableGenders;
     const set = new Set<string>();
     allUsers.forEach((u) => { if (u.gender) set.add(u.gender); });
     return [...set].sort();
-  }, [allUsers]);
+  }, [allUsers, availableGenders]);
 
   const languages = useMemo(() => {
+    if (availableLanguages.length > 0) return availableLanguages;
     const set = new Set<string>();
     allUsers.forEach((u) => { if (u.language) set.add(u.language); });
     return [...set].sort();
-  }, [allUsers]);
+  }, [allUsers, availableLanguages]);
+
+  const regions = useMemo(() => {
+    if (availableRegions.length > 0) return availableRegions;
+    const set = new Set<string>();
+    allUsers.forEach((u) => { if (u.region) set.add(u.region); });
+    return [...set].sort();
+  }, [allUsers, availableRegions]);
 
   const districts = useMemo(() => {
+    if (availableDistricts.length > 0) return availableDistricts;
     const set = new Set<string>();
     allUsers.forEach((u) => { if (u.district) set.add(u.district); });
     return [...set].sort();
-  }, [allUsers]);
+  }, [allUsers, availableDistricts]);
 
   const GENDER_LABELS: Record<string, string> = { male: "Erkak", female: "Ayol" };
   const LANG_LABELS: Record<string, string> = { uz: "O'zbekcha", ru: "Ruscha", en: "Inglizcha" };
@@ -146,8 +172,28 @@ export function ExportColumnsDialog({
   const deselectAll = () => setSelected(new Set());
 
   const updateFilter = (key: keyof ExportFilters, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+    setFilters((prev) => {
+      const next = { ...prev, [key]: value };
+      // Reset district when region changes
+      if (key === "region") {
+        next.district = "all";
+      }
+      return next;
+    });
   };
+
+  // Filter districts based on selected region
+  const filteredDistricts = useMemo(() => {
+    if (filters.region === "all") return districts;
+    const districtSet = new Set<string>();
+    schools.forEach((s) => {
+      if (s.region === filters.region && s.district) districtSet.add(s.district);
+    });
+    allUsers.forEach((u) => {
+      if (u.region === filters.region && u.district) districtSet.add(u.district);
+    });
+    return districtSet.size > 0 ? [...districtSet].sort() : districts;
+  }, [filters.region, districts, schools, allUsers]);
 
   const toggleSchool = (code: string) => {
     setFilters((prev) => {
@@ -167,8 +213,8 @@ export function ExportColumnsDialog({
   };
 
   const hasActiveFilters = filters.gender !== "all" || filters.language !== "all" ||
-    filters.hasResult !== "all" || filters.groupName !== "all" || filters.district !== "all" ||
-    filters.searchTerm.trim().length > 0 || filters.schoolCodes.length > 0;
+    filters.hasResult !== "all" || filters.groupName !== "all" || filters.region !== "all" ||
+    filters.district !== "all" || filters.searchTerm.trim().length > 0 || filters.schoolCodes.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -276,13 +322,25 @@ export function ExportColumnsDialog({
           </div>
 
           <div className="grid grid-cols-2 gap-2">
+            <Select value={filters.region} onValueChange={(v) => updateFilter("region", v)}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Viloyat" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Barcha viloyatlar</SelectItem>
+                {regions.map((r) => (
+                  <SelectItem key={r} value={r}>{r}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Select value={filters.district} onValueChange={(v) => updateFilter("district", v)}>
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="Tuman/Shahar" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Barcha tuman/shahar</SelectItem>
-                {districts.map((d) => (
+                {filteredDistricts.map((d) => (
                   <SelectItem key={d} value={d}>{d}</SelectItem>
                 ))}
               </SelectContent>
