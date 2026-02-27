@@ -67,6 +67,7 @@ export function DTMSchoolsList() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [preloadedUsers, setPreloadedUsers] = useState<DTMUser[]>([]);
   const [preloadingUsers, setPreloadingUsers] = useState(false);
+  const [usersLoadError, setUsersLoadError] = useState<string | null>(null);
 
   // meFilterOptions removed — filter options now derived inside ExportColumnsDialog
 
@@ -387,6 +388,7 @@ export function DTMSchoolsList() {
         onOpenChange={(open) => {
           setExportDialogOpen(open);
           if (open && preloadedUsers.length === 0 && !preloadingUsers) {
+            setUsersLoadError(null);
             const cached = getCachedData<{ entities: DTMUser[]; totalCount: number }>("users");
             if (cached?.entities?.length) {
               setPreloadedUsers(cached.entities);
@@ -395,9 +397,20 @@ export function DTMSchoolsList() {
               if (accessToken) {
                 setPreloadingUsers(true);
                 fetchAllDTMUsersWithToken(accessToken, undefined, false)
-                  .then(({ entities }) => setPreloadedUsers(entities))
-                  .catch(() => {})
+                  .then(({ entities }) => {
+                    setPreloadedUsers(entities);
+                    if (entities.length === 0) {
+                      setUsersLoadError("API dan o'quvchilar topilmadi");
+                    }
+                  })
+                  .catch((err) => {
+                    console.error("Failed to load users for export:", err);
+                    setUsersLoadError("O'quvchilarni yuklashda xatolik: " + (err instanceof Error ? err.message : "Noma'lum xato"));
+                    toast.error("O'quvchilarni yuklashda xatolik yuz berdi");
+                  })
                   .finally(() => setPreloadingUsers(false));
+              } else {
+                setUsersLoadError("Avtorizatsiya tokeni topilmadi. Qayta login qiling.");
               }
             }
           }
@@ -406,6 +419,26 @@ export function DTMSchoolsList() {
         exporting={fullExporting}
         exportProgress={exportProgress}
         allUsers={preloadedUsers}
+        usersLoading={preloadingUsers}
+        usersError={usersLoadError}
+        onRetryLoadUsers={() => {
+          setUsersLoadError(null);
+          setPreloadedUsers([]);
+          const { accessToken } = getDTMTokens();
+          if (accessToken) {
+            setPreloadingUsers(true);
+            fetchAllDTMUsersWithToken(accessToken, undefined, true)
+              .then(({ entities }) => {
+                setPreloadedUsers(entities);
+                if (entities.length === 0) setUsersLoadError("API dan o'quvchilar topilmadi");
+              })
+              .catch((err) => {
+                console.error("Retry load users failed:", err);
+                setUsersLoadError("Qayta yuklashda xatolik");
+              })
+              .finally(() => setPreloadingUsers(false));
+          }
+        }}
         schools={schools.map((s) => ({ code: s.username, name: s.full_name, region: s.region, district: s.district }))}
         meStudents={(dtmUser?.students?.items as unknown as DTMUser[]) || []}
       />
