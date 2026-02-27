@@ -83,6 +83,13 @@ const LANG_LABELS: Record<string, string> = { uz: "O'zbekcha", ru: "Ruscha", en:
 
 const PREVIEW_PAGE_SIZE = 50;
 
+interface SchoolInfo {
+  code: string;
+  name: string;
+  region: string;
+  district: string;
+}
+
 interface ExportColumnsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -90,6 +97,10 @@ interface ExportColumnsDialogProps {
   exporting: boolean;
   exportProgress?: string;
   allUsers?: DTMUser[];
+  /** Schools from /me or management API — used for region/district mapping */
+  schools?: SchoolInfo[];
+  /** Students sample from /me — used to derive group/language/gender options */
+  meStudents?: DTMUser[];
 }
 
 export function ExportColumnsDialog({
@@ -99,6 +110,8 @@ export function ExportColumnsDialog({
   exporting,
   exportProgress,
   allUsers = [],
+  schools = [],
+  meStudents = [],
 }: ExportColumnsDialogProps) {
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(ALL_EXPORT_COLUMNS.filter((c) => c.defaultChecked).map((c) => c.key))
@@ -107,46 +120,74 @@ export function ExportColumnsDialog({
   const [showPreview, setShowPreview] = useState(false);
   const [previewPage, setPreviewPage] = useState(0);
 
-  // ========== CASCADING FILTER OPTIONS ==========
-  // Each level filters options based on the selections above it
+  // Build school lookup: code → {region, district, name}
+  const schoolMap = useMemo(() => {
+    const map = new Map<string, SchoolInfo>();
+    schools.forEach((s) => map.set(s.code, s));
+    return map;
+  }, [schools]);
 
-  // 1. All unique regions from data
+  // Enrich allUsers with region/language/gender/group from meStudents + schools
+  const enrichedUsers = useMemo(() => {
+    // Build a lookup from meStudents (has all fields)
+    const meMap = new Map<string, DTMUser>();
+    meStudents.forEach((s) => {
+      const key = s.bot_id || s.phone || String(s.id);
+      meMap.set(key, s);
+    });
+
+    return allUsers.map((u) => {
+      // Try to find matching meStudent
+      const key = u.bot_id || u.phone || String(u.id);
+      const me = meMap.get(key);
+      const school = schoolMap.get(u.school_code);
+
+      return {
+        ...u,
+        region: u.region || me?.region || school?.region || "",
+        district: u.district || me?.district || school?.district || "",
+        language: u.language || me?.language || "",
+        gender: u.gender || me?.gender || "",
+        group_name: u.group_name || me?.group_name || "",
+        school_name: u.school_name || me?.school_name || school?.name || u.school_code,
+      };
+    });
+  }, [allUsers, meStudents, schoolMap]);
+
+  // ========== CASCADING FILTER OPTIONS ==========
+  // Use schools data for region/district (always complete), meStudents for group/language/gender
+
+  // 1. Regions from schools
   const regionOptions = useMemo(() => {
     const set = new Set<string>();
-    allUsers.forEach((u) => { if (u.region) set.add(u.region); });
+    schools.forEach((s) => { if (s.region) set.add(s.region); });
+    // Also from enriched users
+    enrichedUsers.forEach((u) => { if (u.region) set.add(u.region); });
     return [...set].sort();
-  }, [allUsers]);
+  }, [schools, enrichedUsers]);
 
-  // 2. Districts filtered by selected region
+  // 2. Districts filtered by selected region (from schools)
   const districtOptions = useMemo(() => {
-    let source = allUsers;
+    let source = schools;
     if (filters.region !== "all") {
-      source = source.filter((u) => u.region === filters.region);
+      source = source.filter((s) => s.region === filters.region);
     }
     const set = new Set<string>();
-    source.forEach((u) => { if (u.district) set.add(u.district); });
+    source.forEach((s) => { if (s.district) set.add(s.district); });
     return [...set].sort();
-  }, [allUsers, filters.region]);
+  }, [schools, filters.region]);
 
-  // 3. Schools filtered by selected region + district
-  const schoolOptions = useMemo(() => {
-    let source = allUsers;
-    if (filters.region !== "all") source = source.filter((u) => u.region === filters.region);
-    if (filters.district !== "all") source = source.filter((u) => u.district === filters.district);
-    const map = new Map<string, string>();
-    source.forEach((u) => {
-      if (u.school_code && !map.has(u.school_code)) {
-        map.set(u.school_code, u.school_name || u.school_code);
-      }
-    });
-    return [...map.entries()]
-      .map(([code, name]) => ({ code, name }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [allUsers, filters.region, filters.district]);
+  // 3. Schools filtered by region + district
+  const schoolFilterOptions = useMemo(() => {
+    let source = schools;
+    if (filters.region !== "all") source = source.filter((s) => s.region === filters.region);
+    if (filters.district !== "all") source = source.filter((s) => s.district === filters.district);
+    return source.sort((a, b) => a.name.localeCompare(b.name));
+  }, [schools, filters.region, filters.district]);
 
-  // 4. Groups filtered by region + district + selected schools
+  // 4. Groups — from meStudents filtered by current cascade
   const groupOptions = useMemo(() => {
-    let source = allUsers;
+    let source = meStudents.length > 0 ? meStudents : enrichedUsers;
     if (filters.region !== "all") source = source.filter((u) => u.region === filters.region);
     if (filters.district !== "all") source = source.filter((u) => u.district === filters.district);
     if (filters.schoolCodes.length > 0) {
@@ -156,11 +197,11 @@ export function ExportColumnsDialog({
     const set = new Set<string>();
     source.forEach((u) => { if (u.group_name) set.add(u.group_name); });
     return [...set].sort();
-  }, [allUsers, filters.region, filters.district, filters.schoolCodes]);
+  }, [meStudents, enrichedUsers, filters.region, filters.district, filters.schoolCodes]);
 
-  // 5. Languages filtered by region + district + schools + group
+  // 5. Languages — filtered by cascade + group
   const languageOptions = useMemo(() => {
-    let source = allUsers;
+    let source = meStudents.length > 0 ? meStudents : enrichedUsers;
     if (filters.region !== "all") source = source.filter((u) => u.region === filters.region);
     if (filters.district !== "all") source = source.filter((u) => u.district === filters.district);
     if (filters.schoolCodes.length > 0) {
@@ -171,14 +212,15 @@ export function ExportColumnsDialog({
     const set = new Set<string>();
     source.forEach((u) => { if (u.language) set.add(u.language); });
     return [...set].sort();
-  }, [allUsers, filters.region, filters.district, filters.schoolCodes, filters.groupName]);
+  }, [meStudents, enrichedUsers, filters.region, filters.district, filters.schoolCodes, filters.groupName]);
 
-  // Genders (independent, but filtered by cascade for consistency)
+  // Genders
   const genderOptions = useMemo(() => {
     const set = new Set<string>();
-    allUsers.forEach((u) => { if (u.gender) set.add(u.gender); });
+    meStudents.forEach((u) => { if (u.gender) set.add(u.gender); });
+    enrichedUsers.forEach((u) => { if (u.gender) set.add(u.gender); });
     return [...set].sort();
-  }, [allUsers]);
+  }, [meStudents, enrichedUsers]);
 
   // ========== CASCADING UPDATE LOGIC ==========
   const updateFilter = useCallback((key: keyof ExportFilters, value: string) => {
@@ -216,7 +258,7 @@ export function ExportColumnsDialog({
   const selectAllSchools = () => {
     setFilters((prev) => ({
       ...prev,
-      schoolCodes: schoolOptions.map((s) => s.code),
+      schoolCodes: schoolFilterOptions.map((s) => s.code),
       groupName: "all",
       language: "all",
     }));
@@ -230,8 +272,8 @@ export function ExportColumnsDialog({
 
   // ========== FILTERED RESULTS ==========
   const filteredData = useMemo(() => {
-    if (allUsers.length === 0) return { users: 0, schools: 0, items: [] as DTMUser[] };
-    let result = allUsers;
+    if (enrichedUsers.length === 0) return { users: 0, schools: 0, items: [] as DTMUser[] };
+    let result = enrichedUsers;
 
     if (filters.region !== "all") result = result.filter((u) => u.region === filters.region);
     if (filters.district !== "all") result = result.filter((u) => u.district === filters.district);
@@ -256,7 +298,7 @@ export function ExportColumnsDialog({
 
     const schoolSet = new Set(result.map((u) => u.school_code).filter(Boolean));
     return { users: result.length, schools: schoolSet.size, items: result };
-  }, [allUsers, filters]);
+  }, [enrichedUsers, filters]);
 
   // ========== COLUMNS ==========
   const toggle = (key: string) => {
@@ -383,7 +425,7 @@ export function ExportColumnsDialog({
             {filters.schoolCodes.length > 0 && filters.schoolCodes.length <= 8 && (
               <div className="flex flex-wrap gap-1">
                 {filters.schoolCodes.map((code) => {
-                  const school = schoolOptions.find((s) => s.code === code);
+                  const school = schoolFilterOptions.find((s) => s.code === code);
                   return (
                     <Badge key={code} variant="outline" className="text-xs gap-1 pr-1">
                       {school?.name || code}
@@ -398,12 +440,12 @@ export function ExportColumnsDialog({
 
             <ScrollArea className="h-[120px] rounded-md border p-1.5">
               <div className="space-y-0.5">
-                {schoolOptions.length === 0 ? (
+                {schoolFilterOptions.length === 0 ? (
                   <p className="text-xs text-muted-foreground text-center py-4">
                     {allUsers.length === 0 ? "Ma'lumotlar yuklanmoqda..." : "Maktab topilmadi"}
                   </p>
                 ) : (
-                  schoolOptions.map((s) => (
+                  schoolFilterOptions.map((s) => (
                     <div
                       key={s.code}
                       className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-muted/60 cursor-pointer"
