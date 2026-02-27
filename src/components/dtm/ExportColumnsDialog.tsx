@@ -19,7 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Download, Filter, Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Download, Filter, Search, School, X, FileArchive } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 export interface ExportColumn {
@@ -51,6 +53,7 @@ export interface ExportFilters {
   language: string;
   hasResult: string;
   groupName: string;
+  schoolCodes: string[];
 }
 
 const INITIAL_FILTERS: ExportFilters = {
@@ -59,7 +62,13 @@ const INITIAL_FILTERS: ExportFilters = {
   language: "all",
   hasResult: "all",
   groupName: "all",
+  schoolCodes: [],
 };
+
+interface SchoolOption {
+  code: string;
+  name: string;
+}
 
 interface ExportColumnsDialogProps {
   open: boolean;
@@ -68,6 +77,7 @@ interface ExportColumnsDialogProps {
   exporting: boolean;
   exportProgress?: string;
   allUsers?: DTMUser[];
+  schools?: SchoolOption[];
 }
 
 export function ExportColumnsDialog({
@@ -77,16 +87,27 @@ export function ExportColumnsDialog({
   exporting,
   exportProgress,
   allUsers = [],
+  schools = [],
 }: ExportColumnsDialogProps) {
   const groupNames = useMemo(() => {
     const set = new Set<string>();
     allUsers.forEach((u) => { if (u.group_name) set.add(u.group_name); });
     return [...set].sort();
   }, [allUsers]);
+
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(ALL_EXPORT_COLUMNS.filter((c) => c.defaultChecked).map((c) => c.key))
   );
   const [filters, setFilters] = useState<ExportFilters>(INITIAL_FILTERS);
+  const [schoolSearch, setSchoolSearch] = useState("");
+
+  const filteredSchools = useMemo(() => {
+    if (!schoolSearch.trim()) return schools;
+    const term = schoolSearch.toLowerCase();
+    return schools.filter(
+      (s) => s.name.toLowerCase().includes(term) || s.code.toLowerCase().includes(term)
+    );
+  }, [schools, schoolSearch]);
 
   const toggle = (key: string) => {
     setSelected((prev) => {
@@ -104,24 +125,120 @@ export function ExportColumnsDialog({
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
+  const toggleSchool = (code: string) => {
+    setFilters((prev) => {
+      const codes = prev.schoolCodes.includes(code)
+        ? prev.schoolCodes.filter((c) => c !== code)
+        : [...prev.schoolCodes, code];
+      return { ...prev, schoolCodes: codes };
+    });
+  };
+
+  const selectAllSchools = () => {
+    setFilters((prev) => ({ ...prev, schoolCodes: filteredSchools.map((s) => s.code) }));
+  };
+
+  const deselectAllSchools = () => {
+    setFilters((prev) => ({ ...prev, schoolCodes: [] }));
+  };
+
   const hasActiveFilters = filters.gender !== "all" || filters.language !== "all" ||
-    filters.hasResult !== "all" || filters.groupName !== "all" || filters.searchTerm.trim().length > 0;
+    filters.hasResult !== "all" || filters.groupName !== "all" || 
+    filters.searchTerm.trim().length > 0 || filters.schoolCodes.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Eksport sozlamalari</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <FileArchive className="h-5 w-5" />
+            Eksport sozlamalari
+          </DialogTitle>
           <DialogDescription>
-            Ustunlarni tanlang va kerak bo'lsa filtrlarni qo'llang
+            Maktablarni tanlang, ustunlarni belgilang — ZIP fayl yuklab olinadi
           </DialogDescription>
         </DialogHeader>
 
-        {/* Filters section */}
+        {/* School filter section */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <School className="h-4 w-4 text-muted-foreground" />
+              Maktablar
+              {filters.schoolCodes.length > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {filters.schoolCodes.length} ta tanlangan
+                </Badge>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={selectAllSchools} className="text-xs h-7">
+                Barchasi
+              </Button>
+              <Button variant="ghost" size="sm" onClick={deselectAllSchools} className="text-xs h-7">
+                Tozalash
+              </Button>
+            </div>
+          </div>
+
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Maktab nomi yoki kodi bo'yicha qidirish..."
+              value={schoolSearch}
+              onChange={(e) => setSchoolSearch(e.target.value)}
+              className="pl-9 h-9"
+            />
+          </div>
+
+          {/* Selected schools badges */}
+          {filters.schoolCodes.length > 0 && filters.schoolCodes.length <= 10 && (
+            <div className="flex flex-wrap gap-1.5">
+              {filters.schoolCodes.map((code) => {
+                const school = schools.find((s) => s.code === code);
+                return (
+                  <Badge key={code} variant="outline" className="text-xs gap-1 pr-1">
+                    {school?.name || code}
+                    <button onClick={() => toggleSchool(code)} className="ml-1 hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
+
+          <ScrollArea className="h-[160px] rounded-md border p-2">
+            <div className="space-y-1">
+              {filteredSchools.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-4">Maktab topilmadi</p>
+              ) : (
+                filteredSchools.map((s) => (
+                  <div
+                    key={s.code}
+                    className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/60 cursor-pointer"
+                    onClick={() => toggleSchool(s.code)}
+                  >
+                    <Checkbox
+                      checked={filters.schoolCodes.includes(s.code)}
+                      onCheckedChange={() => toggleSchool(s.code)}
+                    />
+                    <span className="text-sm flex-1 truncate">{s.name}</span>
+                    <code className="text-xs text-muted-foreground font-mono">{s.code}</code>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+
+        <Separator />
+
+        {/* Other filters */}
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm font-medium">
             <Filter className="h-4 w-4 text-muted-foreground" />
-            Filtrlar
+            Qo'shimcha filtrlar
           </div>
 
           <div className="relative">
@@ -183,8 +300,8 @@ export function ExportColumnsDialog({
           </div>
 
           {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={() => setFilters(INITIAL_FILTERS)} className="text-xs">
-              Filtrlarni tozalash
+            <Button variant="ghost" size="sm" onClick={() => { setFilters(INITIAL_FILTERS); setSchoolSearch(""); }} className="text-xs">
+              Barcha filtrlarni tozalash
             </Button>
           )}
         </div>
@@ -205,7 +322,7 @@ export function ExportColumnsDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5 max-h-[200px] overflow-y-auto py-1">
+          <div className="grid grid-cols-2 gap-2.5 max-h-[160px] overflow-y-auto py-1">
             {ALL_EXPORT_COLUMNS.map((col) => (
               <div key={col.key} className="flex items-center gap-2">
                 <Checkbox
@@ -233,8 +350,8 @@ export function ExportColumnsDialog({
               exportProgress || "Yuklanmoqda..."
             ) : (
               <>
-                <Download className="mr-2 h-4 w-4" />
-                Eksport ({selected.size})
+                <FileArchive className="mr-2 h-4 w-4" />
+                ZIP eksport ({selected.size} ustun)
               </>
             )}
           </Button>
