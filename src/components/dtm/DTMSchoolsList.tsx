@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getApiSettings, fetchAllDTMUsers, DTMUser } from "@/lib/dtm-api";
-import { ExportColumnsDialog, ALL_EXPORT_COLUMNS } from "./ExportColumnsDialog";
+import { ExportColumnsDialog, ALL_EXPORT_COLUMNS, type ExportFilters } from "./ExportColumnsDialog";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -155,7 +155,7 @@ export function DTMSchoolsList() {
     a.click();
   };
 
-  const handleFullExport = async (selectedColumns: string[]) => {
+  const handleFullExport = async (selectedColumns: string[], exportFilters: ExportFilters) => {
     const settings = getApiSettings();
     if (!settings) {
       toast.error("API sozlamalari topilmadi");
@@ -176,15 +176,35 @@ export function DTMSchoolsList() {
 
       setExportProgress("CSV tayyorlanmoqda...");
 
-      // Build school code -> school info map
       const schoolMap = new Map<string, DTMSchool>();
       for (const s of filtered) {
         schoolMap.set(s.username, s);
       }
 
-      // Filter users belonging to filtered schools
       const filteredSchoolCodes = new Set(filtered.map((s) => s.username));
-      const relevantUsers = allUsers.filter((u) => filteredSchoolCodes.has(u.school_code));
+      let relevantUsers = allUsers.filter((u) => filteredSchoolCodes.has(u.school_code));
+
+      // Apply export filters
+      if (exportFilters.searchTerm.trim()) {
+        const terms = exportFilters.searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
+        relevantUsers = relevantUsers.filter((u) => {
+          const text = [u.full_name, u.phone, u.bot_id].filter(Boolean).join(" ").toLowerCase();
+          return terms.every((t) => text.includes(t));
+        });
+      }
+      if (exportFilters.gender !== "all") {
+        relevantUsers = relevantUsers.filter((u) => u.gender === exportFilters.gender);
+      }
+      if (exportFilters.language !== "all") {
+        relevantUsers = relevantUsers.filter((u) => u.language === exportFilters.language);
+      }
+      if (exportFilters.hasResult !== "all") {
+        const tested = exportFilters.hasResult === "true";
+        relevantUsers = relevantUsers.filter((u) => (u.dtm?.tested ?? u.has_result) === tested);
+      }
+      if (exportFilters.groupName !== "all") {
+        relevantUsers = relevantUsers.filter((u) => u.group_name === exportFilters.groupName);
+      }
 
       const colDefs = ALL_EXPORT_COLUMNS.filter((c) => selectedColumns.includes(c.key));
 
