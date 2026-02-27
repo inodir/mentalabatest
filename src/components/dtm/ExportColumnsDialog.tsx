@@ -31,7 +31,7 @@ export const ALL_EXPORT_COLUMNS: ExportColumn[] = [
   { key: "bot_id", label: "Bot ID", defaultChecked: false },
   { key: "has_result", label: "Natija bor", defaultChecked: true },
   { key: "total_point", label: "Umumiy ball", defaultChecked: true },
-  { key: "test_language", label: "Test tili", defaultChecked: false },
+  { key: "language", label: "Til", defaultChecked: false },
   { key: "created_at", label: "Ro'yxatdan o'tgan sana", defaultChecked: true },
 ];
 

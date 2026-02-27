@@ -21,12 +21,18 @@ export interface DTMUser {
   has_result: boolean;
   phone?: string;
   district?: string;
+  region?: string;
   school_code: string;
+  school_name?: string | null;
+  language?: string;
+  gender?: string;
+  group_name?: string;
   test_results?: DTMTestResults;
   total_point: number | null;
   test_file_url?: string;
   test_result_file_url?: string;
   created_at: string;
+  dtm?: { tested: boolean; [key: string]: unknown };
   [key: string]: unknown;
 }
 
