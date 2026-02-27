@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getApiSettings, fetchAllDTMUsers, getCachedData, DTMUser } from "@/lib/dtm-api";
+import JSZip from "jszip";
 import { ExportColumnsDialog, ALL_EXPORT_COLUMNS, type ExportFilters } from "./ExportColumnsDialog";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -174,17 +175,21 @@ export function DTMSchoolsList() {
         true
       );
 
-      setExportProgress("CSV tayyorlanmoqda...");
+      setExportProgress("ZIP tayyorlanmoqda...");
 
       const schoolMap = new Map<string, DTMSchool>();
       for (const s of filtered) {
         schoolMap.set(s.username, s);
       }
 
-      const filteredSchoolCodes = new Set(filtered.map((s) => s.username));
-      let relevantUsers = allUsers.filter((u) => filteredSchoolCodes.has(u.school_code));
+      // Determine which schools to export
+      const targetSchoolCodes = exportFilters.schoolCodes.length > 0
+        ? new Set(exportFilters.schoolCodes)
+        : new Set(filtered.map((s) => s.username));
 
-      // Apply export filters
+      let relevantUsers = allUsers.filter((u) => targetSchoolCodes.has(u.school_code));
+
+      // Apply additional filters
       if (exportFilters.searchTerm.trim()) {
         const terms = exportFilters.searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
         relevantUsers = relevantUsers.filter((u) => {
@@ -207,7 +212,6 @@ export function DTMSchoolsList() {
       }
 
       const colDefs = ALL_EXPORT_COLUMNS.filter((c) => selectedColumns.includes(c.key));
-
       const escapeCSV = (val: string) => {
         if (val.includes(",") || val.includes('"') || val.includes("\n")) {
           return `"${val.replace(/"/g, '""')}"`;
@@ -235,22 +239,48 @@ export function DTMSchoolsList() {
         }
       };
 
+      const bom = "\uFEFF";
       const csvHeaders = colDefs.map((c) => c.label);
-      const csvRows = relevantUsers.map((user) => {
+
+      // Group users by school
+      const bySchool = new Map<string, DTMUser[]>();
+      for (const user of relevantUsers) {
+        const code = user.school_code || "unknown";
+        if (!bySchool.has(code)) bySchool.set(code, []);
+        bySchool.get(code)!.push(user);
+      }
+
+      const zip = new JSZip();
+
+      // Create a CSV file per school
+      for (const [code, users] of bySchool) {
+        const school = schoolMap.get(code);
+        const rows = users.map((user) =>
+          colDefs.map((c) => getColumnValue(user, c.key, school))
+        );
+        const csv = [csvHeaders, ...rows].map((r) => r.join(",")).join("\n");
+        const schoolName = (school?.full_name || code).replace(/[/\\?%*:|"<>]/g, "_");
+        zip.file(`${schoolName} (${code}).csv`, bom + csv);
+      }
+
+      // Also add a combined summary CSV
+      const allRows = relevantUsers.map((user) => {
         const school = schoolMap.get(user.school_code);
         return colDefs.map((c) => getColumnValue(user, c.key, school));
       });
+      const summaryCsv = [csvHeaders, ...allRows].map((r) => r.join(",")).join("\n");
+      zip.file("Umumiy.csv", bom + summaryCsv);
 
-      const csv = [csvHeaders, ...csvRows].map((r) => r.join(",")).join("\n");
-      const bom = "\uFEFF";
-      const blob = new Blob([bom + csv], { type: "text/csv;charset=utf-8;" });
+      setExportProgress("ZIP yaratilmoqda...");
+      const blob = await zip.generateAsync({ type: "blob" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `dtm_full_export_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `dtm_export_${new Date().toISOString().slice(0, 10)}.zip`;
       a.click();
+      URL.revokeObjectURL(url);
 
-      toast.success(`${relevantUsers.length} ta o'quvchi eksport qilindi`);
+      toast.success(`${relevantUsers.length} ta o'quvchi, ${bySchool.size} ta maktab eksport qilindi`);
       setExportDialogOpen(false);
     } catch (err) {
       console.error("Full export error:", err);
@@ -395,6 +425,7 @@ export function DTMSchoolsList() {
         exporting={fullExporting}
         exportProgress={exportProgress}
         allUsers={getCachedData<{ entities: DTMUser[]; totalCount: number }>("users")?.entities || []}
+        schools={filtered.map((s) => ({ code: s.username, name: s.full_name }))}
       />
 
       {/* Table */}
