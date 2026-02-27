@@ -197,19 +197,19 @@ export function DTMSchoolsList() {
 
       const getColumnValue = (user: DTMUser, key: string, school?: DTMSchool): string => {
         switch (key) {
-          case "school_name": return escapeCSV(school?.full_name || "—");
+          case "school_name": return escapeCSV(user.school_name || school?.full_name || "—");
           case "school_code": return user.school_code || "—";
-          case "region": return escapeCSV(school?.region || "—");
-          case "district": return escapeCSV(school?.district || user.district || "—");
+          case "region": return escapeCSV(user.region || school?.region || "—");
+          case "district": return escapeCSV(user.district || school?.district || "—");
           case "full_name": return escapeCSV(user.full_name || "—");
           case "phone": return user.phone || "—";
-          case "gender": return escapeCSV(String(user.gender || "—"));
-          case "group_name": return escapeCSV(String(user.group_name || "—"));
+          case "gender": return escapeCSV(user.gender || "—");
+          case "group_name": return escapeCSV(user.group_name || "—");
           case "chat_id": return user.chat_id || "—";
           case "bot_id": return user.bot_id || "—";
-          case "has_result": return user.has_result ? "Ha" : "Yo'q";
+          case "has_result": return (user.dtm?.tested ?? user.has_result) ? "Ha" : "Yo'q";
           case "total_point": return user.total_point != null ? String(user.total_point) : "—";
-          case "test_language": return escapeCSV(String(user.test_language || "—"));
+          case "language": return escapeCSV(user.language || "—");
           case "created_at": return user.created_at ? new Date(user.created_at).toLocaleDateString("uz-UZ") : "—";
           default: return "—";
         }
