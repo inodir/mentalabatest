@@ -23,23 +23,36 @@ export function useSchoolStudents(): UseSchoolStudentsResult {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [progress, setProgress] = useState<{ loaded: number; total: number } | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
     setProgress(null);
     try {
+      let latestTotal = 0;
       const items = await fetchAllSchoolStudents((loaded, total) => {
+        latestTotal = total;
         setProgress({ loaded, total });
       });
+
       if (items.length > 0) {
         setAllStudents(items);
+        setTotalCount(latestTotal || items.length);
       } else if (dtmUser?.students?.items) {
         // Fallback to /me data if batch fetch returns nothing
         setAllStudents(dtmUser.students.items);
+        setTotalCount(dtmUser.students.total || dtmUser.students.items.length);
+      } else {
+        setAllStudents([]);
+        setTotalCount(0);
       }
     } catch {
       if (dtmUser?.students?.items) {
         setAllStudents(dtmUser.students.items);
+        setTotalCount(dtmUser.students.total || dtmUser.students.items.length);
+      } else {
+        setAllStudents([]);
+        setTotalCount(0);
       }
     } finally {
       setLoading(false);
@@ -51,7 +64,7 @@ export function useSchoolStudents(): UseSchoolStudentsResult {
     if (dtmUser) loadAll();
   }, [dtmUser, loadAll]);
 
-  const total = allStudents.length;
+  const total = totalCount || allStudents.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const paginatedStudents = useMemo(() => {
