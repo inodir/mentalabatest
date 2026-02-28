@@ -300,8 +300,9 @@ export async function fetchAllSchoolStudents(
   const base = getDTMApiBase();
   const batchSize = 50;
   let pageOffset = 0;
-  let allItems: DTMStudentItem[] = [];
   let total = 0;
+
+  const uniqueById = new Map<number, DTMStudentItem>();
 
   const fetchPage = async (token: string, offset: number) => {
     return fetch(`${base}/api/v1/auth/me?limit=${batchSize}&offset=${offset}`, {
@@ -325,15 +326,16 @@ export async function fetchAllSchoolStudents(
 
   if (!data.students) return [];
   total = data.students.total;
-  allItems = [...data.students.items];
-  onProgress?.(allItems.length, total);
+  data.students.items.forEach((student) => uniqueById.set(student.id, student));
+  onProgress?.(uniqueById.size, total);
 
   // Fetch remaining pages using offset as page index: 0, 1, 2, ...
   pageOffset = 1;
-  while (allItems.length < total) {
+  while (uniqueById.size < total) {
     const { accessToken: token } = getDTMTokens();
     if (!token) break;
 
+    const beforeCount = uniqueById.size;
     const batchRes = await fetchPage(token, pageOffset);
     if (!batchRes.ok) break;
 
@@ -341,12 +343,15 @@ export async function fetchAllSchoolStudents(
     const pageItems = batchData.students?.items ?? [];
     if (!pageItems.length) break;
 
-    allItems = [...allItems, ...pageItems];
-    onProgress?.(allItems.length, total);
+    pageItems.forEach((student) => uniqueById.set(student.id, student));
+    onProgress?.(uniqueById.size, total);
+
+    // If backend returns same page repeatedly, stop to avoid fake growth
+    if (uniqueById.size === beforeCount) break;
     pageOffset += 1;
   }
 
-  return allItems;
+  return Array.from(uniqueById.values());
 }
 
 // Logout
