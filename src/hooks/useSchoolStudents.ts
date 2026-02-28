@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { fetchAllSchoolStudents, DTMStudentItem } from "@/lib/dtm-auth";
 import { useAuth } from "./useAuth";
 
 interface UseSchoolStudentsResult {
   allStudents: DTMStudentItem[];
   loading: boolean;
+  loadingMore: boolean;
   total: number;
   page: number;
   pageSize: number;
@@ -20,42 +21,42 @@ export function useSchoolStudents(): UseSchoolStudentsResult {
   const { dtmUser } = useAuth();
   const [allStudents, setAllStudents] = useState<DTMStudentItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [progress, setProgress] = useState<{ loaded: number; total: number } | null>(null);
   const [totalCount, setTotalCount] = useState(0);
+  const firstBatchReceived = useRef(false);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
+    setLoadingMore(false);
     setProgress(null);
-    try {
-      let latestTotal = 0;
-      const items = await fetchAllSchoolStudents((loaded, total) => {
-        latestTotal = total;
-        setProgress({ loaded, total });
-      });
+    firstBatchReceived.current = false;
 
-      if (items.length > 0) {
-        setAllStudents(items);
-        setTotalCount(latestTotal || items.length);
-      } else if (dtmUser?.students?.items) {
-        // Fallback to /me data if batch fetch returns nothing
-        setAllStudents(dtmUser.students.items);
-        setTotalCount(dtmUser.students.total || dtmUser.students.items.length);
-      } else {
-        setAllStudents([]);
-        setTotalCount(0);
-      }
+    try {
+      await fetchAllSchoolStudents(
+        (loaded, total) => {
+          setProgress({ loaded, total });
+        },
+        (items, total) => {
+          setAllStudents(items);
+          setTotalCount(total);
+          if (!firstBatchReceived.current) {
+            firstBatchReceived.current = true;
+            setLoading(false);
+            if (items.length < total) setLoadingMore(true);
+          }
+        }
+      );
     } catch {
       if (dtmUser?.students?.items) {
         setAllStudents(dtmUser.students.items);
         setTotalCount(dtmUser.students.total || dtmUser.students.items.length);
-      } else {
-        setAllStudents([]);
-        setTotalCount(0);
       }
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setProgress(null);
     }
   }, [dtmUser]);
@@ -65,14 +66,13 @@ export function useSchoolStudents(): UseSchoolStudentsResult {
   }, [dtmUser, loadAll]);
 
   const total = totalCount || allStudents.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const totalPages = Math.max(1, Math.ceil(allStudents.length / pageSize));
 
   const paginatedStudents = useMemo(() => {
     const start = (page - 1) * pageSize;
     return allStudents.slice(start, start + pageSize);
   }, [allStudents, page, pageSize]);
 
-  // Reset page when pageSize changes
   useEffect(() => {
     setPage(1);
   }, [pageSize]);
@@ -80,6 +80,7 @@ export function useSchoolStudents(): UseSchoolStudentsResult {
   return {
     allStudents,
     loading,
+    loadingMore,
     total,
     page,
     pageSize,

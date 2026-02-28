@@ -16,7 +16,7 @@ import { useSchoolStudents } from "@/hooks/useSchoolStudents";
 
 export default function StudentsManagement() {
   const {
-    allStudents, loading, total, page, pageSize, setPage, setPageSize,
+    allStudents, loading, loadingMore, total, page, pageSize, setPage, setPageSize,
     totalPages, paginatedStudents, retry, progress,
   } = useSchoolStudents();
 
@@ -93,10 +93,14 @@ export default function StudentsManagement() {
               Yangilash
             </Button>
             <div className="text-sm text-muted-foreground">
-              {loading && progress
-                ? `Yuklanmoqda: ${progress.loaded}/${progress.total}`
-                : `Jami: ${total} ta o'quvchi`}
-              {hasFilters && !loading && ` · Filtrlangan: ${displayTotal}`}
+              {loading
+                ? "Yuklanmoqda..."
+                : <>
+                    Jami: {total} ta o'quvchi
+                    {loadingMore && progress && <span className="ml-1 text-xs">({progress.loaded}/{progress.total} yuklandi...)</span>}
+                    {hasFilters && ` · Filtrlangan: ${displayTotal}`}
+                  </>
+              }
             </div>
           </div>
         </div>

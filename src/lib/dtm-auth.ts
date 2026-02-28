@@ -291,8 +291,10 @@ export async function dtmFetchMe(): Promise<DTMUserData | null> {
 }
 
 // Fetch all school students in batches (for school admin)
+// onBatch streams each batch immediately so UI can show data fast
 export async function fetchAllSchoolStudents(
-  onProgress?: (loaded: number, total: number) => void
+  onProgress?: (loaded: number, total: number) => void,
+  onBatch?: (items: DTMStudentItem[], total: number) => void
 ): Promise<DTMStudentItem[]> {
   const { accessToken } = getDTMTokens();
   if (!accessToken) return [];
@@ -310,7 +312,7 @@ export async function fetchAllSchoolStudents(
     });
   };
 
-  // First request to get total count
+  // First request
   let res = await fetchPage(accessToken, pageOffset);
 
   if (res.status === 401) {
@@ -326,10 +328,11 @@ export async function fetchAllSchoolStudents(
 
   if (!data.students) return [];
   total = data.students.total;
-  data.students.items.forEach((student) => uniqueById.set(student.id, student));
+  data.students.items.forEach((s) => uniqueById.set(s.id, s));
   onProgress?.(uniqueById.size, total);
+  onBatch?.(Array.from(uniqueById.values()), total);
 
-  // Fetch remaining pages using offset as page index: 0, 1, 2, ...
+  // Fetch remaining pages: offset 1, 2, 3...
   pageOffset = 1;
   while (uniqueById.size < total) {
     const { accessToken: token } = getDTMTokens();
@@ -343,10 +346,10 @@ export async function fetchAllSchoolStudents(
     const pageItems = batchData.students?.items ?? [];
     if (!pageItems.length) break;
 
-    pageItems.forEach((student) => uniqueById.set(student.id, student));
+    pageItems.forEach((s) => uniqueById.set(s.id, s));
     onProgress?.(uniqueById.size, total);
+    onBatch?.(Array.from(uniqueById.values()), total);
 
-    // If backend returns same page repeatedly, stop to avoid fake growth
     if (uniqueById.size === beforeCount) break;
     pageOffset += 1;
   }
