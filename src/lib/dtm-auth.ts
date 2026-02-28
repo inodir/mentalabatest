@@ -298,23 +298,26 @@ export async function fetchAllSchoolStudents(
   if (!accessToken) return [];
 
   const base = getDTMApiBase();
-  const batchSize = 200;
-  let offset = 0;
+  const batchSize = 50;
+  let pageOffset = 0;
   let allItems: DTMStudentItem[] = [];
   let total = 0;
 
+  const fetchPage = async (token: string, offset: number) => {
+    return fetch(`${base}/api/v1/auth/me?limit=${batchSize}&offset=${offset}`, {
+      headers: { accept: "application/json", Authorization: `Bearer ${token}` },
+    });
+  };
+
   // First request to get total count
-  let res = await fetch(`${base}/api/v1/auth/me?students_limit=${batchSize}&students_offset=0`, {
-    headers: { accept: "application/json", Authorization: `Bearer ${accessToken}` },
-  });
+  let res = await fetchPage(accessToken, pageOffset);
 
   if (res.status === 401) {
     const refreshed = await dtmRefreshToken();
     if (!refreshed) return [];
     const { accessToken: newToken } = getDTMTokens();
-    res = await fetch(`${base}/api/v1/auth/me?students_limit=${batchSize}&students_offset=0`, {
-      headers: { accept: "application/json", Authorization: `Bearer ${newToken}` },
-    });
+    if (!newToken) return [];
+    res = await fetchPage(newToken, pageOffset);
   }
 
   if (!res.ok) return [];
@@ -325,19 +328,22 @@ export async function fetchAllSchoolStudents(
   allItems = [...data.students.items];
   onProgress?.(allItems.length, total);
 
-  // Fetch remaining batches
+  // Fetch remaining pages using offset as page index: 0, 1, 2, ...
+  pageOffset = 1;
   while (allItems.length < total) {
-    offset = allItems.length;
     const { accessToken: token } = getDTMTokens();
-    const batchRes = await fetch(
-      `${base}/api/v1/auth/me?students_limit=${batchSize}&students_offset=${offset}`,
-      { headers: { accept: "application/json", Authorization: `Bearer ${token}` } }
-    );
+    if (!token) break;
+
+    const batchRes = await fetchPage(token, pageOffset);
     if (!batchRes.ok) break;
+
     const batchData: DTMUserData = await batchRes.json();
-    if (!batchData.students?.items?.length) break;
-    allItems = [...allItems, ...batchData.students.items];
+    const pageItems = batchData.students?.items ?? [];
+    if (!pageItems.length) break;
+
+    allItems = [...allItems, ...pageItems];
     onProgress?.(allItems.length, total);
+    pageOffset += 1;
   }
 
   return allItems;
