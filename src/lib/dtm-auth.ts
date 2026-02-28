@@ -290,6 +290,59 @@ export async function dtmFetchMe(): Promise<DTMUserData | null> {
   return userData;
 }
 
+// Fetch all school students in batches (for school admin)
+export async function fetchAllSchoolStudents(
+  onProgress?: (loaded: number, total: number) => void
+): Promise<DTMStudentItem[]> {
+  const { accessToken } = getDTMTokens();
+  if (!accessToken) return [];
+
+  const base = getDTMApiBase();
+  const batchSize = 200;
+  let offset = 0;
+  let allItems: DTMStudentItem[] = [];
+  let total = 0;
+
+  // First request to get total count
+  let res = await fetch(`${base}/api/v1/auth/me?students_limit=${batchSize}&students_offset=0`, {
+    headers: { accept: "application/json", Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (res.status === 401) {
+    const refreshed = await dtmRefreshToken();
+    if (!refreshed) return [];
+    const { accessToken: newToken } = getDTMTokens();
+    res = await fetch(`${base}/api/v1/auth/me?students_limit=${batchSize}&students_offset=0`, {
+      headers: { accept: "application/json", Authorization: `Bearer ${newToken}` },
+    });
+  }
+
+  if (!res.ok) return [];
+  const data: DTMUserData = await res.json();
+
+  if (!data.students) return [];
+  total = data.students.total;
+  allItems = [...data.students.items];
+  onProgress?.(allItems.length, total);
+
+  // Fetch remaining batches
+  while (allItems.length < total) {
+    offset = allItems.length;
+    const { accessToken: token } = getDTMTokens();
+    const batchRes = await fetch(
+      `${base}/api/v1/auth/me?students_limit=${batchSize}&students_offset=${offset}`,
+      { headers: { accept: "application/json", Authorization: `Bearer ${token}` } }
+    );
+    if (!batchRes.ok) break;
+    const batchData: DTMUserData = await batchRes.json();
+    if (!batchData.students?.items?.length) break;
+    allItems = [...allItems, ...batchData.students.items];
+    onProgress?.(allItems.length, total);
+  }
+
+  return allItems;
+}
+
 // Logout
 export async function dtmLogout(): Promise<void> {
   const { refreshToken } = getDTMTokens();
