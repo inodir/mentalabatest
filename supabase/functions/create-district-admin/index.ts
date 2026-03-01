@@ -5,6 +5,28 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Input validation helpers
+function validateLogin(login: string): string | null {
+  if (!login || login.length < 3 || login.length > 50) return 'Login 3-50 belgi bo\'lishi kerak';
+  if (!/^[a-zA-Z0-9_-]+$/.test(login)) return 'Login faqat harf, raqam, _ va - belgilardan iborat bo\'lishi kerak';
+  return null;
+}
+
+function validatePassword(password: string): string | null {
+  if (!password || password.length < 8 || password.length > 128) return 'Parol 8-128 belgi bo\'lishi kerak';
+  return null;
+}
+
+function validateTextField(value: string, fieldName: string, maxLen = 100): string | null {
+  if (!value || value.trim().length === 0) return `${fieldName} bo'sh bo'lmasligi kerak`;
+  if (value.length > maxLen) return `${fieldName} ${maxLen} belgidan oshmasligi kerak`;
+  return null;
+}
+
+function sanitizeText(value: string): string {
+  return value.replace(/[<>"']/g, '').trim();
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -19,7 +41,12 @@ Deno.serve(async (req) => {
     })
     
     // Verify the requesting user is a super_admin
-    const authHeader = req.headers.get('Authorization')!
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization header' }), { 
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      })
+    }
     const token = authHeader.replace('Bearer ', '')
     
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
@@ -45,11 +72,28 @@ Deno.serve(async (req) => {
     
     const { district, region, admin_login, admin_password, admin_full_name } = await req.json()
     
-    if (!district || !region || !admin_login || !admin_password || !admin_full_name) {
-      return new Response(JSON.stringify({ error: 'Missing required fields' }), { 
+    // Validate all inputs
+    const errors: string[] = [];
+    const loginErr = validateLogin(admin_login);
+    if (loginErr) errors.push(loginErr);
+    const passErr = validatePassword(admin_password);
+    if (passErr) errors.push(passErr);
+    const nameErr = validateTextField(admin_full_name, 'Ism');
+    if (nameErr) errors.push(nameErr);
+    const districtErr = validateTextField(district, 'Tuman');
+    if (districtErr) errors.push(districtErr);
+    const regionErr = validateTextField(region, 'Viloyat');
+    if (regionErr) errors.push(regionErr);
+
+    if (errors.length > 0) {
+      return new Response(JSON.stringify({ error: errors.join('; ') }), { 
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       })
     }
+
+    const cleanName = sanitizeText(admin_full_name);
+    const cleanDistrict = sanitizeText(district);
+    const cleanRegion = sanitizeText(region);
     
     // Create auth user for district admin
     const email = `${admin_login}@mentalaba.uz`
@@ -57,7 +101,7 @@ Deno.serve(async (req) => {
       email,
       password: admin_password,
       email_confirm: true,
-      user_metadata: { full_name: admin_full_name, is_district_admin: true }
+      user_metadata: { full_name: cleanName, is_district_admin: true }
     })
     
     if (authError) {
@@ -74,8 +118,8 @@ Deno.serve(async (req) => {
         .from('profiles')
         .insert({
           user_id: newUserId,
-          full_name: admin_full_name,
-          district: district,
+          full_name: cleanName,
+          district: cleanDistrict,
           password_changed: true,
         }),
       supabaseAdmin
@@ -87,10 +131,10 @@ Deno.serve(async (req) => {
       supabaseAdmin
         .from('district_admin_credentials')
         .insert({
-          district,
-          region,
+          district: cleanDistrict,
+          region: cleanRegion,
           admin_login,
-          admin_full_name,
+          admin_full_name: cleanName,
           initial_password: admin_password,
         }),
     ])
