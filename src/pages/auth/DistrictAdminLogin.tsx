@@ -5,19 +5,36 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Loader2, Eye, EyeOff } from "lucide-react";
+import { MapPin, Loader2, Eye, EyeOff, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  isLoginLocked,
+  recordFailedLogin,
+  clearLoginAttempts,
+  getRemainingAttempts,
+  sanitizeInput,
+} from "@/lib/security";
 
 export default function DistrictAdminLogin() {
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
   const { user, role, loading, signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Auto-redirect if already logged in
+  useEffect(() => {
+    const check = () => {
+      const { locked, remainingSeconds } = isLoginLocked();
+      setLockoutSeconds(locked ? remainingSeconds : 0);
+    };
+    check();
+    const interval = setInterval(check, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     if (!loading && user && role) {
       if (role === "district_admin") navigate("/district", { replace: true });
@@ -28,20 +45,39 @@ export default function DistrictAdminLogin() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const { locked, remainingSeconds } = isLoginLocked();
+    if (locked) {
+      setLockoutSeconds(remainingSeconds);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const { error } = await signIn(login.trim(), password);
+      const { error } = await signIn(sanitizeInput(login), password);
       if (error) {
-        toast({
-          title: "Xatolik",
-          description: error,
-          variant: "destructive",
-        });
+        const result = recordFailedLogin();
+        if (result.locked) {
+          setLockoutSeconds(result.remainingSeconds);
+          toast({
+            title: "Kirish bloklandi",
+            description: `Ko'p urinish. ${Math.ceil(result.remainingSeconds / 60)} daqiqa kuting.`,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Xatolik",
+            description: `${error}. Qolgan urinishlar: ${getRemainingAttempts()}`,
+            variant: "destructive",
+          });
+        }
       } else {
+        clearLoginAttempts();
         navigate("/district");
       }
     } catch {
+      recordFailedLogin();
       toast({
         title: "Xatolik",
         description: "Tizimga kirishda xatolik yuz berdi",
@@ -60,6 +96,8 @@ export default function DistrictAdminLogin() {
     );
   }
 
+  const isLocked = lockoutSeconds > 0;
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-accent/5 via-background to-primary/5 p-4">
       <Card className="w-full max-w-md animate-scale-in">
@@ -73,6 +111,14 @@ export default function DistrictAdminLogin() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {isLocked && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+              <ShieldAlert className="h-4 w-4 shrink-0" />
+              <span>
+                Ko'p urinish. {Math.floor(lockoutSeconds / 60)}:{String(lockoutSeconds % 60).padStart(2, "0")} kuting.
+              </span>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="login">Login</Label>
@@ -83,6 +129,9 @@ export default function DistrictAdminLogin() {
                 value={login}
                 onChange={(e) => setLogin(e.target.value)}
                 required
+                disabled={isLocked}
+                maxLength={100}
+                autoComplete="username"
               />
             </div>
             <div className="space-y-2">
@@ -95,7 +144,10 @@ export default function DistrictAdminLogin() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={isLocked}
                   className="pr-10"
+                  maxLength={128}
+                  autoComplete="current-password"
                 />
                 <Button
                   type="button"
@@ -112,7 +164,7 @@ export default function DistrictAdminLogin() {
                 </Button>
               </div>
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || isLocked}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
