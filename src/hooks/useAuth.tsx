@@ -7,6 +7,7 @@ import {
   clearDTMTokens,
   type DTMUserData,
 } from "@/lib/dtm-auth";
+import { startInactivityWatch, stopInactivityWatch } from "@/lib/security";
 
 type AppRole = "super_admin" | "school_admin" | "district_admin" | null;
 
@@ -84,6 +85,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isMounted = false;
     };
   }, [applyDTMUser]);
+
+  // Start/stop inactivity watcher when user logs in/out
+  useEffect(() => {
+    if (user) {
+      startInactivityWatch(async () => {
+        await dtmLogout();
+        clearState();
+        window.location.href = "/";
+      });
+    } else {
+      stopInactivityWatch();
+    }
+    return () => stopInactivityWatch();
+  }, [user, clearState]);
 
   const signIn = async (username: string, password: string) => {
     const result = await dtmLogin(username, password);
