@@ -109,9 +109,16 @@ export function clearDTMCache(): void {
 // API settings cache TTL: 30 days
 const API_SETTINGS_TTL = 30 * 24 * 60 * 60 * 1000;
 
-// Get API settings from localStorage, falling back to env vars
+// Get API settings from sessionStorage, falling back to env vars
 export function getApiSettings(): DTMApiSettings | null {
-  const settings = localStorage.getItem("dtm_api_settings");
+  // Migrate from localStorage to sessionStorage if needed
+  const legacySettings = localStorage.getItem("dtm_api_settings");
+  if (legacySettings) {
+    sessionStorage.setItem("dtm_api_settings", legacySettings);
+    localStorage.removeItem("dtm_api_settings");
+  }
+
+  const settings = sessionStorage.getItem("dtm_api_settings");
   
   if (settings) {
     try {
@@ -119,7 +126,7 @@ export function getApiSettings(): DTMApiSettings | null {
       if (parsed.apiKey) {
         // Check 30-day expiry
         if (parsed.savedAt && Date.now() - parsed.savedAt > API_SETTINGS_TTL) {
-          localStorage.removeItem("dtm_api_settings");
+          sessionStorage.removeItem("dtm_api_settings");
         } else {
           return {
             mainUrl: parsed.mainUrl || DEFAULT_MAIN_URL,
@@ -143,9 +150,9 @@ export function getApiSettings(): DTMApiSettings | null {
   return null;
 }
 
-// Save API settings to localStorage with timestamp
+// Save API settings to sessionStorage with timestamp
 export function saveApiSettings(settings: DTMApiSettings): void {
-  localStorage.setItem("dtm_api_settings", JSON.stringify({
+  sessionStorage.setItem("dtm_api_settings", JSON.stringify({
     ...settings,
     savedAt: Date.now(),
   }));
