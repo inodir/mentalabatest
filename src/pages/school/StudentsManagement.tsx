@@ -97,7 +97,6 @@ export default function StudentsManagement() {
                 ? "Yuklanmoqda..."
                 : <>
                     Jami: {total} ta o'quvchi
-                    {loadingMore && progress && <span className="ml-1 text-xs">({progress.loaded}/{progress.total} yuklandi...)</span>}
                     {hasFilters && ` · Filtrlangan: ${displayTotal}`}
                   </>
               }
@@ -181,11 +180,9 @@ export default function StudentsManagement() {
                   <TableCell colSpan={10} className="py-10 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <Loader2 className="h-6 w-6 animate-spin" />
-                      {progress && (
-                        <span className="text-sm text-muted-foreground">
-                          {progress.loaded}/{progress.total} o'quvchi yuklandi
-                        </span>
-                      )}
+                      <span className="text-sm text-muted-foreground">
+                        Yuklanmoqda...
+                      </span>
                     </div>
                   </TableCell>
                 </TableRow>

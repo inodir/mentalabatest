@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { fetchAllSchoolStudents, DTMStudentItem } from "@/lib/dtm-auth";
 import { useAuth } from "./useAuth";
 
@@ -14,41 +14,23 @@ interface UseSchoolStudentsResult {
   totalPages: number;
   paginatedStudents: DTMStudentItem[];
   retry: () => void;
-  progress: { loaded: number; total: number } | null;
+  progress: null;
 }
 
 export function useSchoolStudents(): UseSchoolStudentsResult {
   const { dtmUser } = useAuth();
   const [allStudents, setAllStudents] = useState<DTMStudentItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
-  const [progress, setProgress] = useState<{ loaded: number; total: number } | null>(null);
   const [totalCount, setTotalCount] = useState(0);
-  const firstBatchReceived = useRef(false);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    setLoadingMore(false);
-    setProgress(null);
-    firstBatchReceived.current = false;
-
     try {
-      await fetchAllSchoolStudents(
-        (loaded, total) => {
-          setProgress({ loaded, total });
-        },
-        (items, total) => {
-          setAllStudents(items);
-          setTotalCount(total);
-          if (!firstBatchReceived.current) {
-            firstBatchReceived.current = true;
-            setLoading(false);
-            if (items.length < total) setLoadingMore(true);
-          }
-        }
-      );
+      const items = await fetchAllSchoolStudents();
+      setAllStudents(items);
+      setTotalCount(items.length);
     } catch {
       if (dtmUser?.students?.items) {
         setAllStudents(dtmUser.students.items);
@@ -56,8 +38,6 @@ export function useSchoolStudents(): UseSchoolStudentsResult {
       }
     } finally {
       setLoading(false);
-      setLoadingMore(false);
-      setProgress(null);
     }
   }, [dtmUser]);
 
@@ -80,7 +60,7 @@ export function useSchoolStudents(): UseSchoolStudentsResult {
   return {
     allStudents,
     loading,
-    loadingMore,
+    loadingMore: false,
     total,
     page,
     pageSize,
@@ -89,6 +69,6 @@ export function useSchoolStudents(): UseSchoolStudentsResult {
     totalPages,
     paginatedStudents,
     retry: loadAll,
-    progress,
+    progress: null,
   };
 }
