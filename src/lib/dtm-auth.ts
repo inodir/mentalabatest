@@ -332,9 +332,9 @@ export async function fetchAllSchoolStudents(
   onProgress?.(uniqueById.size, total);
   onBatch?.(Array.from(uniqueById.values()), total);
 
-  // Fetch remaining pages: offset 1, 2, 3...
-  pageOffset = 1;
-  while (uniqueById.size < total) {
+  // Fetch remaining pages strictly by total/page-count: offset 1..(totalPages-1)
+  const totalPages = Math.ceil(total / batchSize);
+  for (pageOffset = 1; pageOffset < totalPages; pageOffset += 1) {
     const { accessToken: token } = getDTMTokens();
     if (!token) break;
 
@@ -344,14 +344,13 @@ export async function fetchAllSchoolStudents(
 
     const batchData: DTMUserData = await batchRes.json();
     const pageItems = batchData.students?.items ?? [];
-    if (!pageItems.length) break;
 
     pageItems.forEach((s) => uniqueById.set(s.id, s));
     onProgress?.(uniqueById.size, total);
     onBatch?.(Array.from(uniqueById.values()), total);
 
-    if (uniqueById.size === beforeCount) break;
-    pageOffset += 1;
+    // If API returns duplicated/empty page, continue to bounded page range safely
+    if (uniqueById.size === beforeCount && pageItems.length === 0) continue;
   }
 
   return Array.from(uniqueById.values());
