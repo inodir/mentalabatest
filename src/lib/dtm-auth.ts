@@ -308,30 +308,33 @@ export async function fetchAllSchoolStudents(
     });
   };
 
-  let token = accessToken;
+  const fetchPageWithRefresh = async (offset: number): Promise<Response | null> => {
+    const { accessToken: token } = getDTMTokens();
+    if (!token) return null;
 
-  // First page
-  let firstRes: Response;
-  try {
-    firstRes = await fetchPage(token, 0);
-  } catch {
-    return [];
-  }
-
-  if (firstRes.status === 401) {
-    const refreshed = await dtmRefreshToken();
-    if (!refreshed) return [];
-    const { accessToken: newToken } = getDTMTokens();
-    if (!newToken) return [];
-    token = newToken;
+    let res: Response;
     try {
-      firstRes = await fetchPage(token, 0);
+      res = await fetchPage(token, offset);
     } catch {
-      return [];
+      return null;
     }
-  }
 
-  if (!firstRes.ok) return [];
+    if (res.status !== 401) return res;
+
+    const refreshed = await dtmRefreshToken();
+    if (!refreshed) return null;
+    const { accessToken: refreshedToken } = getDTMTokens();
+    if (!refreshedToken) return null;
+
+    try {
+      return await fetchPage(refreshedToken, offset);
+    } catch {
+      return null;
+    }
+  };
+
+  const firstRes = await fetchPageWithRefresh(0);
+  if (!firstRes || !firstRes.ok) return [];
 
   let firstData: DTMUserData;
   try {
@@ -341,48 +344,52 @@ export async function fetchAllSchoolStudents(
   }
 
   const firstItems = firstData.students?.items ?? [];
-  let total = firstData.students?.total ?? firstItems.length;
-
+  const total = firstData.students?.total ?? firstItems.length;
   firstItems.forEach((s) => uniqueById.set(s.id, s));
   onProgress?.(uniqueById.size, total);
   onBatch?.(Array.from(uniqueById.values()), total);
 
-  let totalPages = Math.max(1, Math.ceil(total / batchSize));
+  if (uniqueById.size >= total) return Array.from(uniqueById.values());
 
-  // Fetch remaining pages strictly by offset: 1..(totalPages-1)
-  for (let pageOffset = 1; pageOffset < totalPages; pageOffset += 1) {
-    const { accessToken: currentToken } = getDTMTokens();
-    if (!currentToken) break;
+  const fetchRemaining = async (offsetBuilder: (pageIndex: number) => number, maxPages: number) => {
+    for (let pageIndex = 1; pageIndex <= maxPages; pageIndex += 1) {
+      if (uniqueById.size >= total) break;
 
-    let batchRes: Response;
-    try {
-      batchRes = await fetchPage(currentToken, pageOffset);
-    } catch {
-      break;
+      const offset = offsetBuilder(pageIndex);
+      const res = await fetchPageWithRefresh(offset);
+      if (!res || !res.ok) break;
+
+      let data: DTMUserData;
+      try {
+        data = await res.json();
+      } catch {
+        break;
+      }
+
+      const items = data.students?.items ?? [];
+      if (items.length === 0) break;
+
+      const before = uniqueById.size;
+      items.forEach((s) => uniqueById.set(s.id, s));
+
+      if (uniqueById.size !== before) {
+        onProgress?.(uniqueById.size, total);
+        onBatch?.(Array.from(uniqueById.values()), total);
+      }
+
+      // Last page for absolute-offset APIs
+      if (items.length < batchSize) break;
     }
+  };
 
-    if (!batchRes.ok) break;
+  // 1) Preferred: absolute offset (0, 50, 100, ...)
+  const absMaxPages = Math.max(1, Math.ceil(total / batchSize));
+  await fetchRemaining((pageIndex) => pageIndex * batchSize, absMaxPages);
 
-    let batchData: DTMUserData;
-    try {
-      batchData = await batchRes.json();
-    } catch {
-      break;
-    }
-
-    const pageItems = batchData.students?.items ?? [];
-    const batchTotal = batchData.students?.total;
-
-    if (typeof batchTotal === "number" && batchTotal > total) {
-      total = batchTotal;
-      totalPages = Math.max(1, Math.ceil(total / batchSize));
-    }
-
-    pageItems.forEach((s) => uniqueById.set(s.id, s));
-    onProgress?.(uniqueById.size, total);
-    onBatch?.(Array.from(uniqueById.values()), total);
-
-    if (uniqueById.size >= total) break;
+  // 2) Fallback: page index offset (0, 1, 2, ...)
+  if (uniqueById.size < total) {
+    const pageMaxPages = Math.max(1, Math.ceil(total / batchSize));
+    await fetchRemaining((pageIndex) => pageIndex, pageMaxPages);
   }
 
   return Array.from(uniqueById.values());
