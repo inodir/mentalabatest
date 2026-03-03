@@ -313,20 +313,21 @@ export default function DTMSchoolDetails() {
                       <TableHead>1-fan (ball)</TableHead>
                       <TableHead>2-fan (ball)</TableHead>
                       <TableHead className="text-center">Jami</TableHead>
+                      <TableHead className="text-center">Test fayl</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loading ? (
                       Array.from({ length: 6 }).map((_, i) => (
                         <TableRow key={i}>
-                          {Array.from({ length: 7 }).map((_, j) => (
+                          {Array.from({ length: 8 }).map((_, j) => (
                             <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
                           ))}
                         </TableRow>
                       ))
                     ) : filteredResults.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="py-16 text-center">
+                        <TableCell colSpan={8} className="py-16 text-center">
                           <FileText className="mx-auto h-10 w-10 text-muted-foreground/40" />
                           <p className="mt-3 text-sm text-muted-foreground">Natijalar topilmadi</p>
                         </TableCell>
@@ -372,6 +373,18 @@ export default function DTMSchoolDetails() {
                               >
                                 {user.total_point ?? 0}/189
                               </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {user.test_file_url ? (
+                                <a href={user.test_file_url} target="_blank" rel="noopener noreferrer">
+                                  <Button variant="outline" size="sm">
+                                    <Download className="mr-1 h-3 w-3" />
+                                    Yuklab olish
+                                  </Button>
+                                </a>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
                             </TableCell>
                           </TableRow>
                         );
