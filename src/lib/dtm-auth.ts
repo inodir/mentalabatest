@@ -257,7 +257,7 @@ export async function dtmFetchMe(): Promise<DTMUserData | null> {
   const { accessToken } = getDTMTokens();
   if (!accessToken) return null;
 
-  let res = await fetch(`${getDTMApiBase()}/api/v1/auth/me`, {
+  let res = await fetch(`${getDTMApiBase()}/api/v1/auth/me?limit=1000&offset=0`, {
     headers: {
       accept: "application/json",
       Authorization: `Bearer ${accessToken}`,
@@ -272,7 +272,7 @@ export async function dtmFetchMe(): Promise<DTMUserData | null> {
       return null;
     }
     const { accessToken: newToken } = getDTMTokens();
-    res = await fetch(`${getDTMApiBase()}/api/v1/auth/me`, {
+    res = await fetch(`${getDTMApiBase()}/api/v1/auth/me?limit=1000&offset=0`, {
       headers: {
         accept: "application/json",
         Authorization: `Bearer ${newToken}`,
