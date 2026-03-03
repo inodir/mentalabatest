@@ -451,19 +451,20 @@ export default function SchoolDetails() {
                     <TableHead>1-fan (ball)</TableHead>
                     <TableHead>2-fan (ball)</TableHead>
                     <TableHead className="text-center">Jami</TableHead>
+                    <TableHead className="text-center">Test fayl</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {dtmLoading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8">
+                       <TableCell colSpan={7} className="text-center py-8">
                         <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                       </TableCell>
                     </TableRow>
                   ) : filteredResults.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={6}
+                        colSpan={7}
                         className="text-center py-8 text-muted-foreground"
                       >
                         Natijalar topilmadi
@@ -507,6 +508,22 @@ export default function SchoolDetails() {
                             >
                               {user.total_point ?? 0}/189
                             </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {user.test_file_url ? (
+                              <a
+                                href={user.test_file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Button variant="outline" size="sm">
+                                  <Download className="mr-1 h-3 w-3" />
+                                  Yuklab olish
+                                </Button>
+                              </a>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
