@@ -384,19 +384,20 @@ export default function SchoolDetails() {
                     <TableHead>Telefon</TableHead>
                     <TableHead>Tuman</TableHead>
                     <TableHead>Sana</TableHead>
+                    <TableHead className="text-center">Test fayl</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {dtmLoading ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8">
+                      <TableCell colSpan={5} className="text-center py-8">
                         <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                       </TableCell>
                     </TableRow>
                   ) : filteredRegistered.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={4}
+                        colSpan={5}
                         className="text-center py-8 text-muted-foreground"
                       >
                         O'quvchilar topilmadi
@@ -412,6 +413,18 @@ export default function SchoolDetails() {
                         <TableCell>{user.district || "—"}</TableCell>
                         <TableCell>
                           {format(new Date(user.created_at), "dd.MM.yyyy")}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {user.test_file_url ? (
+                            <a href={user.test_file_url} target="_blank" rel="noopener noreferrer">
+                              <Button variant="outline" size="sm">
+                                <Download className="mr-1 h-3 w-3" />
+                                Yuklab olish
+                              </Button>
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
