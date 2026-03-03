@@ -257,37 +257,44 @@ export async function dtmFetchMe(): Promise<DTMUserData | null> {
   const { accessToken } = getDTMTokens();
   if (!accessToken) return null;
 
-  let res = await fetch(`${getDTMApiBase()}/api/v1/auth/me?limit=1000&offset=0`, {
-    headers: {
-      accept: "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  const cachedUser = getDTMUserData();
 
-  // If 401, try refresh
-  if (res.status === 401) {
-    const refreshed = await dtmRefreshToken();
-    if (!refreshed) {
-      clearDTMTokens();
-      return null;
-    }
-    const { accessToken: newToken } = getDTMTokens();
-    res = await fetch(`${getDTMApiBase()}/api/v1/auth/me?limit=1000&offset=0`, {
+  try {
+    let res = await fetch(`${getDTMApiBase()}/api/v1/auth/me?limit=1000&offset=0`, {
       headers: {
         accept: "application/json",
-        Authorization: `Bearer ${newToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
-  }
 
-  if (!res.ok) {
-    clearDTMTokens();
-    return null;
-  }
+    // If 401, try refresh
+    if (res.status === 401) {
+      const refreshed = await dtmRefreshToken();
+      if (!refreshed) {
+        clearDTMTokens();
+        return null;
+      }
+      const { accessToken: newToken } = getDTMTokens();
+      res = await fetch(`${getDTMApiBase()}/api/v1/auth/me?limit=1000&offset=0`, {
+        headers: {
+          accept: "application/json",
+          Authorization: `Bearer ${newToken}`,
+        },
+      });
+    }
 
-  const userData: DTMUserData = await res.json();
-  setDTMUserData(userData);
-  return userData;
+    if (!res.ok) {
+      // Network worked but server error — use cached data instead of logging out
+      return cachedUser;
+    }
+
+    const userData: DTMUserData = await res.json();
+    setDTMUserData(userData);
+    return userData;
+  } catch {
+    // Network error (offline, timeout, etc.) — use cached data
+    return cachedUser;
+  }
 }
 
 // Fetch all school students in batches (for school admin)
