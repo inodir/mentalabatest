@@ -291,7 +291,6 @@ export async function dtmFetchMe(): Promise<DTMUserData | null> {
 }
 
 // Fetch all school students in batches (for school admin)
-// onBatch streams each batch immediately so UI can show data fast
 export async function fetchAllSchoolStudents(
   onProgress?: (loaded: number, total: number) => void,
   onBatch?: (items: DTMStudentItem[], total: number) => void
@@ -301,9 +300,6 @@ export async function fetchAllSchoolStudents(
 
   const base = getDTMApiBase();
   const batchSize = 50;
-  let pageOffset = 0;
-  let total = 0;
-
   const uniqueById = new Map<number, DTMStudentItem>();
 
   const fetchPage = async (token: string, offset: number) => {
@@ -312,45 +308,81 @@ export async function fetchAllSchoolStudents(
     });
   };
 
-  // First request
-  let res = await fetchPage(accessToken, pageOffset);
+  let token = accessToken;
 
-  if (res.status === 401) {
+  // First page
+  let firstRes: Response;
+  try {
+    firstRes = await fetchPage(token, 0);
+  } catch {
+    return [];
+  }
+
+  if (firstRes.status === 401) {
     const refreshed = await dtmRefreshToken();
     if (!refreshed) return [];
     const { accessToken: newToken } = getDTMTokens();
     if (!newToken) return [];
-    res = await fetchPage(newToken, pageOffset);
+    token = newToken;
+    try {
+      firstRes = await fetchPage(token, 0);
+    } catch {
+      return [];
+    }
   }
 
-  if (!res.ok) return [];
-  const data: DTMUserData = await res.json();
+  if (!firstRes.ok) return [];
 
-  if (!data.students) return [];
-  total = data.students.total;
-  data.students.items.forEach((s) => uniqueById.set(s.id, s));
+  let firstData: DTMUserData;
+  try {
+    firstData = await firstRes.json();
+  } catch {
+    return [];
+  }
+
+  const firstItems = firstData.students?.items ?? [];
+  let total = firstData.students?.total ?? firstItems.length;
+
+  firstItems.forEach((s) => uniqueById.set(s.id, s));
   onProgress?.(uniqueById.size, total);
   onBatch?.(Array.from(uniqueById.values()), total);
 
-  // Fetch remaining pages strictly by total/page-count: offset 1..(totalPages-1)
-  const totalPages = Math.ceil(total / batchSize);
-  for (pageOffset = 1; pageOffset < totalPages; pageOffset += 1) {
-    const { accessToken: token } = getDTMTokens();
-    if (!token) break;
+  let totalPages = Math.max(1, Math.ceil(total / batchSize));
 
-    const beforeCount = uniqueById.size;
-    const batchRes = await fetchPage(token, pageOffset);
+  // Fetch remaining pages strictly by offset: 1..(totalPages-1)
+  for (let pageOffset = 1; pageOffset < totalPages; pageOffset += 1) {
+    const { accessToken: currentToken } = getDTMTokens();
+    if (!currentToken) break;
+
+    let batchRes: Response;
+    try {
+      batchRes = await fetchPage(currentToken, pageOffset);
+    } catch {
+      break;
+    }
+
     if (!batchRes.ok) break;
 
-    const batchData: DTMUserData = await batchRes.json();
+    let batchData: DTMUserData;
+    try {
+      batchData = await batchRes.json();
+    } catch {
+      break;
+    }
+
     const pageItems = batchData.students?.items ?? [];
+    const batchTotal = batchData.students?.total;
+
+    if (typeof batchTotal === "number" && batchTotal > total) {
+      total = batchTotal;
+      totalPages = Math.max(1, Math.ceil(total / batchSize));
+    }
 
     pageItems.forEach((s) => uniqueById.set(s.id, s));
     onProgress?.(uniqueById.size, total);
     onBatch?.(Array.from(uniqueById.values()), total);
 
-    // If API returns duplicated/empty page, continue to bounded page range safely
-    if (uniqueById.size === beforeCount && pageItems.length === 0) continue;
+    if (uniqueById.size >= total) break;
   }
 
   return Array.from(uniqueById.values());
