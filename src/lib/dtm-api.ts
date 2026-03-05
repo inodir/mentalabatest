@@ -386,3 +386,28 @@ export async function fetchAllDTMUsers(
   setCachedData("users", result);
   return result;
 }
+
+// Delete a DTM user by ID
+export async function deleteDTMUser(settings: DTMApiSettings, userId: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    const baseUrl = settings.mainUrl.endsWith("/") ? settings.mainUrl : `${settings.mainUrl}/`;
+    const response = await fetch(`${baseUrl}api/v1/dtm/${userId}`, {
+      method: "DELETE",
+      headers: {
+        accept: "application/json",
+        "x-api-key": settings.apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      return { success: false, error: `Xatolik: ${response.status} ${errorText}` };
+    }
+
+    // Clear cache after deletion
+    clearDTMCache();
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Noma'lum xatolik" };
+  }
+}
