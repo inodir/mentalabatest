@@ -196,6 +196,14 @@ const UserDetailCard = ({ user }: { user: DTMUser }) => {
             <GraduationCap className="h-4 w-4 text-primary" />
             <span className="font-medium truncate">{user.full_name || "—"}</span>
           </div>
+          {user.id && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="text-xs">ID:</span>
+              <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono select-all">
+                {user.id}
+              </code>
+            </div>
+          )}
           {user.phone && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Phone className="h-3 w-3" />
