@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminLayout } from "@/components/layout/AdminLayout";
@@ -44,8 +44,21 @@ import {
   XCircle,
   Download,
   Eye,
+  Trash2,
+  Loader2,
 } from "lucide-react";
-import { DTMUser, DTMTestResults } from "@/lib/dtm-api";
+import { DTMUser, DTMTestResults, getApiSettings, deleteDTMUser } from "@/lib/dtm-api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 // Subject score display component
 const SubjectScore = ({ 
@@ -311,6 +324,27 @@ export default function DTMUsers() {
   const [expandedUser, setExpandedUser] = useState<number | null>(null);
   const [sortColumn, setSortColumn] = useState<string>("created_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [deleteUser, setDeleteUser] = useState<DTMUser | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteUser = useCallback(async () => {
+    if (!deleteUser) return;
+    const settings = getApiSettings();
+    if (!settings) {
+      toast.error("API sozlamalari topilmadi");
+      return;
+    }
+    setDeleting(true);
+    const result = await deleteDTMUser(settings, deleteUser.id);
+    setDeleting(false);
+    setDeleteUser(null);
+    if (result.success) {
+      toast.success(`${deleteUser.full_name} muvaffaqiyatli o'chirildi`);
+      retry();
+    } else {
+      toast.error(result.error || "O'chirishda xatolik yuz berdi");
+    }
+  }, [deleteUser, retry]);
 
   // Check if any filter or search is active
   const hasActiveFilter = filters.schoolCode !== "all" || filters.hasResult !== "all" || filters.groupName !== "all" || filters.searchTerm.trim().length > 0;
@@ -670,25 +704,44 @@ export default function DTMUsers() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => setExpandedUser(
-                                        expandedUser === user.id ? null : user.id
-                                      )}
-                                    >
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Batafsil ko'rish</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                              <div className="flex items-center gap-1">
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={() => setExpandedUser(
+                                          expandedUser === user.id ? null : user.id
+                                        )}
+                                      >
+                                        <Eye className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Batafsil ko'rish</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                        onClick={() => setDeleteUser(user)}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>O'chirish</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
                             </TableCell>
                           </TableRow>
                           {expandedUser === user.id && (
@@ -746,6 +799,39 @@ export default function DTMUsers() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteUser} onOpenChange={(open) => !open && setDeleteUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Foydalanuvchini o'chirish</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{deleteUser?.full_name}</strong> (ID: {deleteUser?.id}) ni o'chirishni xohlaysizmi? 
+              Bu amalni qaytarib bo'lmaydi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Bekor qilish</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  O'chirilmoqda...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  O'chirish
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 }
