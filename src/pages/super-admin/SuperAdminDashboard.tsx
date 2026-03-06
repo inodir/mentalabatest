@@ -14,6 +14,7 @@ import { SubjectMasteryChart } from "@/components/dashboard/SubjectMasteryChart"
 import { BallDistributionChart } from "@/components/dashboard/BallDistributionChart";
 import { DTMReadinessCards } from "@/components/dashboard/DTMReadinessCards";
 import { MandatoryChart } from "@/components/dashboard/MandatoryChart";
+import { TimeBasedStats } from "@/components/dashboard/TimeBasedStats";
 import { Users, FileText, TrendingUp, School, Settings, RefreshCw, AlertCircle, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -41,7 +42,7 @@ const itemVariants = {
 
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
-  const { stats, loading, error, mode, setMode, progress, retry } = useDTMDashboard();
+  const { stats, loading, error, mode, setMode, progress, retry, loadedEntities } = useDTMDashboard();
   const { dtmUser } = useAuth();
 
   if (error) {
@@ -202,7 +203,12 @@ export default function SuperAdminDashboard() {
           )}
         </motion.div>
 
-        {/* O'rtacha ball */}
+        {/* Time-based Stats */}
+        <motion.div variants={itemVariants}>
+          <TimeBasedStats users={loadedEntities} loading={loading} />
+        </motion.div>
+
+
         {!loading && dtmUser?.stats?.dtm_readiness && (
           <motion.div variants={itemVariants} className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
             <StatCard
