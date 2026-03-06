@@ -6,6 +6,7 @@ import {
   calculateStats,
   DashboardStats,
   DTMApiSettings,
+  DTMUser,
 } from "@/lib/dtm-api";
 
 export type DashboardMode = "fast" | "accurate";
@@ -20,6 +21,7 @@ interface UseDTMDashboardResult {
   progress: { loaded: number; total: number } | null;
   retry: () => void;
   settings: DTMApiSettings | null;
+  loadedEntities: DTMUser[];
 }
 
 export function useDTMDashboard(): UseDTMDashboardResult {
@@ -29,6 +31,7 @@ export function useDTMDashboard(): UseDTMDashboardResult {
   const [mode, setMode] = useState<DashboardMode>("fast");
   const [progress, setProgress] = useState<{ loaded: number; total: number } | null>(null);
   const [settings, setSettings] = useState<DTMApiSettings | null>(null);
+  const [loadedEntities, setLoadedEntities] = useState<DTMUser[]>([]);
 
   const fetchData = useCallback(async (currentMode: DashboardMode) => {
     setLoading(true);
@@ -54,6 +57,7 @@ export function useDTMDashboard(): UseDTMDashboardResult {
           true
         );
         setStats(calculatedStats);
+        setLoadedEntities(response.entities);
       } else {
         // Accurate mode: fetch all pages
         const { entities, totalCount } = await fetchAllDTMUsers(
@@ -62,6 +66,7 @@ export function useDTMDashboard(): UseDTMDashboardResult {
         );
         const calculatedStats = calculateStats(entities, totalCount, false);
         setStats(calculatedStats);
+        setLoadedEntities(entities);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
@@ -100,5 +105,6 @@ export function useDTMDashboard(): UseDTMDashboardResult {
     progress,
     retry,
     settings,
+    loadedEntities,
   };
 }
