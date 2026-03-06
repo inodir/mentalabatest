@@ -10,10 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Search, Loader2, X, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { Search, Loader2, X, ChevronLeft, ChevronRight, RefreshCw, Eye, EyeOff, Copy, Check } from "lucide-react";
 import { format } from "date-fns";
 import { useSchoolStudents } from "@/hooks/useSchoolStudents";
-
+import { DTMStudentItem } from "@/lib/dtm-auth";
+import { toast } from "sonner";
 export default function StudentsManagement() {
   const {
     allStudents, loading, loadingMore, total, page, pageSize, setPage, setPageSize,
@@ -25,6 +26,8 @@ export default function StudentsManagement() {
   const [genderFilter, setGenderFilter] = useState("all");
   const [langFilter, setLangFilter] = useState("all");
   const [testStatusFilter, setTestStatusFilter] = useState("all");
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
   const groups = useMemo(() => [...new Set(allStudents.map(s => s.group_name))].filter(Boolean).sort(), [allStudents]);
   const languages = useMemo(() => [...new Set(allStudents.map(s => s.language))].filter(Boolean), [allStudents]);
@@ -69,6 +72,13 @@ export default function StudentsManagement() {
   const formatGender = (g: string) => g === "female" ? "Ayol" : g === "male" ? "Erkak" : g;
   const formatDate = (d: string) => {
     try { return format(new Date(d), "dd.MM.yyyy HH:mm"); } catch { return d; }
+  };
+
+  const copyToClipboard = (id: number) => {
+    navigator.clipboard.writeText(String(id));
+    setCopiedId(id);
+    toast.success("ID nusxalandi");
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   // Reset page on filter change
@@ -163,6 +173,7 @@ export default function StudentsManagement() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">#</TableHead>
+                <TableHead className="w-10"></TableHead>
                 <TableHead>F.I.O.</TableHead>
                 <TableHead>Guruh</TableHead>
                 <TableHead>Jinsi</TableHead>
@@ -196,60 +207,157 @@ export default function StudentsManagement() {
                 displayStudents.map((student, index) => {
                   const rowNum = (page - 1) * pageSize + index + 1;
                   const subjects = student.dtm?.subjects ?? [];
+                  const mandatory = subjects.filter(s => s.subject_name.includes("majburiy"));
                   const elective = subjects.filter(s => !s.subject_name.includes("majburiy"));
                   const fan1 = elective[0];
                   const fan2 = elective[1];
+                  const isExpanded = expandedId === student.id;
                   return (
-                    <TableRow key={student.id}>
-                      <TableCell className="text-muted-foreground">{rowNum}</TableCell>
-                      <TableCell className="font-medium whitespace-nowrap">{student.full_name}</TableCell>
-                      <TableCell><Badge variant="outline">{student.group_name}</Badge></TableCell>
-                      <TableCell>{formatGender(student.gender)}</TableCell>
-                      <TableCell>{formatLang(student.language)}</TableCell>
-                      <TableCell className="whitespace-nowrap text-muted-foreground text-xs">{formatDate(student.created_at)}</TableCell>
-                      <TableCell>
-                        {student.dtm ? (
-                          student.dtm.tested
-                            ? <Badge variant="default">Topshirgan</Badge>
-                            : <Badge variant="secondary">Topshirmagan</Badge>
-                        ) : <Badge variant="outline">Ma'lumot yo'q</Badge>}
-                      </TableCell>
-                      <TableCell>
-                        {fan1 ? (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant={fan1.earned_ball > 0 ? "default" : "secondary"} className="text-xs cursor-default">
-                                  {fan1.subject_name}: {fan1.earned_ball}/{fan1.max_ball}
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>{fan1.percent}%</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        ) : <span className="text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell>
-                        {fan2 ? (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant={fan2.earned_ball > 0 ? "default" : "secondary"} className="text-xs cursor-default">
-                                  {fan2.subject_name}: {fan2.earned_ball}/{fan2.max_ball}
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>{fan2.percent}%</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        ) : <span className="text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {student.dtm?.total_ball != null ? (
-                          <Badge variant={student.dtm.total_ball >= 140 ? "default" : "secondary"} className="text-base">
-                            {student.dtm.total_ball}
-                          </Badge>
-                        ) : <span className="text-muted-foreground">—</span>}
-                      </TableCell>
-                    </TableRow>
+                    <>
+                      <TableRow key={student.id} className={isExpanded ? "border-b-0 bg-muted/30" : ""}>
+                        <TableCell className="text-muted-foreground">{rowNum}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => setExpandedId(isExpanded ? null : student.id)}
+                          >
+                            {isExpanded ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </TableCell>
+                        <TableCell className="font-medium whitespace-nowrap">{student.full_name}</TableCell>
+                        <TableCell><Badge variant="outline">{student.group_name}</Badge></TableCell>
+                        <TableCell>{formatGender(student.gender)}</TableCell>
+                        <TableCell>{formatLang(student.language)}</TableCell>
+                        <TableCell className="whitespace-nowrap text-muted-foreground text-xs">{formatDate(student.created_at)}</TableCell>
+                        <TableCell>
+                          {student.dtm ? (
+                            student.dtm.tested
+                              ? <Badge variant="default">Topshirgan</Badge>
+                              : <Badge variant="secondary">Topshirmagan</Badge>
+                          ) : <Badge variant="outline">Ma'lumot yo'q</Badge>}
+                        </TableCell>
+                        <TableCell>
+                          {fan1 ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant={fan1.earned_ball > 0 ? "default" : "secondary"} className="text-xs cursor-default">
+                                    {fan1.subject_name}: {fan1.earned_ball}/{fan1.max_ball}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>{fan1.percent}%</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell>
+                          {fan2 ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant={fan2.earned_ball > 0 ? "default" : "secondary"} className="text-xs cursor-default">
+                                    {fan2.subject_name}: {fan2.earned_ball}/{fan2.max_ball}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>{fan2.percent}%</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {student.dtm?.total_ball != null ? (
+                            <Badge variant={student.dtm.total_ball >= 140 ? "default" : "secondary"} className="text-base">
+                              {student.dtm.total_ball}
+                            </Badge>
+                          ) : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded && (
+                        <TableRow key={`detail-${student.id}`} className="bg-muted/20 hover:bg-muted/30">
+                          <TableCell colSpan={11} className="py-4 px-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                              {/* ID */}
+                              <div className="space-y-1">
+                                <span className="text-xs text-muted-foreground">User ID</span>
+                                <div className="flex items-center gap-2">
+                                  <code className="rounded bg-muted px-2 py-1 text-xs font-mono select-all">
+                                    {student.id}
+                                  </code>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => copyToClipboard(student.id)}
+                                  >
+                                    {copiedId === student.id ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                                  </Button>
+                                </div>
+                              </div>
+                              {/* Bot ID */}
+                              <div className="space-y-1">
+                                <span className="text-xs text-muted-foreground">Bot ID</span>
+                                <p className="font-medium">{student.bot_id || "—"}</p>
+                              </div>
+                              {/* Phone */}
+                              <div className="space-y-1">
+                                <span className="text-xs text-muted-foreground">Telefon</span>
+                                <p className="font-medium">{student.phone || "—"}</p>
+                              </div>
+                              {/* School */}
+                              <div className="space-y-1">
+                                <span className="text-xs text-muted-foreground">Maktab</span>
+                                <p className="font-medium">{student.school_name || student.school_code}</p>
+                              </div>
+                              {/* Region / District */}
+                              <div className="space-y-1">
+                                <span className="text-xs text-muted-foreground">Viloyat / Tuman</span>
+                                <p className="font-medium">{student.region}, {student.district}</p>
+                              </div>
+                              {/* Group */}
+                              <div className="space-y-1">
+                                <span className="text-xs text-muted-foreground">Guruh</span>
+                                <p className="font-medium">{student.group_name}</p>
+                              </div>
+                              {/* Mandatory subjects */}
+                              {mandatory.length > 0 && (
+                                <div className="space-y-1 md:col-span-2 lg:col-span-3">
+                                  <span className="text-xs text-muted-foreground">Majburiy fanlar</span>
+                                  <div className="flex flex-wrap gap-2">
+                                    {mandatory.map((s, i) => (
+                                      <Badge key={i} variant={s.earned_ball > 0 ? "default" : "secondary"} className="text-xs">
+                                        {s.subject_name}: {s.earned_ball}/{s.max_ball} ({s.percent}%)
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {/* DTM detailed scores */}
+                              {student.dtm && (
+                                <div className="space-y-1 md:col-span-2 lg:col-span-3">
+                                  <span className="text-xs text-muted-foreground">DTM batafsil</span>
+                                  <div className="flex flex-wrap gap-3 text-xs">
+                                    {student.dtm.mandatory_ball != null && (
+                                      <span>Majburiy: <strong>{student.dtm.mandatory_ball}</strong></span>
+                                    )}
+                                    {student.dtm.primary_ball != null && (
+                                      <span>1-fan: <strong>{student.dtm.primary_ball}</strong></span>
+                                    )}
+                                    {student.dtm.secondary_ball != null && (
+                                      <span>2-fan: <strong>{student.dtm.secondary_ball}</strong></span>
+                                    )}
+                                    {student.dtm.total_ball != null && (
+                                      <span>Jami: <strong>{student.dtm.total_ball}</strong></span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </>
                   );
                 })
               )}
