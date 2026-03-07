@@ -205,7 +205,12 @@ export default function SuperAdminDashboard() {
 
         {/* Time-based Stats */}
         <motion.div variants={itemVariants}>
-          <TimeBasedStats users={loadedEntities} loading={loading} />
+          <TimeBasedStats
+            users={loadedEntities}
+            loading={loading}
+            isApproximate={stats?.isApproximate}
+            totalCount={stats?.totalUsers}
+          />
         </motion.div>
 
 
