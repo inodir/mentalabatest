@@ -302,8 +302,6 @@ export default function StudentsManagement() {
                         </TableCell>
                           </>
                         )}
-                          )}
-                        </TableCell>
                       </TableRow>
                       {isExpanded && (
                         <TableRow key={`detail-${student.id}`} className="bg-muted/20 hover:bg-muted/30">
