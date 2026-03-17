@@ -67,6 +67,7 @@ interface School {
   admin_full_name: string;
   admin_login: string;
   is_active: boolean;
+  show_results: boolean;
   created_at: string;
   initial_password?: string;
 }
