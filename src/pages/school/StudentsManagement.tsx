@@ -195,7 +195,7 @@ export default function StudentsManagement() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="py-10 text-center">
+                  <TableCell colSpan={showResults ? 12 : 8} className="py-10 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <Loader2 className="h-6 w-6 animate-spin" />
                       <span className="text-sm text-muted-foreground">
