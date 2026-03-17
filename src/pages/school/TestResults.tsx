@@ -336,6 +336,8 @@ export default function TestResults() {
             </Card>
           </>
         )}
+        </>
+        )}
       </div>
     </AdminLayout>
   );
