@@ -1072,6 +1072,7 @@ export default function SchoolsManagement() {
                 <TableHead>Admin</TableHead>
                 <TableHead>Login / Parol</TableHead>
                 <TableHead>Holat</TableHead>
+                <TableHead className="text-center">Natijalar</TableHead>
                 <TableHead className="text-right">Amallar</TableHead>
               </TableRow>
             </TableHeader>
