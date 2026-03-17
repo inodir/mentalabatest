@@ -295,7 +295,7 @@ export default function StudentsManagement() {
                       </TableRow>
                       {isExpanded && (
                         <TableRow key={`detail-${student.id}`} className="bg-muted/20 hover:bg-muted/30">
-                          <TableCell colSpan={11} className="py-4 px-6">
+                          <TableCell colSpan={12} className="py-4 px-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                               {/* ID */}
                               <div className="space-y-1">
