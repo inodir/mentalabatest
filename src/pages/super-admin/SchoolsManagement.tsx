@@ -639,8 +639,31 @@ export default function SchoolsManagement() {
        });
      }
    };
- 
-  const handleExportCSV = () => {
+
+   const handleToggleShowResults = async (school: School) => {
+     try {
+       const { error } = await supabase
+         .from("schools")
+         .update({ show_results: !school.show_results })
+         .eq("id", school.id);
+
+       if (error) throw error;
+
+       toast({
+         title: school.show_results ? "Natijalar yashirildi" : "Natijalar ko'rsatildi",
+       });
+
+       fetchSchools();
+     } catch (error) {
+       console.error("Error toggling show_results:", error);
+       toast({
+         title: "Xatolik",
+         description: "Natijalar holatini o'zgartirishda xatolik",
+         variant: "destructive",
+       });
+     }
+   };
+
     const headers = ["Viloyat", "Tuman", "Maktab nomi", "Kod", "Admin F.I.O.", "Admin login", "Parol"];
     const rows = filteredSchools.map((s) => [
       s.region,
