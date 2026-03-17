@@ -126,6 +126,16 @@ export default function TestResults() {
   return (
     <AdminLayout variant="school">
       <div className="space-y-6">
+        {!showResults ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+            <h2 className="text-2xl font-bold">Natijalar hozircha yopiq</h2>
+            <p className="text-muted-foreground mt-2">
+              Admin tomonidan natijalarni ko'rish vaqtincha o'chirilgan. Iltimos, keyinroq qayta tekshiring.
+            </p>
+          </div>
+        ) : (
+        <>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Test natijalari</h1>
