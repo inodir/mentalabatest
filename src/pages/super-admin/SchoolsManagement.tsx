@@ -78,12 +78,14 @@ function SchoolTableRow({
   onEdit,
   onResetPassword,
   onToggleActive,
+  onToggleShowResults,
   copyToClipboard,
 }: {
   school: School;
   onEdit: (school: School) => void;
   onResetPassword: (school: School) => void;
   onToggleActive: (school: School) => void;
+  onToggleShowResults: (school: School) => void;
   copyToClipboard: (text: string) => void;
 }) {
   const [showCredentials, setShowCredentials] = useState(false);
