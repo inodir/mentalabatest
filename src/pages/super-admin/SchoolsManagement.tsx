@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -67,6 +68,7 @@ interface School {
   admin_full_name: string;
   admin_login: string;
   is_active: boolean;
+  show_results: boolean;
   created_at: string;
   initial_password?: string;
 }
@@ -77,12 +79,14 @@ function SchoolTableRow({
   onEdit,
   onResetPassword,
   onToggleActive,
+  onToggleShowResults,
   copyToClipboard,
 }: {
   school: School;
   onEdit: (school: School) => void;
   onResetPassword: (school: School) => void;
   onToggleActive: (school: School) => void;
+  onToggleShowResults: (school: School) => void;
   copyToClipboard: (text: string) => void;
 }) {
   const [showCredentials, setShowCredentials] = useState(false);
@@ -159,6 +163,13 @@ function SchoolTableRow({
         <Badge variant={school.is_active ? "default" : "secondary"}>
           {school.is_active ? "Faol" : "Nofaol"}
         </Badge>
+      </TableCell>
+      <TableCell className="text-center">
+        <Switch
+          checked={school.show_results}
+          onCheckedChange={() => onToggleShowResults(school)}
+          className="data-[state=checked]:bg-primary"
+        />
       </TableCell>
       <TableCell className="text-right">
         <div className="flex justify-end gap-1">
@@ -628,7 +639,31 @@ export default function SchoolsManagement() {
        });
      }
    };
- 
+
+   const handleToggleShowResults = async (school: School) => {
+     try {
+       const { error } = await supabase
+         .from("schools")
+         .update({ show_results: !school.show_results })
+         .eq("id", school.id);
+
+       if (error) throw error;
+
+       toast({
+         title: school.show_results ? "Natijalar yashirildi" : "Natijalar ko'rsatildi",
+       });
+
+       fetchSchools();
+     } catch (error) {
+       console.error("Error toggling show_results:", error);
+       toast({
+         title: "Xatolik",
+         description: "Natijalar holatini o'zgartirishda xatolik",
+         variant: "destructive",
+       });
+     }
+   };
+
   const handleExportCSV = () => {
     const headers = ["Viloyat", "Tuman", "Maktab nomi", "Kod", "Admin F.I.O.", "Admin login", "Parol"];
     const rows = filteredSchools.map((s) => [
@@ -1061,19 +1096,20 @@ export default function SchoolsManagement() {
                 <TableHead>Admin</TableHead>
                 <TableHead>Login / Parol</TableHead>
                 <TableHead>Holat</TableHead>
+                <TableHead className="text-center">Natijalar</TableHead>
                 <TableHead className="text-right">Amallar</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-10 text-center">
+                  <TableCell colSpan={8} className="py-10 text-center">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                   </TableCell>
                 </TableRow>
               ) : filteredSchools.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
                     Maktablar topilmadi
                   </TableCell>
                 </TableRow>
@@ -1085,6 +1121,7 @@ export default function SchoolsManagement() {
                     onEdit={openEditDialog}
                     onResetPassword={openResetPasswordDialog}
                     onToggleActive={handleToggleActive}
+                    onToggleShowResults={handleToggleShowResults}
                     copyToClipboard={copyToClipboard}
                   />
                 ))

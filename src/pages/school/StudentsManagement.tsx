@@ -13,6 +13,7 @@ import {
 import { Search, Loader2, X, ChevronLeft, ChevronRight, RefreshCw, Eye, EyeOff, Copy, Check, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { useSchoolStudents } from "@/hooks/useSchoolStudents";
+import { useShowResults } from "@/hooks/useShowResults";
 import { DTMStudentItem } from "@/lib/dtm-auth";
 import { toast } from "sonner";
 export default function StudentsManagement() {
@@ -20,6 +21,7 @@ export default function StudentsManagement() {
     allStudents, loading, loadingMore, total, page, pageSize, setPage, setPageSize,
     totalPages, paginatedStudents, retry, progress,
   } = useSchoolStudents();
+  const { showResults } = useShowResults();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [groupFilter, setGroupFilter] = useState("all");
@@ -180,16 +182,20 @@ export default function StudentsManagement() {
                 <TableHead>Til</TableHead>
                 <TableHead>Ro'yxatdan o'tgan</TableHead>
                 <TableHead>Test holati</TableHead>
-                <TableHead>1-fan</TableHead>
-                <TableHead>2-fan</TableHead>
-                <TableHead className="text-right">Jami ball</TableHead>
-                <TableHead className="text-center">Natija fayli</TableHead>
+                {showResults && (
+                  <>
+                    <TableHead>1-fan</TableHead>
+                    <TableHead>2-fan</TableHead>
+                    <TableHead className="text-right">Jami ball</TableHead>
+                    <TableHead className="text-center">Natija fayli</TableHead>
+                  </>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="py-10 text-center">
+                  <TableCell colSpan={showResults ? 12 : 8} className="py-10 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <Loader2 className="h-6 w-6 animate-spin" />
                       <span className="text-sm text-muted-foreground">
@@ -200,7 +206,7 @@ export default function StudentsManagement() {
                 </TableRow>
               ) : displayStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={showResults ? 12 : 8} className="py-10 text-center text-muted-foreground">
                     {hasFilters ? "Qidiruv bo'yicha o'quvchi topilmadi" : "O'quvchilar topilmadi"}
                   </TableCell>
                 </TableRow>
@@ -239,6 +245,8 @@ export default function StudentsManagement() {
                               : <Badge variant="secondary">Topshirmagan</Badge>
                           ) : <Badge variant="outline">Ma'lumot yo'q</Badge>}
                         </TableCell>
+                        {showResults && (
+                          <>
                         <TableCell>
                           {fan1 ? (
                             <TooltipProvider>
@@ -292,10 +300,12 @@ export default function StudentsManagement() {
                             </span>
                           )}
                         </TableCell>
+                          </>
+                        )}
                       </TableRow>
                       {isExpanded && (
                         <TableRow key={`detail-${student.id}`} className="bg-muted/20 hover:bg-muted/30">
-                          <TableCell colSpan={12} className="py-4 px-6">
+                          <TableCell colSpan={showResults ? 12 : 8} className="py-4 px-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                               {/* ID */}
                               <div className="space-y-1">
