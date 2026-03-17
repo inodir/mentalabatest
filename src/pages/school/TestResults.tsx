@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useSchoolDTMData } from "@/hooks/useSchoolDTMData";
+import { useShowResults } from "@/hooks/useShowResults";
 import { 
   Search, 
   Download, 
