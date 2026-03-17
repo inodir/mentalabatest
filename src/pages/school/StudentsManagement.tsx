@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Search, Loader2, X, ChevronLeft, ChevronRight, RefreshCw, Eye, EyeOff, Copy, Check } from "lucide-react";
+import { Search, Loader2, X, ChevronLeft, ChevronRight, RefreshCw, Eye, EyeOff, Copy, Check, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { useSchoolStudents } from "@/hooks/useSchoolStudents";
 import { DTMStudentItem } from "@/lib/dtm-auth";
