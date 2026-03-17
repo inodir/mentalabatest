@@ -245,6 +245,8 @@ export default function StudentsManagement() {
                               : <Badge variant="secondary">Topshirmagan</Badge>
                           ) : <Badge variant="outline">Ma'lumot yo'q</Badge>}
                         </TableCell>
+                        {showResults && (
+                          <>
                         <TableCell>
                           {fan1 ? (
                             <TooltipProvider>
@@ -296,6 +298,10 @@ export default function StudentsManagement() {
                               <FileText className="h-3.5 w-3.5" />
                               Yo'q
                             </span>
+                          )}
+                        </TableCell>
+                          </>
+                        )}
                           )}
                         </TableCell>
                       </TableRow>
