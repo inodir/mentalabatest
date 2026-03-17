@@ -163,6 +163,13 @@ function SchoolTableRow({
           {school.is_active ? "Faol" : "Nofaol"}
         </Badge>
       </TableCell>
+      <TableCell className="text-center">
+        <Switch
+          checked={school.show_results}
+          onCheckedChange={() => onToggleShowResults(school)}
+          className="data-[state=checked]:bg-primary"
+        />
+      </TableCell>
       <TableCell className="text-right">
         <div className="flex justify-end gap-1">
           <Link to={`/super-admin/schools/${school.id}`}>
