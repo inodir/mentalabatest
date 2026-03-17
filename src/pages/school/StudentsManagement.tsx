@@ -13,6 +13,7 @@ import {
 import { Search, Loader2, X, ChevronLeft, ChevronRight, RefreshCw, Eye, EyeOff, Copy, Check, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { useSchoolStudents } from "@/hooks/useSchoolStudents";
+import { useShowResults } from "@/hooks/useShowResults";
 import { DTMStudentItem } from "@/lib/dtm-auth";
 import { toast } from "sonner";
 export default function StudentsManagement() {
