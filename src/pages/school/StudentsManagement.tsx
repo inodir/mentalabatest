@@ -184,6 +184,7 @@ export default function StudentsManagement() {
                 <TableHead>2-fan</TableHead>
                 <TableHead className="text-right">Jami ball</TableHead>
                 <TableHead className="text-center">Natija fayli</TableHead>
+              </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
