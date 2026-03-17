@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Search, Loader2, X, ChevronLeft, ChevronRight, RefreshCw, Eye, EyeOff, Copy, Check } from "lucide-react";
+import { Search, Loader2, X, ChevronLeft, ChevronRight, RefreshCw, Eye, EyeOff, Copy, Check, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { useSchoolStudents } from "@/hooks/useSchoolStudents";
 import { DTMStudentItem } from "@/lib/dtm-auth";
@@ -183,12 +183,13 @@ export default function StudentsManagement() {
                 <TableHead>1-fan</TableHead>
                 <TableHead>2-fan</TableHead>
                 <TableHead className="text-right">Jami ball</TableHead>
+                <TableHead className="text-center">Natija fayli</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="py-10 text-center">
+                  <TableCell colSpan={12} className="py-10 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <Loader2 className="h-6 w-6 animate-spin" />
                       <span className="text-sm text-muted-foreground">
@@ -199,7 +200,7 @@ export default function StudentsManagement() {
                 </TableRow>
               ) : displayStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={12} className="py-10 text-center text-muted-foreground">
                     {hasFilters ? "Qidiruv bo'yicha o'quvchi topilmadi" : "O'quvchilar topilmadi"}
                   </TableCell>
                 </TableRow>
@@ -273,10 +274,28 @@ export default function StudentsManagement() {
                             </Badge>
                           ) : <span className="text-muted-foreground">—</span>}
                         </TableCell>
+                        <TableCell className="text-center">
+                          {student.dtm?.result_file ? (
+                            <a
+                              href={student.dtm.result_file}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                              Natija
+                            </a>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground opacity-50">
+                              <FileText className="h-3.5 w-3.5" />
+                              Yo'q
+                            </span>
+                          )}
+                        </TableCell>
                       </TableRow>
                       {isExpanded && (
                         <TableRow key={`detail-${student.id}`} className="bg-muted/20 hover:bg-muted/30">
-                          <TableCell colSpan={11} className="py-4 px-6">
+                          <TableCell colSpan={12} className="py-4 px-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                               {/* ID */}
                               <div className="space-y-1">
