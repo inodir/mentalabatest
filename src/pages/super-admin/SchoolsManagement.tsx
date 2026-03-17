@@ -664,6 +664,7 @@ export default function SchoolsManagement() {
      }
    };
 
+  const handleExportCSV = () => {
     const headers = ["Viloyat", "Tuman", "Maktab nomi", "Kod", "Admin F.I.O.", "Admin login", "Parol"];
     const rows = filteredSchools.map((s) => [
       s.region,
