@@ -274,6 +274,24 @@ export default function StudentsManagement() {
                             </Badge>
                           ) : <span className="text-muted-foreground">—</span>}
                         </TableCell>
+                        <TableCell className="text-center">
+                          {student.dtm?.result_file ? (
+                            <a
+                              href={student.dtm.result_file}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                              Natija
+                            </a>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground opacity-50">
+                              <FileText className="h-3.5 w-3.5" />
+                              Yo'q
+                            </span>
+                          )}
+                        </TableCell>
                       </TableRow>
                       {isExpanded && (
                         <TableRow key={`detail-${student.id}`} className="bg-muted/20 hover:bg-muted/30">
