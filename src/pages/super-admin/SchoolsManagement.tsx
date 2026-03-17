@@ -1120,6 +1120,7 @@ export default function SchoolsManagement() {
                     onEdit={openEditDialog}
                     onResetPassword={openResetPasswordDialog}
                     onToggleActive={handleToggleActive}
+                    onToggleShowResults={handleToggleShowResults}
                     copyToClipboard={copyToClipboard}
                   />
                 ))
