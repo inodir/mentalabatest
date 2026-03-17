@@ -182,10 +182,14 @@ export default function StudentsManagement() {
                 <TableHead>Til</TableHead>
                 <TableHead>Ro'yxatdan o'tgan</TableHead>
                 <TableHead>Test holati</TableHead>
-                <TableHead>1-fan</TableHead>
-                <TableHead>2-fan</TableHead>
-                <TableHead className="text-right">Jami ball</TableHead>
-                <TableHead className="text-center">Natija fayli</TableHead>
+                {showResults && (
+                  <>
+                    <TableHead>1-fan</TableHead>
+                    <TableHead>2-fan</TableHead>
+                    <TableHead className="text-right">Jami ball</TableHead>
+                    <TableHead className="text-center">Natija fayli</TableHead>
+                  </>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
