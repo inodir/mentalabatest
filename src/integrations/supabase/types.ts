@@ -128,6 +128,7 @@ export type Database = {
           region: string
           school_code: string
           school_name: string
+          show_results: boolean
           updated_at: string
         }
         Insert: {
@@ -140,6 +141,7 @@ export type Database = {
           region: string
           school_code: string
           school_name: string
+          show_results?: boolean
           updated_at?: string
         }
         Update: {
@@ -152,6 +154,7 @@ export type Database = {
           region?: string
           school_code?: string
           school_name?: string
+          show_results?: boolean
           updated_at?: string
         }
         Relationships: []
