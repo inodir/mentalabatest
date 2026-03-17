@@ -200,7 +200,7 @@ export default function StudentsManagement() {
                 </TableRow>
               ) : displayStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={12} className="py-10 text-center text-muted-foreground">
                     {hasFilters ? "Qidiruv bo'yicha o'quvchi topilmadi" : "O'quvchilar topilmadi"}
                   </TableCell>
                 </TableRow>
