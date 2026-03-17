@@ -29,6 +29,7 @@ import type { DTMStudentItem } from "@/lib/dtm-auth";
 
 export default function TestResults() {
   const { students: allStudents, loading, schoolCode } = useSchoolDTMData();
+  const { showResults } = useShowResults();
   
   const [searchTerm, setSearchTerm] = useState("");
   const [minScore, setMinScore] = useState("");
