@@ -183,7 +183,7 @@ export default function StudentsManagement() {
                 <TableHead>1-fan</TableHead>
                 <TableHead>2-fan</TableHead>
                 <TableHead className="text-right">Jami ball</TableHead>
-              </TableRow>
+                <TableHead className="text-center">Natija fayli</TableHead>
             </TableHeader>
             <TableBody>
               {loading ? (
