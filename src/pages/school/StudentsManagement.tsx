@@ -21,6 +21,7 @@ export default function StudentsManagement() {
     allStudents, loading, loadingMore, total, page, pageSize, setPage, setPageSize,
     totalPages, paginatedStudents, retry, progress,
   } = useSchoolStudents();
+  const { showResults } = useShowResults();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [groupFilter, setGroupFilter] = useState("all");
