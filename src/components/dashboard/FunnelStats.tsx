@@ -24,7 +24,7 @@ export function FunnelStats({ registered, answered, passed, passLine }: FunnelSt
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
-          <span>Funnel tahlil</span>
+          <span>Bosqichli tahlil</span>
           {passLine && (
             <span className="text-xs font-normal text-muted-foreground ml-1">
               O'tish balli: {passLine}

@@ -1,178 +1,487 @@
-// PDF export utility for Mentalaba Dashboard
-// Uses jspdf + jspdf-autotable for structured PDF reports
-
+// ═══════════════════════════════════════════════════════════════════
+// Mentalaba — Advanced PDF Hisobot Generator
+// jsPDF + jspdf-autotable - Professional multi-page reports
+// ═══════════════════════════════════════════════════════════════════
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { DTMSchoolInfo, DTMDistrictInfo } from "@/lib/dtm-auth";
 import type { DTMUser } from "@/lib/dtm-api";
 
-interface ExportData {
+// ─── Types ──────────────────────────────────────────────────────────
+export interface ExportData {
   totalUsers?: number;
   answeredUsers?: number;
   testedPercent?: number;
   schoolCount?: number;
   avgBall?: number;
+  passLine?: number;
   schools?: DTMSchoolInfo[];
   districts?: DTMDistrictInfo[];
   topStudents?: DTMUser[];
-  passLine?: number;
+  subjectMastery?: { subject: string; mastery_percent: number; avg_point: number }[];
+  riskStats?: { risk_count: number; risk_percent: number; tested_count: number };
+  dtmReadiness?: { readiness_index: number; passed_count: number; tested_count: number };
+  ballDistribution?: { labels: string[]; data: number[] };
+  genderStats?: { male?: number; female?: number };
+  languageStats?: { [key: string]: number };
   role?: "super" | "district" | "school";
   adminName?: string;
+  districtName?: string;
+  schoolName?: string;
 }
 
-function addUzbekFont(doc: jsPDF) {
-  // jsPDF built-in fonts support Latin + some Cyrillic
-  // For Uzbek Latin we use helvetica
-  doc.setFont("helvetica");
+// ─── Colors ─────────────────────────────────────────────────────────
+const C = {
+  primary:   [37,  99,  235] as [number, number, number],   // blue-600
+  success:   [22,  163,  74] as [number, number, number],   // green-600
+  warning:   [202, 138,   4] as [number, number, number],   // yellow-600
+  danger:    [220,  38,  38] as [number, number, number],   // red-600
+  purple:    [124,  58, 237] as [number, number, number],   // violet-600
+  dark:      [ 15,  23,  42] as [number, number, number],   // slate-900
+  muted:     [100, 116, 139] as [number, number, number],   // slate-500
+  light:     [241, 245, 249] as [number, number, number],   // slate-100
+  white:     [255, 255, 255] as [number, number, number],
+  cardBlue:  [239, 246, 255] as [number, number, number],
+  cardGreen: [240, 253, 244] as [number, number, number],
+  cardRed:   [254, 242, 242] as [number, number, number],
+  cardYellow:[254, 252, 232] as [number, number, number],
+};
+
+// ─── Helpers ────────────────────────────────────────────────────────
+function nowStr() {
+  const n = new Date();
+  const pad = (x: number) => String(x).padStart(2, "0");
+  return `${pad(n.getDate())}.${pad(n.getMonth() + 1)}.${n.getFullYear()} ${pad(n.getHours())}:${pad(n.getMinutes())}`;
 }
 
-function addHeader(doc: jsPDF, title: string, adminName?: string) {
-  const pageW = doc.internal.pageSize.getWidth();
-  const now = new Date();
-  const dateStr = `${now.getDate().toString().padStart(2, "0")}.${(now.getMonth() + 1)
-    .toString()
-    .padStart(2, "0")}.${now.getFullYear()} ${now.getHours().toString().padStart(2, "0")}:${now
-    .getMinutes()
-    .toString()
-    .padStart(2, "0")}`;
+function fileDate() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`;
+}
 
-  // Header background
-  doc.setFillColor(37, 99, 235); // blue-600
-  doc.rect(0, 0, pageW, 32, "F");
+function riskOf(avg: number, pct: number, pass: number): { label: string; color: [number,number,number]; bg: [number,number,number] } {
+  if (pct === 0 || avg === 0) return { label: "Natijasiz", color: C.muted, bg: C.light };
+  if (avg >= pass)            return { label: "Xavfsiz",   color: C.success, bg: C.cardGreen };
+  if (avg >= pass * 0.6)      return { label: "O'rta xavf",color: C.warning, bg: C.cardYellow };
+  return                             { label: "Yuqori xavf",color: C.danger,  bg: C.cardRed };
+}
 
+type Doc = jsPDF & { lastAutoTable: { finalY: number } };
+
+// ─── COVER PAGE ─────────────────────────────────────────────────────
+function drawCover(doc: Doc, data: ExportData, title: string) {
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+
+  // Background gradient blocks
+  doc.setFillColor(...C.primary);
+  doc.rect(0, 0, W, H * 0.55, "F");
+
+  // Decorative circles
+  doc.setFillColor(255, 255, 255, 0.05 as unknown as number);
+  doc.setDrawColor(255, 255, 255);
+  doc.setLineWidth(0.3);
+  doc.circle(W - 30, 30, 45, "S");
+  doc.circle(W - 20, 20, 25, "S");
+  doc.circle(20, H * 0.55 - 15, 30, "S");
+
+  // Logo text
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text("Mentalaba - DTM Statistik Hisobot", 14, 13);
-
+  doc.setFontSize(32);
+  doc.text("Mentalaba", 20, 35);
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text(title, 14, 22);
+  doc.text("DTM Platformasi", 20, 43);
 
-  doc.setFontSize(9);
-  doc.text(`Sana: ${dateStr}`, pageW - 14, 22, { align: "right" });
-  if (adminName) {
-    doc.text(`Admin: ${adminName}`, pageW - 14, 29, { align: "right" });
-  }
-
-  doc.setTextColor(0, 0, 0);
-  return 40; // next Y position
-}
-
-function addSummaryStats(doc: jsPDF, data: ExportData, y: number) {
-  doc.setFontSize(13);
+  // Title
+  doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(30, 30, 30);
-  doc.text("Umumiy ko'rsatkichlar", 14, y);
-  y += 5;
+  doc.text(title, 20, 80);
 
-  const stats = [
-    ["Jami o'quvchilar", (data.totalUsers ?? 0).toLocaleString()],
-    ["Test topshirganlar", (data.answeredUsers ?? 0).toLocaleString()],
-    ["Topshirish foizi", `${(data.testedPercent ?? 0).toFixed(1)}%`],
-    ["Maktablar soni", (data.schoolCount ?? 0).toLocaleString()],
-    ...(data.avgBall ? [["O'rtacha ball", data.avgBall.toFixed(1)]] : []),
-    ...(data.passLine ? [["O'tish balli", String(data.passLine)]] : []),
-  ];
+  // Subtitle / admin info
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "normal");
+  if (data.adminName) doc.text(`Admin: ${data.adminName}`, 20, 92);
+  if (data.districtName) doc.text(`Tuman: ${data.districtName}`, 20, 100);
+  if (data.schoolName)   doc.text(`Maktab: ${data.schoolName}`, 20, 100);
+  doc.text(`Sana: ${nowStr()}`, 20, 110);
 
-  autoTable(doc, {
-    startY: y,
-    head: [["Ko'rsatkich", "Qiymat"]],
-    body: stats,
-    margin: { left: 14, right: 14 },
-    styles: { fontSize: 10, cellPadding: 4 },
-    headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: "bold" },
-    alternateRowStyles: { fillColor: [240, 245, 255] },
-    columnStyles: { 1: { fontStyle: "bold", halign: "right" } },
+  // Key stat boxes (bottom half — white bg)
+  doc.setFillColor(...C.white);
+  doc.roundedRect(0, H * 0.55, W, H - H * 0.55, 0, 0, "F");
+
+  // Stat cards row
+  const stats = buildCoverStats(data);
+  const boxW = (W - 30) / stats.length;
+  const boxY = H * 0.58;
+
+  stats.forEach((s, i) => {
+    const bx = 15 + i * boxW;
+    doc.setFillColor(...s.bg);
+    doc.roundedRect(bx, boxY, boxW - 4, 38, 4, 4, "F");
+    doc.setTextColor(...s.color);
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text(s.value, bx + (boxW - 4) / 2, boxY + 16, { align: "center" });
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...C.muted);
+    doc.text(s.label, bx + (boxW - 4) / 2, boxY + 26, { align: "center" });
   });
 
-  return (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+  // Footer line
+  doc.setDrawColor(...C.light);
+  doc.setLineWidth(0.5);
+  doc.line(15, H - 18, W - 15, H - 18);
+  doc.setFontSize(8);
+  doc.setTextColor(...C.muted);
+  doc.text("Mentalaba DTM Platformasi — Maxfiy hujjat", 15, H - 12);
+  doc.text(`Sahifa 1`, W - 15, H - 12, { align: "right" });
 }
 
-function addSchoolsTable(
-  doc: jsPDF,
-  schools: DTMSchoolInfo[],
-  passLine: number,
-  y: number
-) {
-  if (schools.length === 0) return y;
+function buildCoverStats(data: ExportData) {
+  const arr: { label: string; value: string; color: [number,number,number]; bg: [number,number,number] }[] = [];
+  if (data.totalUsers !== undefined)
+    arr.push({ label: "Jami o'quvchilar", value: data.totalUsers.toLocaleString(),       color: C.primary, bg: C.cardBlue });
+  if (data.answeredUsers !== undefined)
+    arr.push({ label: "Test topshirdi",   value: data.answeredUsers.toLocaleString(),     color: C.success, bg: C.cardGreen });
+  if (data.testedPercent !== undefined)
+    arr.push({ label: "Topshirish foizi", value: `${data.testedPercent.toFixed(1)}%`,     color: C.purple,  bg: [245,240,255] as [number,number,number] });
+  if (data.avgBall)
+    arr.push({ label: "O'rtacha ball",    value: data.avgBall.toFixed(1),                 color: C.warning, bg: C.cardYellow });
+  if (data.schoolCount !== undefined)
+    arr.push({ label: "Maktablar",        value: String(data.schoolCount),                color: C.danger,  bg: C.cardRed });
+  return arr;
+}
 
-  const pageW = doc.internal.pageSize.getWidth();
-  doc.setFontSize(13);
+// ─── SECTION HEADER ─────────────────────────────────────────────────
+function sectionHeader(doc: Doc, text: string, y: number, icon?: string): number {
+  const W = doc.internal.pageSize.getWidth();
+  doc.setFillColor(...C.primary);
+  doc.roundedRect(14, y, W - 28, 10, 3, 3, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(30, 30, 30);
-  doc.text(`Maktablar reytingi (jami: ${schools.length} ta)`, 14, y);
-  y += 4;
+  doc.text(`${icon ?? "▸"} ${text}`, 20, y + 7);
+  doc.setTextColor(0, 0, 0);
+  return y + 15;
+}
 
-  const sorted = [...schools]
-    .sort((a, b) => (b.avg_total_ball ?? 0) - (a.avg_total_ball ?? 0));
+// ─── PAGE FOOTER ────────────────────────────────────────────────────
+function addFooters(doc: Doc) {
+  const pages = doc.getNumberOfPages();
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  for (let i = 2; i <= pages; i++) {
+    doc.setPage(i);
+    doc.setDrawColor(...C.light);
+    doc.setLineWidth(0.4);
+    doc.line(14, H - 12, W - 14, H - 12);
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...C.muted);
+    doc.text("Mentalaba DTM Platformasi — Maxfiy hujjat", 14, H - 7);
+    doc.text(`${i} / ${pages}`, W - 14, H - 7, { align: "right" });
+  }
+}
 
-  const rows = sorted.slice(0, 50).map((s, i) => {
-    const avg = s.avg_total_ball ?? 0;
-    const pct = s.tested_percent ?? 0;
-    const risk = avg === 0 ? "Natijasiz" : avg >= passLine ? "Xavfsiz" : avg >= passLine * 0.6 ? "O'rta xavf" : "Yuqori xavf";
+// ─── CUSTOM BAR CHART ────────────────────────────────────────────────
+function drawBarChart(
+  doc: Doc,
+  items: { label: string; value: number; color?: [number,number,number] }[],
+  title: string,
+  y: number,
+  maxVal?: number,
+  suffix = ""
+): number {
+  const W = doc.internal.pageSize.getWidth();
+  const chartH = 55;
+  const chartX = 14;
+  const chartW = W - 28;
+  const topPad = 12;
+  const max = maxVal ?? Math.max(...items.map(i => i.value), 1);
+
+  y = sectionHeader(doc, title, y, "📊");
+
+  // Axes
+  doc.setDrawColor(...C.light);
+  doc.setLineWidth(0.3);
+
+  const barW = (chartW / items.length) * 0.6;
+  const gap   = (chartW / items.length) * 0.4;
+
+  items.forEach((item, i) => {
+    const barH = ((item.value / max) * (chartH - topPad));
+    const bx = chartX + i * (barW + gap) + gap / 2;
+    const by = y + chartH - barH;
+    const col = item.color ?? C.primary;
+
+    // Bar shadow
+    doc.setFillColor(col[0], col[1], col[2], 0.15 as unknown as number);
+    doc.roundedRect(bx + 1, by + 1, barW, barH, 2, 2, "F");
+
+    // Bar
+    doc.setFillColor(...col);
+    doc.roundedRect(bx, by, barW, barH, 2, 2, "F");
+
+    // Value label on top
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...C.dark);
+    doc.text(`${item.value}${suffix}`, bx + barW / 2, by - 1.5, { align: "center" });
+
+    // X label
+    doc.setFontSize(6);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...C.muted);
+    const labelTrunc = item.label.length > 12 ? item.label.slice(0, 12) + "…" : item.label;
+    doc.text(labelTrunc, bx + barW / 2, y + chartH + 5, { align: "center", maxWidth: barW + gap });
+  });
+
+  doc.setTextColor(0, 0, 0);
+  return y + chartH + 14;
+}
+
+// ─── SUMMARY STAT CARDS ─────────────────────────────────────────────
+function drawSummaryCards(doc: Doc, data: ExportData, y: number): number {
+  y = sectionHeader(doc, "Umumiy ko'rsatkichlar", y, "📈");
+  const W = doc.internal.pageSize.getWidth();
+
+  const cards = buildCoverStats(data);
+  if (data.passLine)
+    cards.push({ label: "O'tish balli", value: String(data.passLine), color: C.dark, bg: C.light });
+  if (data.riskStats)
+    cards.push({ label: "Xavfli o'quvchilar", value: `${data.riskStats.risk_percent.toFixed(1)}%`, color: C.danger, bg: C.cardRed });
+  if (data.dtmReadiness)
+    cards.push({ label: "Tayyorlik indeksi", value: `${data.dtmReadiness.readiness_index.toFixed(1)}%`, color: C.primary, bg: C.cardBlue });
+
+  const cols = 4;
+  const boxW = (W - 30) / cols;
+  let row = 0;
+  cards.forEach((c, idx) => {
+    const col = idx % cols;
+    if (col === 0 && idx > 0) row++;
+    const bx = 14 + col * boxW;
+    const by = y + row * 20;
+    doc.setFillColor(...c.bg);
+    doc.roundedRect(bx + 1, by, boxW - 3, 16, 3, 3, "F");
+    doc.setTextColor(...c.color);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.text(c.value, bx + 1 + (boxW - 3) / 2, by + 8, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...C.muted);
+    doc.text(c.label, bx + 1 + (boxW - 3) / 2, by + 13.5, { align: "center" });
+  });
+  doc.setTextColor(0, 0, 0);
+  return y + (row + 1) * 20 + 6;
+}
+
+// ─── RISK SUMMARY ────────────────────────────────────────────────────
+function drawRiskSummary(doc: Doc, schools: DTMSchoolInfo[], passLine: number, y: number): number {
+  y = sectionHeader(doc, "Xavf darajasi taqsimoti", y, "🚨");
+  const W = doc.internal.pageSize.getWidth();
+
+  const counts = { high: 0, medium: 0, low: 0, none: 0 };
+  for (const s of schools) {
+    const r = riskOf(s.avg_total_ball ?? 0, s.tested_percent ?? 0, passLine);
+    if (r.label === "Yuqori xavf")  counts.high++;
+    else if (r.label === "O'rta xavf") counts.medium++;
+    else if (r.label === "Xavfsiz")    counts.low++;
+    else                               counts.none++;
+  }
+  const total = schools.length;
+
+  const buckets: { label: string; count: number; color: [number,number,number]; bg: [number,number,number] }[] = [
+    { label: "Yuqori xavf",  count: counts.high,   color: C.danger,  bg: C.cardRed },
+    { label: "O'rta xavf",   count: counts.medium, color: C.warning, bg: C.cardYellow },
+    { label: "Xavfsiz",      count: counts.low,     color: C.success, bg: C.cardGreen },
+    { label: "Natijasiz",    count: counts.none,    color: C.muted,   bg: C.light },
+  ];
+
+  const boxW = (W - 30) / 4;
+  buckets.forEach((b, i) => {
+    const bx = 14 + i * boxW;
+    doc.setFillColor(...b.bg);
+    doc.roundedRect(bx + 1, y, boxW - 3, 22, 3, 3, "F");
+
+    // Count
+    doc.setTextColor(...b.color);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text(String(b.count), bx + 1 + (boxW - 3) / 2, y + 10, { align: "center" });
+
+    // Percent
+    doc.setFontSize(7);
+    const pct = total > 0 ? ((b.count / total) * 100).toFixed(0) : "0";
+    doc.text(`${pct}%`, bx + 1 + (boxW - 3) / 2, y + 16, { align: "center" });
+
+    // Label
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...C.muted);
+    doc.text(b.label, bx + 1 + (boxW - 3) / 2, y + 21, { align: "center" });
+  });
+
+  doc.setTextColor(0, 0, 0);
+  return y + 30;
+}
+
+// ─── SUBJECT MASTERY ─────────────────────────────────────────────────
+function drawSubjectMastery(doc: Doc, subjects: ExportData["subjectMastery"], y: number): number {
+  if (!subjects || subjects.length === 0) return y;
+  y = sectionHeader(doc, "Fan bo'yicha ko'nikma darajasi", y, "📚");
+  const W = doc.internal.pageSize.getWidth();
+
+  subjects.forEach((s, i) => {
+    const barY = y + i * 10;
+    const pct  = Math.min(100, s.mastery_percent);
+    const barW = W - 90;
+
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...C.dark);
+    const subjectName = s.subject.length > 22 ? s.subject.slice(0, 22) + "…" : s.subject;
+    doc.text(subjectName, 14, barY + 6);
+
+    // Track
+    doc.setFillColor(...C.light);
+    doc.roundedRect(80, barY + 2, barW, 5, 2, 2, "F");
+
+    // Fill
+    const col: [number,number,number] = pct >= 70 ? C.success : pct >= 40 ? C.warning : C.danger;
+    doc.setFillColor(...col);
+    doc.roundedRect(80, barY + 2, (pct / 100) * barW, 5, 2, 2, "F");
+
+    // Value
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...C.dark);
+    doc.text(`${pct.toFixed(0)}% | ${s.avg_point.toFixed(1)} ball`, 80 + barW + 2, barY + 6);
+  });
+
+  doc.setTextColor(0, 0, 0);
+  return y + subjects.length * 10 + 6;
+}
+
+// ─── GENDER / LANGUAGE PIE ────────────────────────────────────────────
+function drawDemographics(doc: Doc, data: ExportData, y: number): number {
+  if (!data.genderStats && !data.languageStats) return y;
+  y = sectionHeader(doc, "Demografik ko'rsatkichlar", y, "👥");
+
+  const W = doc.internal.pageSize.getWidth();
+  const LANG: Record<string, string> = { uz: "O'zbek", ru: "Rus", en: "Ingliz", kk: "Qozoq" };
+
+  // ─ gender table
+  if (data.genderStats) {
+    const gRows: string[][] = [];
+    const total = (data.genderStats.male ?? 0) + (data.genderStats.female ?? 0);
+    if (data.genderStats.male !== undefined)
+      gRows.push(["Erkak", String(data.genderStats.male), total > 0 ? `${((data.genderStats.male!/total)*100).toFixed(1)}%` : "—"]);
+    if (data.genderStats.female !== undefined)
+      gRows.push(["Ayol", String(data.genderStats.female), total > 0 ? `${((data.genderStats.female!/total)*100).toFixed(1)}%` : "—"]);
+
+    autoTable(doc, {
+      startY: y,
+      tableWidth: (W - 28) / 2 - 2,
+      head: [["Jins", "Soni", "Foiz"]],
+      body: gRows,
+      margin: { left: 14 },
+      styles:      { fontSize: 8, cellPadding: 3 },
+      headStyles:  { fillColor: C.primary, textColor: 255 },
+      alternateRowStyles: { fillColor: C.light },
+    });
+  }
+
+  // ─ language table
+  if (data.languageStats) {
+    const lRows = Object.entries(data.languageStats).map(([lang, count]) => [
+      LANG[lang] ?? lang, String(count)
+    ]);
+    const total = Object.values(data.languageStats).reduce((s, v) => s + v, 0);
+    const lRowsFull = Object.entries(data.languageStats).map(([lang, count]) => [
+      LANG[lang] ?? lang, String(count), total > 0 ? `${((count/total)*100).toFixed(1)}%` : "—"
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      tableWidth: (W - 28) / 2 - 2,
+      head: [["Til", "Soni", "Foiz"]],
+      body: lRowsFull,
+      margin: { left: (W - 28) / 2 + 16 },
+      styles:      { fontSize: 8, cellPadding: 3 },
+      headStyles:  { fillColor: C.purple, textColor: 255 },
+      alternateRowStyles: { fillColor: C.light },
+    });
+  }
+
+  return doc.lastAutoTable.finalY + 8;
+}
+
+// ─── SCHOOLS TABLE ───────────────────────────────────────────────────
+function drawSchoolsTable(doc: Doc, schools: DTMSchoolInfo[], passLine: number, y: number): number {
+  y = sectionHeader(doc, `Maktablar reytingi — jami ${schools.length} ta`, y, "🏫");
+
+  const sorted = [...schools].sort((a, b) => (b.avg_total_ball ?? 0) - (a.avg_total_ball ?? 0));
+
+  const rows = sorted.slice(0, 60).map((s, i) => {
+    const risk = riskOf(s.avg_total_ball ?? 0, s.tested_percent ?? 0, passLine);
     return [
       String(i + 1),
-      s.name.slice(0, 30),
-      s.district || "—",
-      `${(s.registered_count ?? 0).toLocaleString()}`,
-      `${(s.answered_count ?? 0).toLocaleString()}`,
-      `${pct.toFixed(0)}%`,
-      avg > 0 ? avg.toFixed(1) : "—",
-      risk,
+      s.name.length > 28 ? s.name.slice(0, 28) + "…" : s.name,
+      s.region ?? "—",
+      s.district ?? "—",
+      String(s.registered_count ?? 0),
+      String(s.answered_count ?? 0),
+      `${(s.tested_percent ?? 0).toFixed(0)}%`,
+      (s.avg_total_ball ?? 0) > 0 ? (s.avg_total_ball ?? 0).toFixed(1) : "—",
+      (s.avg_mandatory_ball ?? 0) > 0 ? (s.avg_mandatory_ball ?? 0).toFixed(1) : "—",
+      risk.label,
     ];
   });
 
   autoTable(doc, {
     startY: y,
-    tableWidth: pageW - 28,
-    head: [["#", "Maktab nomi", "Tuman", "Ro'yxatda", "Topshirdi", "%", "O'rt. ball", "Xavf"]],
+    head: [["#", "Maktab nomi", "Viloyat", "Tuman", "Ro'yxat", "Topshirdi", "%", "Ball", "Majb.", "Xavf"]],
     body: rows,
     margin: { left: 14, right: 14 },
-    styles: { fontSize: 8, cellPadding: 2.5, overflow: "linebreak" },
-    headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: "bold", fontSize: 8 },
-    alternateRowStyles: { fillColor: [248, 250, 255] },
+    styles:      { fontSize: 7.5, cellPadding: 2.5, overflow: "linebreak" },
+    headStyles:  { fillColor: C.primary, textColor: 255, fontStyle: "bold", fontSize: 7.5 },
+    alternateRowStyles: { fillColor: C.light },
     columnStyles: {
-      0: { halign: "center", cellWidth: 8 },
-      1: { cellWidth: 50 },
-      2: { cellWidth: 35 },
-      3: { halign: "right", cellWidth: 18 },
-      4: { halign: "right", cellWidth: 18 },
-      5: { halign: "center", cellWidth: 12 },
-      6: { halign: "center", cellWidth: 16, fontStyle: "bold" },
-      7: { halign: "center", cellWidth: 22 },
+      0:  { halign: "center", cellWidth: 7 },
+      1:  { cellWidth: 48 },
+      2:  { cellWidth: 24 },
+      3:  { cellWidth: 26 },
+      4:  { halign: "right", cellWidth: 14 },
+      5:  { halign: "right", cellWidth: 14 },
+      6:  { halign: "center", cellWidth: 10 },
+      7:  { halign: "center", fontStyle: "bold", cellWidth: 12 },
+      8:  { halign: "center", cellWidth: 12 },
+      9:  { halign: "center", cellWidth: 20 },
     },
-    didDrawCell: (data) => {
-      if (data.column.index === 7 && data.section === "body") {
-        const val = String(data.cell.text).trim();
-        if (val === "Yuqori xavf") {
-          doc.setFillColor(254, 226, 226);
-        } else if (val === "O'rta xavf") {
-          doc.setFillColor(254, 243, 199);
-        } else if (val === "Xavfsiz") {
-          doc.setFillColor(220, 252, 231);
-        }
+    willDrawCell: (hookData) => {
+      if (hookData.section === "body" && hookData.column.index === 9) {
+        const val = String(hookData.cell.raw);
+        if (val === "Yuqori xavf")  { doc.setFillColor(...C.cardRed);    doc.rect(hookData.cell.x, hookData.cell.y, hookData.cell.width, hookData.cell.height, "F"); doc.setTextColor(...C.danger); }
+        else if (val === "O'rta xavf") { doc.setFillColor(...C.cardYellow); doc.rect(hookData.cell.x, hookData.cell.y, hookData.cell.width, hookData.cell.height, "F"); doc.setTextColor(...C.warning); }
+        else if (val === "Xavfsiz")  { doc.setFillColor(...C.cardGreen);  doc.rect(hookData.cell.x, hookData.cell.y, hookData.cell.width, hookData.cell.height, "F"); doc.setTextColor(...C.success); }
+        else { doc.setTextColor(...C.muted); }
       }
     },
   });
 
-  return (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+  return doc.lastAutoTable.finalY + 10;
 }
 
-function addDistrictsTable(doc: jsPDF, districts: DTMDistrictInfo[], y: number) {
-  if (districts.length === 0) return y;
-
-  doc.addPage();
-  y = 20;
-
-  doc.setFontSize(13);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(30, 30, 30);
-  doc.text(`Tumanlar bo'yicha statistika (${districts.length} ta tuman)`, 14, y);
-  y += 4;
+// ─── DISTRICTS TABLE ─────────────────────────────────────────────────
+function drawDistrictsTable(doc: Doc, districts: DTMDistrictInfo[], y: number): number {
+  y = sectionHeader(doc, `Tumanlar statistikasi — ${districts.length} ta tuman`, y, "🗺️");
 
   const sorted = [...districts].sort((a, b) => b.tested_percent - a.tested_percent);
-
   const rows = sorted.map((d, i) => [
     String(i + 1),
     d.region,
@@ -188,9 +497,9 @@ function addDistrictsTable(doc: jsPDF, districts: DTMDistrictInfo[], y: number) 
     head: [["#", "Viloyat", "Tuman", "Maktablar", "Ro'yxatda", "Topshirdi", "Foiz"]],
     body: rows,
     margin: { left: 14, right: 14 },
-    styles: { fontSize: 9, cellPadding: 3 },
-    headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: "bold" },
-    alternateRowStyles: { fillColor: [248, 250, 255] },
+    styles:      { fontSize: 8.5, cellPadding: 3 },
+    headStyles:  { fillColor: C.primary, textColor: 255, fontStyle: "bold" },
+    alternateRowStyles: { fillColor: C.light },
     columnStyles: {
       0: { halign: "center", cellWidth: 10 },
       3: { halign: "center" },
@@ -198,139 +507,189 @@ function addDistrictsTable(doc: jsPDF, districts: DTMDistrictInfo[], y: number) 
       5: { halign: "right" },
       6: { halign: "center", fontStyle: "bold" },
     },
+    willDrawCell: (hookData) => {
+      if (hookData.section === "body" && hookData.column.index === 6) {
+        const val = parseFloat(String(hookData.cell.raw));
+        if (val >= 80)      { doc.setTextColor(...C.success); }
+        else if (val >= 50) { doc.setTextColor(...C.warning); }
+        else                { doc.setTextColor(...C.danger);  }
+      }
+    },
   });
 
-  return (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+  return doc.lastAutoTable.finalY + 10;
 }
 
-function addTopStudents(doc: jsPDF, students: DTMUser[], y: number) {
-  if (students.length === 0) return y;
-
-  doc.addPage();
-  y = 20;
-  doc.setFontSize(13);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(30, 30, 30);
-  doc.text("Top 20 o'quvchilar (eng yuqori ball)", 14, y);
-  y += 4;
-
-  const top20 = [...students]
-    .filter((u) => u.has_result && (u.total_point ?? 0) > 0)
+// ─── TOP STUDENTS ─────────────────────────────────────────────────────
+function drawTopStudents(doc: Doc, students: DTMUser[], y: number): number {
+  const withScore = [...students]
+    .filter(u => u.has_result && (u.total_point ?? 0) > 0)
     .sort((a, b) => (b.total_point ?? 0) - (a.total_point ?? 0))
-    .slice(0, 20);
+    .slice(0, 25);
 
-  const rows = top20.map((u, i) => [
-    String(i + 1),
-    u.full_name,
-    u.school_name || u.school_code || "—",
-    u.district || "—",
-    u.language === "uz" ? "O'zbek" : u.language === "ru" ? "Rus" : u.language || "—",
-    String(u.total_point ?? "—"),
-  ]);
+  if (withScore.length === 0) return y;
+
+  y = sectionHeader(doc, "Top 25 o'quvchi (eng yuqori ball)", y, "🏆");
+
+  const LANG: Record<string, string> = { uz: "O'zbek", ru: "Rus", en: "Ingliz" };
+
+  const rows = withScore.map((u, i) => {
+    const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : String(i + 1);
+    return [
+      medal,
+      u.full_name,
+      (u.school_name ?? u.school_code ?? "—").slice(0, 25),
+      u.district ?? "—",
+      LANG[u.language ?? ""] ?? u.language ?? "—",
+      String(u.total_point ?? "—"),
+    ];
+  });
 
   autoTable(doc, {
     startY: y,
     head: [["#", "Ism Familiya", "Maktab", "Tuman", "Til", "Ball"]],
     body: rows,
     margin: { left: 14, right: 14 },
-    styles: { fontSize: 9, cellPadding: 3.5 },
-    headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: "bold" },
-    alternateRowStyles: { fillColor: [248, 250, 255] },
+    styles:      { fontSize: 8.5, cellPadding: 3 },
+    headStyles:  { fillColor: [202, 138, 4], textColor: 255, fontStyle: "bold" },
+    alternateRowStyles: { fillColor: C.light },
     columnStyles: {
-      0: { halign: "center", cellWidth: 10 },
+      0: { halign: "center", cellWidth: 12 },
       5: { halign: "center", fontStyle: "bold", cellWidth: 16 },
+    },
+    willDrawCell: (hookData) => {
+      if (hookData.section === "body" && hookData.column.index === 5) {
+        const val = parseInt(String(hookData.cell.raw));
+        if (val >= 150)      doc.setTextColor(...C.success);
+        else if (val >= 120) doc.setTextColor(...C.primary);
+        else if (val >= 90)  doc.setTextColor(...C.warning);
+        else                 doc.setTextColor(...C.danger);
+      }
     },
   });
 
-  return (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+  return doc.lastAutoTable.finalY + 10;
 }
 
-function addFooter(doc: jsPDF) {
-  const pageCount = doc.getNumberOfPages();
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
-
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(150, 150, 150);
-    doc.line(14, pageH - 12, pageW - 14, pageH - 12);
-    doc.text("Mentalaba DTM platformasi - Maxfiy hujjat", 14, pageH - 7);
-    doc.text(`${i} / ${pageCount}`, pageW - 14, pageH - 7, { align: "right" });
-    doc.setTextColor(0, 0, 0);
-  }
+// ─── SCORE DISTRIBUTION ──────────────────────────────────────────────
+function drawScoreDistChart(doc: Doc, dist: { labels: string[]; data: number[] }, y: number): number {
+  const items = dist.labels.map((label, i) => ({
+    label,
+    value: dist.data[i] ?? 0,
+    color: [C.danger, C.warning, C.primary, C.success, C.purple, [20, 184, 166] as [number,number,number]][i % 6] as [number,number,number],
+  }));
+  return drawBarChart(doc, items, "Ball taqsimoti", y, undefined, " ta");
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// MAIN EXPORT FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════
 
 export async function exportSuperAdminPDF(data: ExportData) {
-  const doc = new jsPDF({ orientation: "landscape", format: "a4", unit: "mm" });
-  addUzbekFont(doc);
+  const doc = new jsPDF({ orientation: "landscape", format: "a4", unit: "mm" }) as Doc;
+  doc.setFont("helvetica");
 
-  let y = addHeader(doc, "Super Admin — To'liq Statistik Hisobot", data.adminName);
-  y = addSummaryStats(doc, data, y);
+  // ── Page 1: Cover
+  drawCover(doc, data, "Super Admin — To'liq Statistik Hisobot");
 
+  // ── Page 2: Summary + Risk + Demographics
+  doc.addPage();
+  let y = 15;
+  y = drawSummaryCards(doc, data, y);
   if (data.schools && data.schools.length > 0) {
-    if (y > 160) { doc.addPage(); y = 20; }
-    y = addSchoolsTable(doc, data.schools, data.passLine ?? 90, y);
+    y = drawRiskSummary(doc, data.schools, data.passLine ?? 90, y);
   }
+  y = drawDemographics(doc, data, y);
 
+  // ── Page 3: Districts bar chart + Districts table
   if (data.districts && data.districts.length > 0) {
-    addDistrictsTable(doc, data.districts, y);
+    doc.addPage();
+    y = 15;
+    const distItems = [...data.districts]
+      .sort((a, b) => b.tested_percent - a.tested_percent)
+      .slice(0, 15)
+      .map(d => ({
+        label: d.district,
+        value: Math.round(d.tested_percent),
+        color: d.tested_percent >= 80 ? C.success : d.tested_percent >= 50 ? C.warning : C.danger,
+      }));
+    y = drawBarChart(doc, distItems, "Tumanlar bo'yicha topshirish foizi (Top 15)", y, 100, "%");
+    y = drawDistrictsTable(doc, data.districts, y);
   }
 
+  // ── Page 4+: Schools table
+  if (data.schools && data.schools.length > 0) {
+    doc.addPage();
+    y = 15;
+    y = drawSchoolsTable(doc, data.schools, data.passLine ?? 90, y);
+  }
+
+  // ── Subject mastery
+  if (data.subjectMastery && data.subjectMastery.length > 0) {
+    if (y > 150) { doc.addPage(); y = 15; }
+    y = drawSubjectMastery(doc, data.subjectMastery, y);
+  }
+
+  // ── Ball distribution chart
+  if (data.ballDistribution && data.ballDistribution.labels.length > 0) {
+    if (y > 150) { doc.addPage(); y = 15; }
+    y = drawScoreDistChart(doc, data.ballDistribution, y);
+  }
+
+  // ── Top students
   if (data.topStudents && data.topStudents.length > 0) {
-    addTopStudents(doc, data.topStudents, 0);
+    doc.addPage();
+    y = 15;
+    drawTopStudents(doc, data.topStudents, y);
   }
 
-  addFooter(doc);
-
-  const now = new Date();
-  const dateTag = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}-${now
-    .getDate()
-    .toString()
-    .padStart(2, "0")}`;
-  doc.save(`mentalaba-statistika-${dateTag}.pdf`);
+  addFooters(doc);
+  doc.save(`mentalaba-super-${fileDate()}.pdf`);
 }
 
 export async function exportSchoolPDF(data: ExportData) {
-  const doc = new jsPDF({ orientation: "portrait", format: "a4", unit: "mm" });
-  addUzbekFont(doc);
+  const doc = new jsPDF({ orientation: "portrait", format: "a4", unit: "mm" }) as Doc;
+  doc.setFont("helvetica");
 
-  let y = addHeader(doc, "Maktab Statistik Hisoboti", data.adminName);
-  y = addSummaryStats(doc, data, y);
+  drawCover(doc, { ...data, role: "school" }, `Maktab Statistik Hisoboti${data.schoolName ? " — " + data.schoolName : ""}`);
 
+  doc.addPage();
+  let y = 15;
+  y = drawSummaryCards(doc, data, y);
+  if (data.subjectMastery && data.subjectMastery.length > 0) {
+    y = drawSubjectMastery(doc, data.subjectMastery, y);
+  }
+  if (data.ballDistribution) {
+    y = drawScoreDistChart(doc, data.ballDistribution, y);
+  }
   if (data.topStudents && data.topStudents.length > 0) {
-    y = addTopStudents(doc, data.topStudents, y);
+    if (y > 200) { doc.addPage(); y = 15; }
+    drawTopStudents(doc, data.topStudents, y);
   }
 
-  addFooter(doc);
-
-  const now = new Date();
-  const dateTag = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}-${now
-    .getDate()
-    .toString()
-    .padStart(2, "0")}`;
-  doc.save(`maktab-hisobot-${dateTag}.pdf`);
+  addFooters(doc);
+  doc.save(`maktab-hisobot-${fileDate()}.pdf`);
 }
 
 export async function exportDistrictPDF(data: ExportData) {
-  const doc = new jsPDF({ orientation: "landscape", format: "a4", unit: "mm" });
-  addUzbekFont(doc);
+  const doc = new jsPDF({ orientation: "landscape", format: "a4", unit: "mm" }) as Doc;
+  doc.setFont("helvetica");
 
-  let y = addHeader(doc, "Tuman Statistik Hisoboti", data.adminName);
-  y = addSummaryStats(doc, data, y);
+  drawCover(doc, data, `Tuman Statistik Hisoboti${data.districtName ? " — " + data.districtName : ""}`);
 
+  doc.addPage();
+  let y = 15;
+  y = drawSummaryCards(doc, data, y);
   if (data.schools && data.schools.length > 0) {
-    y = addSchoolsTable(doc, data.schools, data.passLine ?? 90, y);
+    y = drawRiskSummary(doc, data.schools, data.passLine ?? 90, y);
+    if (y > 130) { doc.addPage(); y = 15; }
+    y = drawSchoolsTable(doc, data.schools, data.passLine ?? 90, y);
   }
-
   if (data.topStudents && data.topStudents.length > 0) {
-    addTopStudents(doc, data.topStudents, 0);
+    doc.addPage();
+    drawTopStudents(doc, data.topStudents, 15);
   }
 
-  addFooter(doc);
-
-  const now = new Date();
-  const dateTag = `${now.getDate()}.${now.getMonth() + 1}.${now.getFullYear()}`;
-  doc.save(`tuman-hisobot-${dateTag}.pdf`);
+  addFooters(doc);
+  doc.save(`tuman-hisobot-${fileDate()}.pdf`);
 }
