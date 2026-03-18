@@ -15,7 +15,7 @@ import { BallDistributionChart } from "@/components/dashboard/BallDistributionCh
 import { DTMReadinessCards } from "@/components/dashboard/DTMReadinessCards";
 import { MandatoryChart } from "@/components/dashboard/MandatoryChart";
 import { TimeBasedStats } from "@/components/dashboard/TimeBasedStats";
-import { Users, FileText, TrendingUp, School, Settings, RefreshCw, AlertCircle, Loader2 } from "lucide-react";
+import { Users, FileText, TrendingUp, School, Settings, RefreshCw, AlertCircle, Loader2, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
 import {
   BarChart,
@@ -25,7 +25,24 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Cell,
 } from "recharts";
+import { DistrictsChart } from "@/components/dashboard/DistrictsChart";
+import { TopSchoolsTable } from "@/components/dashboard/TopSchoolsTable";
+import { FunnelStats } from "@/components/dashboard/FunnelStats";
+import { ScoreHistogram } from "@/components/dashboard/ScoreHistogram";
+import { LanguageScoreChart } from "@/components/dashboard/LanguageScoreChart";
+import { TopStudents } from "@/components/dashboard/TopStudents";
+import { InactiveSchools } from "@/components/dashboard/InactiveSchools";
+import { ScatterSchools } from "@/components/dashboard/ScatterSchools";
+import { SubjectComparison } from "@/components/dashboard/SubjectComparison";
+import { RadarSubjects } from "@/components/dashboard/RadarSubjects";
+import { DailyTrend } from "@/components/dashboard/DailyTrend";
+import { RegionalHeatmap } from "@/components/dashboard/RegionalHeatmap";
+import { ReadinessGauge } from "@/components/dashboard/ReadinessGauge";
+import { SchoolRiskTable } from "@/components/dashboard/SchoolRiskTable";
+import { PDFExportButton } from "@/components/ui/pdf-export-button";
+import { exportSuperAdminPDF } from "@/lib/exportPDF";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -150,6 +167,26 @@ export default function SuperAdminDashboard() {
               />
             </div>
 
+            {!loading && stats && (
+              <PDFExportButton
+                label="PDF hisobot"
+                onExport={() =>
+                  exportSuperAdminPDF({
+                    totalUsers: stats.totalUsers,
+                    answeredUsers: stats.resultUsersCount,
+                    testedPercent: dtmUser?.stats?.tested_percent,
+                    schoolCount: stats.totalSchools,
+                    avgBall: dtmUser?.stats?.dtm_readiness?.avg_total_ball,
+                    passLine: dtmUser?.stats?.risk_stats?.pass_line ?? dtmUser?.stats?.dtm_readiness?.pass_line,
+                    schools: dtmUser?.schools,
+                    districts: dtmUser?.districts,
+                    topStudents: loadedEntities,
+                    adminName: dtmUser?.full_name,
+                  })
+                }
+              />
+            )}
+
             <Button
               variant="outline"
               size="icon"
@@ -254,7 +291,110 @@ export default function SuperAdminDashboard() {
           </>
         )}
 
-        {/* Recent Users & Chart */}
+        {/* Districts + Schools deep analytics */}
+        {!loading && dtmUser && (
+          <>
+            {/* Districts comparison */}
+            {dtmUser.districts && dtmUser.districts.length > 0 && (
+              <motion.div variants={itemVariants}>
+                <DistrictsChart districts={dtmUser.districts} />
+              </motion.div>
+            )}
+
+            {/* Top/Bottom schools by avg score */}
+            {dtmUser.schools && dtmUser.schools.length > 0 && (
+              <motion.div variants={itemVariants}>
+                <TopSchoolsTable schools={dtmUser.schools} />
+              </motion.div>
+            )}
+
+            {/* Regional summary */}
+            {dtmUser.districts && dtmUser.districts.length > 0 && (() => {
+              const regionMap = new Map<string, { answered: number; registered: number; schools: number }>();
+              for (const d of dtmUser.districts) {
+                const prev = regionMap.get(d.region) ?? { answered: 0, registered: 0, schools: 0 };
+                regionMap.set(d.region, {
+                  answered: prev.answered + d.answered_count,
+                  registered: prev.registered + d.registered_count,
+                  schools: prev.schools + d.school_count,
+                });
+              }
+              const regionData = Array.from(regionMap.entries())
+                .map(([name, v]) => ({
+                  name: name.length > 16 ? name.slice(0, 16) + "…" : name,
+                  fullName: name,
+                  pct: v.registered > 0 ? Math.round((v.answered / v.registered) * 100) : 0,
+                  schools: v.schools,
+                  answered: v.answered,
+                  registered: v.registered,
+                }))
+                .sort((a, b) => b.pct - a.pct);
+              return (
+                <motion.div variants={itemVariants}>
+                  <div className="glass-card rounded-2xl overflow-hidden">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                        <MapPin className="h-5 w-5 text-primary" />
+                        Viloyatlar bo'yicha qamrov
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-[280px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={regionData}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                            <XAxis
+                              dataKey="name"
+                              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                              angle={-30}
+                              textAnchor="end"
+                              height={55}
+                            />
+                            <YAxis
+                              tick={{ fill: "hsl(var(--muted-foreground))" }}
+                              tickFormatter={(v) => `${v}%`}
+                              domain={[0, 100]}
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: "hsl(var(--card))",
+                                border: "1px solid hsl(var(--border))",
+                                borderRadius: "12px",
+                                boxShadow: "0 8px 32px -8px hsl(var(--glass-shadow))",
+                              }}
+                              formatter={(v: number, _: string, props: { payload?: typeof regionData[0] }) => [
+                                `${v}%`,
+                                `${props.payload?.answered ?? 0} / ${props.payload?.registered ?? 0}`,
+                              ]}
+                              labelFormatter={(label: string) => {
+                                const item = regionData.find((r) => r.name === label);
+                                return item ? `${item.fullName} (${item.schools} maktab)` : label;
+                              }}
+                            />
+                            <Bar dataKey="pct" radius={[8, 8, 0, 0]}>
+                              {regionData.map((entry, i) => (
+                                <Cell
+                                  key={i}
+                                  fill={
+                                    entry.pct >= 80 ? "hsl(142 71% 45%)"
+                                    : entry.pct >= 60 ? "hsl(217 91% 55%)"
+                                    : entry.pct >= 40 ? "hsl(38 92% 50%)"
+                                    : "hsl(0 72% 51%)"
+                                  }
+                                />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </div>
+                </motion.div>
+              );
+            })()}
+          </>
+        )}
+
         <motion.div variants={itemVariants} className="grid gap-5 lg:grid-cols-2">
           <div className="glass-card rounded-2xl overflow-hidden">
             <CardHeader className="pb-4">
@@ -357,6 +497,83 @@ export default function SuperAdminDashboard() {
             </CardContent>
           </div>
         </motion.div>
+
+        {/* ─── Funnel + Daily Trend ─── */}
+        {!loading && stats && (
+          <motion.div variants={itemVariants} className="grid gap-5 lg:grid-cols-2">
+            <FunnelStats
+              registered={stats.totalUsers}
+              answered={stats.resultUsersCount}
+              passed={dtmUser?.stats?.dtm_readiness?.passed_count}
+              passLine={dtmUser?.stats?.dtm_readiness?.pass_line}
+            />
+            <DailyTrend users={loadedEntities} />
+          </motion.div>
+        )}
+
+        {/* ─── Readiness Gauge + Score Histogram ─── */}
+        {!loading && (
+          <motion.div variants={itemVariants} className="grid gap-5 lg:grid-cols-2">
+            {dtmUser?.stats?.dtm_readiness && (
+              <ReadinessGauge
+                readinessIndex={dtmUser.stats.dtm_readiness.readiness_index}
+                avgTotalBall={dtmUser.stats.dtm_readiness.avg_total_ball}
+                passedCount={dtmUser.stats.dtm_readiness.passed_count}
+                testedCount={dtmUser.stats.dtm_readiness.tested_count}
+                passLine={dtmUser.stats.dtm_readiness.pass_line}
+              />
+            )}
+            <ScoreHistogram users={loadedEntities} />
+          </motion.div>
+        )}
+
+        {/* ─── Language Score + Radar Subjects ─── */}
+        {!loading && (
+          <motion.div variants={itemVariants} className="grid gap-5 lg:grid-cols-2">
+            <LanguageScoreChart users={loadedEntities} />
+            <RadarSubjects subjectMastery={dtmUser?.stats?.subject_mastery} />
+          </motion.div>
+        )}
+
+        {/* ─── Scatter Schools ─── */}
+        {!loading && dtmUser?.schools && dtmUser.schools.length > 0 && (
+          <motion.div variants={itemVariants}>
+            <ScatterSchools schools={dtmUser.schools} />
+          </motion.div>
+        )}
+
+        {/* ─── Subject Comparison (primary vs secondary) ─── */}
+        {!loading && dtmUser?.schools && dtmUser.schools.length > 0 && (
+          <motion.div variants={itemVariants}>
+            <SubjectComparison schools={dtmUser.schools} />
+          </motion.div>
+        )}
+
+        {/* ─── Regional Heatmap ─── */}
+        {!loading && dtmUser?.districts && dtmUser.districts.length > 0 && (
+          <motion.div variants={itemVariants}>
+            <RegionalHeatmap districts={dtmUser.districts} />
+          </motion.div>
+        )}
+
+        {/* ─── Top Students + Inactive Schools ─── */}
+        {!loading && (
+          <motion.div variants={itemVariants} className="grid gap-5 lg:grid-cols-2">
+            <TopStudents users={loadedEntities} />
+            <InactiveSchools schools={dtmUser?.schools} />
+          </motion.div>
+        )}
+
+        {/* ─── School Risk & Readiness Table (with filters) ─── */}
+        {!loading && dtmUser?.schools && dtmUser.schools.length > 0 && (
+          <motion.div variants={itemVariants}>
+            <SchoolRiskTable
+              schools={dtmUser.schools}
+              passLine={dtmUser.stats?.risk_stats?.pass_line ?? dtmUser.stats?.dtm_readiness?.pass_line ?? 90}
+            />
+          </motion.div>
+        )}
+
       </motion.div>
     </AdminLayout>
   );

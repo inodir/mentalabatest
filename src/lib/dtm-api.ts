@@ -1,5 +1,5 @@
 // DTM API Client Helper
-const DEFAULT_MAIN_URL = import.meta.env.VITE_DTM_API_URL || "https://dtm-api.misterdev.uz/";
+const DEFAULT_MAIN_URL = import.meta.env.VITE_DTM_API_URL || "https://dtmpaperreaderapi.mentalaba.uz/";
 const ENV_API_KEY = import.meta.env.VITE_DTM_API_KEY || "";
 
 export interface DTMTestScore {
