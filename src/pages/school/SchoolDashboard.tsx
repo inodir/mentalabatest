@@ -3,12 +3,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Users,
-  FileText,
-  TrendingUp,
-  Percent,
-  CheckCircle2,
-  XCircle,
+  Users, FileText, TrendingUp, Percent, CheckCircle2, XCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useSchoolDTMData } from "@/hooks/useSchoolDTMData";
@@ -18,6 +13,11 @@ import { SubjectMasteryChart } from "@/components/dashboard/SubjectMasteryChart"
 import { BallDistributionChart } from "@/components/dashboard/BallDistributionChart";
 import { DTMReadinessCards } from "@/components/dashboard/DTMReadinessCards";
 import { MandatoryChart } from "@/components/dashboard/MandatoryChart";
+import { FunnelStats } from "@/components/dashboard/FunnelStats";
+import { DailyTrend } from "@/components/dashboard/DailyTrend";
+import { RadarSubjects } from "@/components/dashboard/RadarSubjects";
+import { ScoreHistogram } from "@/components/dashboard/ScoreHistogram";
+import { TopStudents } from "@/components/dashboard/TopStudents";
 import { motion } from "framer-motion";
 import { PDFExportButton } from "@/components/ui/pdf-export-button";
 import { exportSchoolPDF } from "@/lib/exportPDF";
@@ -165,6 +165,34 @@ export default function SchoolDashboard() {
             {!loading && dtmUser?.stats?.ball_distribution && (
               <motion.div variants={itemVariants}>
                 <BallDistributionChart ballDistribution={dtmUser.stats.ball_distribution} />
+              </motion.div>
+            )}
+
+            {/* Bosqichli tahlil + Kunlik trend */}
+            {!loading && dtmUser?.stats && (
+              <motion.div variants={itemVariants} className="grid gap-5 lg:grid-cols-2">
+                <FunnelStats
+                  registered={stats.totalStudents}
+                  answered={stats.studentsWithResults}
+                  passed={dtmUser.stats.dtm_readiness?.passed_count}
+                  passLine={dtmUser.stats.dtm_readiness?.pass_line}
+                />
+                <DailyTrend users={students as unknown as import("@/lib/dtm-api").DTMUser[]} />
+              </motion.div>
+            )}
+
+            {/* Radar + Score Histogram */}
+            {!loading && (
+              <motion.div variants={itemVariants} className="grid gap-5 lg:grid-cols-2">
+                <RadarSubjects subjectMastery={dtmUser?.stats?.subject_mastery} />
+                <ScoreHistogram users={students as unknown as import("@/lib/dtm-api").DTMUser[]} />
+              </motion.div>
+            )}
+
+            {/* Top o'quvchilar */}
+            {!loading && students.length > 0 && (
+              <motion.div variants={itemVariants}>
+                <TopStudents users={students as unknown as import("@/lib/dtm-api").DTMUser[]} />
               </motion.div>
             )}
 

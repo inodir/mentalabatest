@@ -26,6 +26,10 @@ import {
 import { motion } from "framer-motion";
 import { PDFExportButton } from "@/components/ui/pdf-export-button";
 import { exportDistrictPDF } from "@/lib/exportPDF";
+import { FunnelStats } from "@/components/dashboard/FunnelStats";
+import { ScatterSchools } from "@/components/dashboard/ScatterSchools";
+import { SchoolRiskTable } from "@/components/dashboard/SchoolRiskTable";
+import { TopStudents } from "@/components/dashboard/TopStudents";
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 function progressColor(pct: number) {
@@ -191,7 +195,7 @@ const PIE_COLORS = ["hsl(217 91% 55%)", "hsl(0 72% 51%)"];
 // ── main page ──────────────────────────────────────────────────────────────────
 export default function DistrictDashboard() {
   const { stats, loading, error, progress, retry } = useDistrictDTMDashboard();
-  const { district } = useAuth();
+  const { district, dtmUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredSchools = (stats?.schoolStats || []).filter(
@@ -551,6 +555,30 @@ export default function DistrictDashboard() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Bosqichli tahlil */}
+        {!loading && stats && (
+          <FunnelStats
+            registered={stats.totalStudents}
+            answered={stats.studentsWithResults}
+          />
+        )}
+
+        {/* ScatterSchools — maktab bubble chart */}
+        {!loading && dtmUser?.schools && dtmUser.schools.length > 0 && (
+          <ScatterSchools schools={dtmUser.schools} />
+        )}
+
+        {/* SchoolRiskTable — xavflilik jadval + filter */}
+        {!loading && dtmUser?.schools && dtmUser.schools.length > 0 && (
+          <SchoolRiskTable schools={dtmUser.schools} />
+        )}
+
+        {/* Top o'quvchilar */}
+        {!loading && stats && stats.recentUsers.length > 0 && (
+          <TopStudents users={stats.recentUsers} />
+        )}
+
       </div>
     </AdminLayout>
   );
