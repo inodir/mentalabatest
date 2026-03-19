@@ -597,7 +597,7 @@ export async function exportSuperAdminPDF(data: ExportData) {
   let y = 15;
   y = drawSummaryCards(doc, data, y);
   if (data.schools && data.schools.length > 0) {
-    y = drawRiskSummary(doc, data.schools, data.passLine ?? 90, y);
+    y = drawRiskSummary(doc, data.schools, data.passLine ?? 70, y);
   }
   y = drawDemographics(doc, data, y);
 
@@ -621,7 +621,7 @@ export async function exportSuperAdminPDF(data: ExportData) {
   if (data.schools && data.schools.length > 0) {
     doc.addPage();
     y = 15;
-    y = drawSchoolsTable(doc, data.schools, data.passLine ?? 90, y);
+    y = drawSchoolsTable(doc, data.schools, data.passLine ?? 70, y);
   }
 
   // ── Subject mastery
@@ -681,9 +681,9 @@ export async function exportDistrictPDF(data: ExportData) {
   let y = 15;
   y = drawSummaryCards(doc, data, y);
   if (data.schools && data.schools.length > 0) {
-    y = drawRiskSummary(doc, data.schools, data.passLine ?? 90, y);
+    y = drawRiskSummary(doc, data.schools, data.passLine ?? 70, y);
     if (y > 130) { doc.addPage(); y = 15; }
-    y = drawSchoolsTable(doc, data.schools, data.passLine ?? 90, y);
+    y = drawSchoolsTable(doc, data.schools, data.passLine ?? 70, y);
   }
   if (data.topStudents && data.topStudents.length > 0) {
     doc.addPage();

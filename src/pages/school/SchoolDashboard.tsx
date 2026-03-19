@@ -18,6 +18,8 @@ import { DailyTrend } from "@/components/dashboard/DailyTrend";
 import { RadarSubjects } from "@/components/dashboard/RadarSubjects";
 import { ScoreHistogram } from "@/components/dashboard/ScoreHistogram";
 import { TopStudents } from "@/components/dashboard/TopStudents";
+import { ReadinessGauge } from "@/components/dashboard/ReadinessGauge";
+import { LanguageScoreChart } from "@/components/dashboard/LanguageScoreChart";
 import { motion } from "framer-motion";
 import { PDFExportButton } from "@/components/ui/pdf-export-button";
 import { exportSchoolPDF } from "@/lib/exportPDF";
@@ -140,6 +142,20 @@ export default function SchoolDashboard() {
                   dtmReadiness={dtmUser.stats.dtm_readiness}
                   genderResultStats={dtmUser.stats.gender_result_stats}
                 />
+              </motion.div>
+            )}
+
+            {/* Tayyorlik ko'rsatkichi + Til bo'yicha ball */}
+            {!loading && dtmUser?.stats?.dtm_readiness && (
+              <motion.div variants={itemVariants} className="grid gap-5 lg:grid-cols-2">
+                <ReadinessGauge
+                  readinessIndex={dtmUser.stats.dtm_readiness.readiness_index}
+                  avgTotalBall={dtmUser.stats.dtm_readiness.avg_total_ball}
+                  passedCount={dtmUser.stats.dtm_readiness.passed_count}
+                  testedCount={dtmUser.stats.dtm_readiness.tested_count}
+                  passLine={dtmUser.stats.dtm_readiness.pass_line ?? 70}
+                />
+                <LanguageScoreChart users={students as unknown as import("@/lib/dtm-api").DTMUser[]} />
               </motion.div>
             )}
 

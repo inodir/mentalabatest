@@ -569,7 +569,7 @@ export default function SuperAdminDashboard() {
           <motion.div variants={itemVariants}>
             <SchoolRiskTable
               schools={dtmUser.schools}
-              passLine={dtmUser.stats?.risk_stats?.pass_line ?? dtmUser.stats?.dtm_readiness?.pass_line ?? 90}
+              passLine={dtmUser.stats?.risk_stats?.pass_line ?? dtmUser.stats?.dtm_readiness?.pass_line ?? 70}
             />
           </motion.div>
         )}

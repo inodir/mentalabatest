@@ -32,7 +32,7 @@ function getRisk(avgBall: number, passLine: number, testedPct: number): {
   return { level: "low", label: "Xavfsiz", badgeClass: "bg-green-500/15 text-green-600 dark:text-green-400", color: "hsl(142 71% 45%)" };
 }
 
-export function SchoolRiskTable({ schools, passLine = 90 }: SchoolRiskTableProps) {
+export function SchoolRiskTable({ schools, passLine = 70 }: SchoolRiskTableProps) {
   const [search, setSearch] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("all");
   const [selectedDistrict, setSelectedDistrict] = useState("all");

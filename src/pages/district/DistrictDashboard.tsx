@@ -30,6 +30,8 @@ import { FunnelStats } from "@/components/dashboard/FunnelStats";
 import { ScatterSchools } from "@/components/dashboard/ScatterSchools";
 import { SchoolRiskTable } from "@/components/dashboard/SchoolRiskTable";
 import { TopStudents } from "@/components/dashboard/TopStudents";
+import { ReadinessGauge } from "@/components/dashboard/ReadinessGauge";
+import { LanguageScoreChart } from "@/components/dashboard/LanguageScoreChart";
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 function progressColor(pct: number) {
@@ -555,6 +557,22 @@ export default function DistrictDashboard() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Tayyorlik ko'rsatkichi + Til bo'yicha ball */}
+        {!loading && dtmUser?.stats?.dtm_readiness && (
+          <div className="grid gap-5 lg:grid-cols-2">
+            <ReadinessGauge
+              readinessIndex={dtmUser.stats.dtm_readiness.readiness_index}
+              avgTotalBall={dtmUser.stats.dtm_readiness.avg_total_ball}
+              passedCount={dtmUser.stats.dtm_readiness.passed_count}
+              testedCount={dtmUser.stats.dtm_readiness.tested_count}
+              passLine={dtmUser.stats.dtm_readiness.pass_line ?? 70}
+            />
+            {stats && stats.recentUsers.length > 0 && (
+              <LanguageScoreChart users={stats.recentUsers} />
+            )}
+          </div>
+        )}
 
         {/* Bosqichli tahlil */}
         {!loading && stats && (
