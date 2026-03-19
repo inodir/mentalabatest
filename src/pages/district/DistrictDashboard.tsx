@@ -566,7 +566,7 @@ export default function DistrictDashboard() {
               avgTotalBall={dtmUser.stats.dtm_readiness.avg_total_ball}
               passedCount={dtmUser.stats.dtm_readiness.passed_count}
               testedCount={dtmUser.stats.dtm_readiness.tested_count}
-              passLine={dtmUser.stats.dtm_readiness.pass_line ?? 70}
+              passLine={70}
             />
             {stats && stats.recentUsers.length > 0 && (
               <LanguageScoreChart users={stats.recentUsers} />

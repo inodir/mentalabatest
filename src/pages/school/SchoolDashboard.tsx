@@ -153,7 +153,7 @@ export default function SchoolDashboard() {
                   avgTotalBall={dtmUser.stats.dtm_readiness.avg_total_ball}
                   passedCount={dtmUser.stats.dtm_readiness.passed_count}
                   testedCount={dtmUser.stats.dtm_readiness.tested_count}
-                  passLine={dtmUser.stats.dtm_readiness.pass_line ?? 70}
+                  passLine={70}
                 />
                 <LanguageScoreChart users={students as unknown as import("@/lib/dtm-api").DTMUser[]} />
               </motion.div>
@@ -191,7 +191,7 @@ export default function SchoolDashboard() {
                   registered={stats.totalStudents}
                   answered={stats.studentsWithResults}
                   passed={dtmUser.stats.dtm_readiness?.passed_count}
-                  passLine={dtmUser.stats.dtm_readiness?.pass_line}
+                  passLine={70}
                 />
                 <DailyTrend users={students as unknown as import("@/lib/dtm-api").DTMUser[]} />
               </motion.div>
