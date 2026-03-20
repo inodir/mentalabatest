@@ -121,7 +121,7 @@ export default function SuperAdminDashboard() {
     filteredEntities.forEach(u => {
       const code = u.school_code || "unknown";
       const curr = map.get(code) || {
-        name: u.school_name || "Noma'lum",
+        name: u.school_name || (u.school_code ? `Maktab ${u.school_code}` : "Noma'lum"),
         code: code,
         district: u.district || "—",
         region: u.region || "—",
@@ -242,7 +242,6 @@ export default function SuperAdminDashboard() {
   const genderData = [
     { name: "O'g'il", value: g_male,   fill: "hsl(210 100% 50%)" },
     { name: "Qiz",   value: g_female, fill: "hsl(330 100% 70%)" },
-    { name: "Noma'lum", value: g_other, fill: "hsl(0 0% 60%)"   },
   ].filter(d => d.value > 0);
 
   // Top schools by submission %

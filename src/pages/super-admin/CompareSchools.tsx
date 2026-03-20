@@ -72,22 +72,27 @@ export default function CompareSchools() {
       const res = u.test_results;
       if (!res) return;
       res.mandatory?.forEach((m: any) => {
-        const name = m.name;
+        const name = m.name?.trim();
+        if (!name || name.toLowerCase() === "noma'lum") return;
         if (!stats[name]) stats[name] = { A_sum: 0, A_cnt: 0, B_sum: 0, B_cnt: 0 };
         stats[name][`${key}_sum`] += (m.point ?? 0);
         stats[name][`${key}_cnt`]++;
       });
       if (res.primary) {
-        const name = res.primary.name;
-        if (!stats[name]) stats[name] = { A_sum: 0, A_cnt: 0, B_sum: 0, B_cnt: 0 };
-        stats[name][`${key}_sum`] += (res.primary.point ?? 0);
-        stats[name][`${key}_cnt`]++;
+        const name = res.primary.name?.trim();
+        if (name && name.toLowerCase() !== "noma'lum") {
+          if (!stats[name]) stats[name] = { A_sum: 0, A_cnt: 0, B_sum: 0, B_cnt: 0 };
+          stats[name][`${key}_sum`] += (res.primary.point ?? 0);
+          stats[name][`${key}_cnt`]++;
+        }
       }
       if (res.secondary) {
-        const name = res.secondary.name;
-        if (!stats[name]) stats[name] = { A_sum: 0, A_cnt: 0, B_sum: 0, B_cnt: 0 };
-        stats[name][`${key}_sum`] += (res.secondary.point ?? 0);
-        stats[name][`${key}_cnt`]++;
+        const name = res.secondary.name?.trim();
+        if (name && name.toLowerCase() !== "noma'lum") {
+          if (!stats[name]) stats[name] = { A_sum: 0, A_cnt: 0, B_sum: 0, B_cnt: 0 };
+          stats[name][`${key}_sum`] += (res.secondary.point ?? 0);
+          stats[name][`${key}_cnt`]++;
+        }
       }
     };
 
