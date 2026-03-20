@@ -21,21 +21,9 @@ export default function SecurityDashboard() {
   });
 
   useEffect(() => {
-    if (dtmUser) {
-      setLogs([{
-        id: 1,
-        user: dtmUser.full_name || "Siz",
-        role: dtmUser.role === "superadmin" || dtmUser.role === "admin" ? "Super Admin" : dtmUser.role === "district" ? "Tuman Admin" : "Maktab Admin",
-        ip: "127.0.0.1 (Lokal)",
-        location: "O'zbekiston (Siz)",
-        time: new Date().toLocaleTimeString().slice(0, 5),
-        duration: "0h 01m",
-        status: "Active"
-      }]);
-    } else {
-      setLogs([]);
-    }
-  }, [dtmUser]);
+    const localLogs = JSON.parse(localStorage.getItem("admin_audit_logs") || "[]");
+    setLogs(localLogs);
+  }, []);
 
   const activeLogs = logs.filter(l => l.status === "Active").length;
   const blockedLogs = logs.filter(l => l.status === "Blocked" || blockedIPs.includes(l.ip)).length;

@@ -11,8 +11,42 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ children, variant }: AdminLayoutProps) {
-  const { sessionWarning, setSessionWarning } = useAuth();
+  const { sessionWarning, setSessionWarning, dtmUser } = useAuth();
   const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark");
+  const [ipInfo, setIpInfo] = useState({ ip: "127.0.0.1", location: "Lokal" });
+
+  useEffect(() => {
+    fetch("https://ipapi.co/json/")
+      .then(r => r.json())
+      .then(d => {
+        if (d.ip) {
+          setIpInfo({ ip: d.ip, location: `${d.city || "Lokal"}, ${d.country_name || ""}` });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (dtmUser && variant) {
+      const localLogs = JSON.parse(localStorage.getItem("admin_audit_logs") || "[]");
+      const currentMin = new Date().toLocaleTimeString().slice(0, 5);
+      const isDuplicate = localLogs.some((l: any) => l.user === dtmUser.full_name && l.time === currentMin);
+      
+      if (!isDuplicate) {
+        const newLog = {
+          id: Math.floor(Math.random() * 100000),
+          user: dtmUser.full_name || "Siz",
+          role: variant === "super" ? "Super Admin" : variant === "district" ? "Tuman Admin" : "Maktab Admin",
+          ip: ipInfo.ip,
+          location: ipInfo.location,
+          time: currentMin,
+          duration: "Hozirgina",
+          status: "Active"
+        };
+        localStorage.setItem("admin_audit_logs", JSON.stringify([newLog, ...localLogs.slice(0, 49)]));
+      }
+    }
+  }, [dtmUser, variant, ipInfo]);
 
   useEffect(() => {
     if (dark) {
