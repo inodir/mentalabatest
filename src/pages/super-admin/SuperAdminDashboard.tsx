@@ -571,6 +571,7 @@ export default function SuperAdminDashboard() {
               ))}
             </div>
           ) : (
+            <>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               <KPI i={0} label="Jami ro'yxatdagi o'quvchilar" value={total.toLocaleString()} icon={Users}
                 color="bg-blue-500/15 text-blue-600" />
@@ -585,6 +586,26 @@ export default function SuperAdminDashboard() {
                 value={avgBall > 0 ? `${avgBall.toFixed(1)} / 189` : "—"}
                 icon={TrendingUp} color="bg-purple-500/15 text-purple-600" />
             </div>
+
+            {/* 🛡️ Xavfsizlik Quick Access Banner */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-400 p-4 rounded-2xl flex items-center justify-between shadow-sm cursor-pointer hover:bg-emerald-500/15 transition-colors"
+              onClick={() => navigate("/super-admin/security")}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-500/20 rounded-xl">
+                  <Shield className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold">🛡️ Sessiyalar & Xavfsizlik Monitoringi</p>
+                  <p className="text-xs opacity-90 mt-0.5">Tizim kirish jurnali va xavfsizlik tahliliga kiring</p>
+                </div>
+              </div>
+              <Button size="sm" variant="outline" className="rounded-xl bg-transparent border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/20">Ko'rish</Button>
+            </motion.div>
+            </>
           )}
         </Section>
 
