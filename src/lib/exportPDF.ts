@@ -703,7 +703,7 @@ export async function exportSuperAdminPDF(data: ExportData) {
   }
   y = drawDemographics(doc, data, y);
 
-  // ── Page 3: Districts bar chart
+  // ── Page 3: Districts bar chart + Districts table
   if (data.districts && data.districts.length > 0) {
     doc.addPage();
     y = 15;
@@ -716,10 +716,15 @@ export async function exportSuperAdminPDF(data: ExportData) {
         color: d.tested_percent >= 80 ? C.success : d.tested_percent >= 50 ? C.warning : C.danger,
       }));
     y = drawBarChart(doc, distItems, "Tumanlar bo'yicha topshirish foizi (Top 15)", y, 100, "%");
-    // Removed drawDistrictsTable for compact business report
+    y = drawDistrictsTable(doc, data.districts, y);
   }
 
-  // Removed Page 4+: Schools table for compact business report
+  // ── Page 4+: Schools table
+  if (data.schools && data.schools.length > 0) {
+    doc.addPage();
+    y = 15;
+    y = drawSchoolsTable(doc, data.schools, data.passLine ?? 70, y);
+  }
 
   // ── Subject mastery
   if (data.subjectMastery && data.subjectMastery.length > 0) {
