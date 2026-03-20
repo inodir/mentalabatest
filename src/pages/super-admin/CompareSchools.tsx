@@ -64,6 +64,43 @@ export default function CompareSchools() {
     ];
   }, [dataA, dataB]);
 
+  const subjectComparisonData = useMemo(() => {
+    if (!dataA && !dataB) return [];
+    const stats: Record<string, { A_sum: number, A_cnt: number, B_sum: number, B_cnt: number }> = {};
+
+    const processUser = (u: any, key: "A" | "B") => {
+      const res = u.test_results;
+      if (!res) return;
+      res.mandatory?.forEach((m: any) => {
+        const name = m.name;
+        if (!stats[name]) stats[name] = { A_sum: 0, A_cnt: 0, B_sum: 0, B_cnt: 0 };
+        stats[name][`${key}_sum`] += (m.point ?? 0);
+        stats[name][`${key}_cnt`]++;
+      });
+      if (res.primary) {
+        const name = res.primary.name;
+        if (!stats[name]) stats[name] = { A_sum: 0, A_cnt: 0, B_sum: 0, B_cnt: 0 };
+        stats[name][`${key}_sum`] += (res.primary.point ?? 0);
+        stats[name][`${key}_cnt`]++;
+      }
+      if (res.secondary) {
+        const name = res.secondary.name;
+        if (!stats[name]) stats[name] = { A_sum: 0, A_cnt: 0, B_sum: 0, B_cnt: 0 };
+        stats[name][`${key}_sum`] += (res.secondary.point ?? 0);
+        stats[name][`${key}_cnt`]++;
+      }
+    };
+
+    if (schoolA !== "none") loadedEntities.filter(u => u.school_code === schoolA).forEach(u => processUser(u, "A"));
+    if (schoolB !== "none") loadedEntities.filter(u => u.school_code === schoolB).forEach(u => processUser(u, "B"));
+
+    return Object.entries(stats).map(([name, s]) => ({
+      name: name.length > 24 ? name.slice(0, 22) + "…" : name,
+      A: s.A_cnt > 0 ? Math.round((s.A_sum / s.A_cnt) * 10) / 10 : 0,
+      B: s.B_cnt > 0 ? Math.round((s.B_sum / s.B_cnt) * 10) / 10 : 0,
+    })).filter(item => item.A > 0 || item.B > 0).sort((a, b) => b.A + b.B - (a.A + a.B)); // Sort by high combined averages
+  }, [schoolA, schoolB, loadedEntities, dataA, dataB]);
+
   return (
     <AdminLayout variant="super">
       <div className="space-y-8">
@@ -128,6 +165,32 @@ export default function CompareSchools() {
                     <Legend iconType="circle" />
                     <Bar dataKey="A" name={dataA?.name || "1-Maktab"} fill="hsl(217 91% 60%)" radius={[4, 4, 0, 0]} barSize={35} />
                     <Bar dataKey="B" name={dataB?.name || "2-Maktab"} fill="hsl(262 83% 58%)" radius={[4, 4, 0, 0]} barSize={35} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 2. Subject comparison Chart */}
+        {subjectComparisonData.length > 0 && (
+          <Card className="rounded-2xl border-primary/10 bg-background/40 backdrop-blur-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <Award className="h-5 w-5 text-primary" /> Fanlar kesimida tahlil (O'rtacha ball)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[380px] mt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={subjectComparisonData} layout="vertical" margin={{ top: 10, right: 30, left: 80, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 11 }} domain={[0, 'auto']} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} />
+                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "12px", fontSize: "12px" }} />
+                    <Legend iconType="circle" />
+                    <Bar dataKey="A" name={dataA?.name || "1-Maktab"} fill="hsl(217 91% 60%)" radius={[0, 4, 4, 0]} barSize={20} />
+                    <Bar dataKey="B" name={dataB?.name || "2-Maktab"} fill="hsl(262 83% 58%)" radius={[0, 4, 4, 0]} barSize={20} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
