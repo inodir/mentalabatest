@@ -19,6 +19,12 @@ import {
 } from "recharts";
 import { PDFExportButton } from "@/components/ui/pdf-export-button";
 import { exportSuperAdminPDF } from "@/lib/exportPDF";
+import { ExcelExportButton } from "@/components/ui/excel-export-button";
+import { exportSuperAdminExcel } from "@/lib/exportExcel";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { useState, useMemo, useEffect } from "react";
 
 const PASS_LINE = 70;
 
@@ -81,6 +87,71 @@ export default function SuperAdminDashboard() {
   const { stats, loading, error, mode, setMode, progress, retry, loadedEntities } = useDTMDashboard();
   const { dtmUser } = useAuth();
 
+  const [selectedRegion, setSelectedRegion] = useState<string>("all");
+  const [selectedDistrict, setSelectedDistrict] = useState<string>("all");
+
+  const regions = useMemo(() => {
+    const r = new Set<string>();
+    loadedEntities.forEach(u => { if (u.region) r.add(u.region); });
+    return Array.from(r).sort();
+  }, [loadedEntities]);
+
+  const districts = useMemo(() => {
+    const d = new Set<string>();
+    loadedEntities.forEach(u => {
+      if (u.district && (selectedRegion === "all" || u.region === selectedRegion)) {
+        d.add(u.district);
+      }
+    });
+    return Array.from(d).sort();
+  }, [loadedEntities, selectedRegion]);
+
+  const filteredEntities = useMemo(() => {
+    let list = loadedEntities;
+    if (selectedRegion !== "all") list = list.filter(u => u.region === selectedRegion);
+    if (selectedDistrict !== "all") list = list.filter(u => u.district === selectedDistrict);
+    return list;
+  }, [loadedEntities, selectedRegion, selectedDistrict]);
+
+  const aggregSchools = useMemo(() => {
+    const sourceSchools = dtmUser?.schools ?? [];
+    if (mode === "fast" || loadedEntities.length === 0) return sourceSchools;
+    
+    const map = new Map<string, any>();
+    filteredEntities.forEach(u => {
+      const code = u.school_code || "unknown";
+      const curr = map.get(code) || {
+        name: u.school_name || "Noma'lum",
+        code: code,
+        district: u.district || "—",
+        region: u.region || "—",
+        registered_count: 0, answered_count: 0, totalBall: 0,
+      };
+      curr.registered_count++;
+      if (u.has_result) {
+        curr.answered_count++;
+        curr.totalBall += (u.total_point ?? 0);
+      }
+      map.set(code, curr);
+    });
+
+    return Array.from(map.values()).map(s => ({
+      ...s,
+      tested_percent: s.registered_count > 0 ? (s.answered_count / s.registered_count) * 100 : 0,
+      avg_total_ball: s.answered_count > 0 ? s.totalBall / s.answered_count : 0,
+    }));
+  }, [filteredEntities, mode, dtmUser?.schools, loadedEntities.length]);
+
+  const [autoRefresh, setAutoRefresh] = useState(false);
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const timer = setInterval(() => {
+      retry();
+    }, 60000); // 60 sec Refresh
+    return () => clearInterval(timer);
+  }, [autoRefresh, retry]);
+
   // ─── Error State ───────────────────────────────────────────────────
   if (error) {
     return (
@@ -120,14 +191,19 @@ export default function SuperAdminDashboard() {
   }
 
   // ─── Computed values ───────────────────────────────────────────────
-  const total        = stats?.totalUsers ?? 0;
-  const submitted    = stats?.resultUsersCount ?? 0;
-  const notSubmitted = stats?.noResultUsersCount ?? 0;
+  const baseEntities = mode === "accurate" ? filteredEntities : loadedEntities;
+  
+  const total        = mode === "accurate" ? baseEntities.length : (stats?.totalUsers ?? 0);
+  const submitted    = mode === "accurate" ? baseEntities.filter(u => u.has_result).length : (stats?.resultUsersCount ?? 0);
+  const notSubmitted = total - submitted;
   const submitPct    = total > 0 ? ((submitted / total) * 100).toFixed(1) : "0";
-  const avgBall      = stats?.averageTotalPoint ?? 0;
+  
+  const avgBall = mode === "accurate" && submitted > 0 
+    ? baseEntities.reduce((sum, u) => sum + (u.total_point ?? 0), 0) / submitted 
+    : (stats?.averageTotalPoint ?? 0);
 
-  const passed     = loadedEntities.filter(u => u.has_result && (u.total_point ?? 0) >= PASS_LINE).length;
-  const failed     = loadedEntities.filter(u => u.has_result && (u.total_point ?? 0) > 0 && (u.total_point ?? 0) < PASS_LINE).length;
+  const passed     = baseEntities.filter(u => u.has_result && (u.total_point ?? 0) >= PASS_LINE).length;
+  const failed     = baseEntities.filter(u => u.has_result && (u.total_point ?? 0) > 0 && (u.total_point ?? 0) < PASS_LINE).length;
   const passPct    = submitted > 0 ? ((passed / submitted) * 100).toFixed(1) : "0";
 
   // Score range bands  
@@ -141,14 +217,14 @@ export default function SuperAdminDashboard() {
   ];
   const scoreBands = bands.map(b => ({
     label: b.label,
-    soni: loadedEntities.filter(u => {
+    soni: baseEntities.filter(u => {
       const p = u.total_point ?? 0;
       return u.has_result && p >= b.min && p < b.max;
     }).length,
   }));
 
   // Top schools by submission %
-  const topSchoolsBySubmit = (dtmUser?.schools ?? [])
+  const topSchoolsBySubmit = (aggregSchools)
     .filter(s => (s.registered_count ?? 0) > 0)
     .map(s => ({
       name: s.name.length > 20 ? s.name.slice(0, 20) + "…" : s.name,
@@ -158,7 +234,7 @@ export default function SuperAdminDashboard() {
     .slice(0, 10);
 
   // Top schools by avg score
-  const topSchoolsByScore = (dtmUser?.schools ?? [])
+  const topSchoolsByScore = (aggregSchools)
     .filter(s => (s.avg_total_ball ?? 0) > 0)
     .map(s => ({
       name: s.name.length > 20 ? s.name.slice(0, 20) + "…" : s.name,
@@ -179,7 +255,7 @@ export default function SuperAdminDashboard() {
     .slice(0, 12);
 
   // Alert schools — low submission or low avg
-  const alertSchools = (dtmUser?.schools ?? [])
+  const alertSchools = (aggregSchools)
     .filter(s => (s.registered_count ?? 0) >= 10)
     .map(s => ({
       name: s.name,
@@ -234,24 +310,44 @@ export default function SuperAdminDashboard() {
               />
             </div>
 
-            {!loading && stats && (
-              <PDFExportButton
-                label="PDF hisobot"
-                onExport={() => exportSuperAdminPDF({
-                  totalUsers: stats.totalUsers,
-                  answeredUsers: stats.resultUsersCount,
-                  testedPercent: parseFloat(submitPct),
-                  schoolCount: stats.totalSchools,
-                  avgBall: avgBall,
-                  passLine: PASS_LINE,
-                  schools: dtmUser?.schools,
-                  districts: dtmUser?.districts,
-                  topStudents: loadedEntities,
-                  adminName: dtmUser?.full_name,
-                })}
+            <div className="flex items-center gap-2 glass-card rounded-full px-4 py-2">
+              <Label htmlFor="refresh-toggle" className="text-xs font-medium">Avto-yangilash</Label>
+              <Switch
+                id="refresh-toggle"
+                checked={autoRefresh}
+                onCheckedChange={setAutoRefresh}
               />
-            )}
+            </div>
 
+            {!loading && stats && (
+              <>
+                <ExcelExportButton
+                  label="Excel"
+                  filename="SuperAdmin_Statistikasi"
+                  onExport={() => exportSuperAdminExcel(aggregSchools, dtmUser?.districts || [])}
+                />
+                <PDFExportButton
+                  label="PDF"
+                  onExport={() => exportSuperAdminPDF({
+                    totalUsers: total,
+                    answeredUsers: submitted,
+                    testedPercent: parseFloat(submitPct),
+                    schoolCount: aggregSchools.length,
+                    avgBall: avgBall,
+                    passLine: PASS_LINE,
+                    schools: aggregSchools.map(s => ({
+                      id: 0, region: s.region, district: s.district, name: s.name, code: s.code,
+                      registered_count: s.registered_count, answered_count: s.answered_count,
+                      tested_percent: s.tested_percent, avg_total_ball: s.avg_total_ball
+                    })),
+                    districts: dtmUser?.districts,
+                    topStudents: baseEntities,
+                    adminName: dtmUser?.full_name,
+                  })}
+                />
+              </>
+            )}
+            
             <Button variant="outline" size="icon" onClick={retry} disabled={loading} className="rounded-xl">
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             </Button>
@@ -261,6 +357,47 @@ export default function SuperAdminDashboard() {
             </Button>
           </div>
         </div>
+
+        {/* ── 0. Filtrlar ────────────────────────────────────────── */}
+        {mode === "accurate" && loadedEntities.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }} 
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-wrap gap-4 items-center bg-card p-4 rounded-2xl border border-border/50 shadow-sm"
+          >
+            <div className="flex items-center gap-2">
+              <Label className="text-xs font-semibold text-muted-foreground mr-1">Viloyat:</Label>
+              <Select value={selectedRegion} onValueChange={(v) => { setSelectedRegion(v); setSelectedDistrict("all"); }}>
+                <SelectTrigger className="w-[170px] rounded-xl h-9 bg-background/50">
+                  <SelectValue placeholder="Barchasi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barchasi</SelectItem>
+                  {regions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Label className="text-xs font-semibold text-muted-foreground mr-1">Tuman:</Label>
+              <Select value={selectedDistrict} onValueChange={setSelectedDistrict}>
+                <SelectTrigger className="w-[170px] rounded-xl h-9 bg-background/50">
+                  <SelectValue placeholder="Barchasi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barchasi</SelectItem>
+                  {districts.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            { (selectedRegion !== "all" || selectedDistrict !== "all") && (
+              <Badge variant="secondary" className="rounded-full px-2 py-0.5 text-xs font-normal">
+                Filtr faol: {baseEntities.length.toLocaleString()} o'quvchi
+              </Badge>
+            )}
+          </motion.div>
+        )}
 
         {/* ── 1. Asosiy ko'rsatkichlar ────────────────────────────── */}
         <Section title="Asosiy ko'rsatkichlar">

@@ -30,6 +30,7 @@ interface AuthContextType {
   dtmUser: DTMUserData | null;
   signIn: (username: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -128,10 +129,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     keysToRemove.forEach(key => localStorage.removeItem(key));
   };
+  const refresh = useCallback(async () => {
+    try {
+      const { accessToken } = getDTMTokens();
+      if (accessToken) {
+        const dtmData = await dtmFetchMe();
+        if (dtmData) {
+          applyDTMUser(dtmData);
+        }
+      }
+    } catch (err) {
+      console.error("Profile refresh failed", err);
+    }
+  }, [applyDTMUser]);
 
   return (
     <AuthContext.Provider
-      value={{ user, role, schoolId, district, loading, dtmUser, signIn, signOut }}
+      value={{ user, role, schoolId, district, loading, dtmUser, signIn, signOut, refresh }}
     >
       {children}
     </AuthContext.Provider>

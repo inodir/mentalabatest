@@ -48,6 +48,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { DTMUser, DTMTestResults, getApiSettings, deleteDTMUser } from "@/lib/dtm-api";
+import { exportCertificate } from "@/lib/exportCertificate";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -711,6 +712,25 @@ export default function DTMUsers() {
                                       <Button
                                         variant="ghost"
                                         size="icon"
+                                        className="h-8 w-8 text-yellow-500 hover:text-yellow-600 hover:bg-yellow-500/10"
+                                        onClick={() => exportCertificate(user.full_name)}
+                                        disabled={!user.has_result}
+                                      >
+                                        <Award className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Sertifikat yuklash</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
                                         className="h-8 w-8"
                                         onClick={() => setExpandedUser(
                                           expandedUser === user.id ? null : user.id
@@ -724,6 +744,7 @@ export default function DTMUsers() {
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
+
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>

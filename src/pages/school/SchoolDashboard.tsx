@@ -1,7 +1,11 @@
+import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useSchoolDTMData } from "@/hooks/useSchoolDTMData";
 import { useAuth } from "@/hooks/useAuth";
 import { Users, CheckCircle, XCircle, TrendingUp, Trophy, AlertTriangle, FileText } from "lucide-react";
@@ -12,6 +16,9 @@ import {
 } from "recharts";
 import { PDFExportButton } from "@/components/ui/pdf-export-button";
 import { exportSchoolPDF } from "@/lib/exportPDF";
+import { ExcelExportButton } from "@/components/ui/excel-export-button";
+import { exportStudentsExcel } from "@/lib/exportExcel";
+import { exportCertificate } from "@/lib/exportCertificate";
 
 const PASS_LINE = 70;
 
@@ -58,8 +65,18 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function SchoolDashboard() {
-  const { dtmUser } = useAuth();
+  const { dtmUser, refresh } = useAuth();
   const { stats, loading, schoolCode, students } = useSchoolDTMData();
+
+  const [autoRefresh, setAutoRefresh] = useState(false);
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const timer = setInterval(() => {
+      refresh();
+    }, 60000); // 60 sec Refresh
+    return () => clearInterval(timer);
+  }, [autoRefresh, refresh]);
 
   const schoolName = dtmUser?.school?.name || dtmUser?.full_name || "Maktab";
 
@@ -128,20 +145,34 @@ export default function SchoolDashboard() {
               {schoolCode && <Badge variant="secondary" className="ml-2">Kod: {schoolCode}</Badge>}
             </p>
           </div>
-          {!loading && stats && (
-            <PDFExportButton
-              label="PDF hisobot"
-              onExport={() => exportSchoolPDF({
-                totalUsers: total,
-                answeredUsers: submitted,
-                testedPercent: parseFloat(submitPct),
-                avgBall,
-                passLine: PASS_LINE,
-                adminName: dtmUser?.full_name,
-                schoolName,
-              })}
-            />
-          )}
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2 glass-card rounded-full px-4 py-2 border border-border/40">
+              <Label htmlFor="refresh-toggle" className="text-xs font-semibold">Avto-yangilash</Label>
+              <Switch id="refresh-toggle" checked={autoRefresh} onCheckedChange={setAutoRefresh} />
+            </div>
+
+            {!loading && stats && (
+              <div className="flex items-center gap-2">
+              <ExcelExportButton
+                label="Excel yuklab olish"
+                filename={`${schoolName}_O'quvchilar`}
+                onExport={() => exportStudentsExcel(students)}
+              />
+              <PDFExportButton
+                label="PDF hisobot"
+                onExport={() => exportSchoolPDF({
+                  totalUsers: total,
+                  answeredUsers: submitted,
+                  testedPercent: parseFloat(submitPct),
+                  avgBall,
+                  passLine: PASS_LINE,
+                  adminName: dtmUser?.full_name,
+                  schoolName,
+                })}
+              />
+            </div>
+           )}
+          </div>
         </div>
 
         {/* 1. Asosiy ko'rsatkichlar */}
@@ -275,9 +306,20 @@ export default function SchoolDashboard() {
                           <p className="font-medium truncate">{u.full_name}</p>
                           <p className="text-xs text-muted-foreground">{u.phone || "—"}</p>
                         </div>
-                        <div className="text-right">
-                          <p className={`text-lg font-bold ${ball >= 70 ? "text-green-600" : "text-red-500"}`}>{ball}</p>
-                          <p className="text-xs text-muted-foreground">/ 189</p>
+                        <div className="flex items-center gap-3">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-full text-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-600"
+                            onClick={() => exportCertificate(u.full_name)}
+                            title="Sertifikat yuklash"
+                          >
+                            <Trophy className="h-4 w-4" />
+                          </Button>
+                          <div className="text-right">
+                            <p className={`text-lg font-bold ${ball >= 70 ? "text-green-600" : "text-red-500"}`}>{ball}</p>
+                            <p className="text-xs text-muted-foreground">/ 189</p>
+                          </div>
                         </div>
                       </div>
                     );
