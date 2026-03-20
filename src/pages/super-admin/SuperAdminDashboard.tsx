@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useDTMDashboard } from "@/hooks/useDTMDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Users, CheckCircle, XCircle, TrendingUp, School, Settings,
+  Users, CheckCircle, XCircle, TrendingUp, School, Settings, Shield,
   RefreshCw, AlertCircle, Loader2, AlertTriangle, Trophy, MapPin, Clock, Award,
 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -486,6 +486,10 @@ export default function SuperAdminDashboard() {
             
             <Button variant="outline" size="icon" onClick={retry} disabled={loading} className="rounded-xl">
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            </Button>
+
+            <Button onClick={() => navigate("/super-admin/security")} variant="outline" className="rounded-xl">
+              <Shield className="mr-2 h-4 w-4" /> Xavfsizlik
             </Button>
 
             <Button onClick={() => navigate("/super-admin/settings")} className="rounded-xl">

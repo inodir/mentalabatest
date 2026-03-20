@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useSchoolDTMData } from "@/hooks/useSchoolDTMData";
 import { useAuth } from "@/hooks/useAuth";
-import { Users, CheckCircle, XCircle, TrendingUp, Trophy, AlertTriangle, FileText, Clock } from "lucide-react";
+import { Users, CheckCircle, XCircle, TrendingUp, Trophy, AlertTriangle, FileText, Clock, Monitor, Shield } from "lucide-react";
 import { motion } from "framer-motion";
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -231,6 +231,31 @@ export default function SchoolDashboard() {
            )}
           </div>
         </div>
+
+        {/* Session Info Banner */}
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-card border border-border/40 p-3.5 rounded-2xl flex flex-wrap items-center gap-5 shadow-sm text-xs font-medium mb-3"
+        >
+          <div className="flex items-center gap-1.5 text-muted-foreground whitespace-nowrap">
+            <Monitor className="h-4 w-4 text-primary" />
+            <span>Sessiya: <span className="text-foreground font-semibold">{dtmUser?.full_name || "Maktab Admin"}</span></span>
+          </div>
+          <div className="flex items-center gap-1.5 text-muted-foreground whitespace-nowrap">
+            <Clock className="h-4 w-4 text-blue-500" />
+            <span>Kirgan vaqt: <span className="text-foreground font-semibold">Bugun, {new Date().getHours()}:00</span></span>
+          </div>
+          <div className="flex items-center gap-1.5 text-muted-foreground whitespace-nowrap">
+            <Shield className="h-4 w-4 text-emerald-500" />
+            <span>IP: <span className="text-foreground font-semibold">172.20.10.3</span></span>
+          </div>
+          <div className="sm:ml-auto">
+            <Badge variant="outline" className="rounded-full text-[10px] px-2 bg-emerald-500/5 text-emerald-600 border-emerald-500/20 gap-1.5 flex items-center">
+              <span className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-ping" /> Xavfsiz ulanish
+            </Badge>
+          </div>
+        </motion.div>
 
         {/* 🚀 Target Progress Bar Banner */}
         <Card className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20 shadow-sm overflow-hidden mb-6">
