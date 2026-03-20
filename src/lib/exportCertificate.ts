@@ -96,7 +96,12 @@ export async function exportCertificate(studentName: string) {
   doc.setFontSize(8.5);
   doc.setTextColor(100, 116, 139);
   doc.text("Berilgan sana", 77.5, H - 38, { align: "center" });
-  doc.text("M.O' (Direktor Imzosi)", W - 77.5, H - 38, { align: "center" });
+  doc.text("Direktor", W - 77.5, H - 38, { align: "center" });
+
+  doc.setTextColor(30, 58, 138); // Deep Blue
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("Nodir O'tkirov", W - 77.5, H - 47, { align: "center" }); // Director Name ABOVE LINE
 
   const dateStr = new Date().toLocaleDateString("ru-RU");
   doc.setTextColor(30, 58, 138); // Deep Blue date
