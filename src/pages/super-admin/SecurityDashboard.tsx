@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,15 +8,34 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import logsData from "@/data/security_logs.json";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function SecurityDashboard() {
   const navigate = useNavigate();
+  const { dtmUser } = useAuth();
   
-  const [logs, setLogs] = useState(logsData);
+  const [logs, setLogs] = useState<any[]>(logsData);
   const [viewingCapture, setViewingCapture] = useState<string | null>(null);
   const [blockedIPs, setBlockedIPs] = useState<string[]>(() => {
     return JSON.parse(localStorage.getItem("blocked_ips") || "[]");
   });
+
+  useEffect(() => {
+    if (dtmUser) {
+      setLogs([{
+        id: 1,
+        user: dtmUser.full_name || "Siz",
+        role: dtmUser.role === "superadmin" || dtmUser.role === "admin" ? "Super Admin" : dtmUser.role === "district" ? "Tuman Admin" : "Maktab Admin",
+        ip: "127.0.0.1 (Lokal)",
+        location: "O'zbekiston (Siz)",
+        time: new Date().toLocaleTimeString().slice(0, 5),
+        duration: "0h 01m",
+        status: "Active"
+      }]);
+    } else {
+      setLogs([]);
+    }
+  }, [dtmUser]);
 
   const activeLogs = logs.filter(l => l.status === "Active").length;
   const blockedLogs = logs.filter(l => l.status === "Blocked" || blockedIPs.includes(l.ip)).length;

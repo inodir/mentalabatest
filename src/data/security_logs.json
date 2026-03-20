@@ -1,9 +1,1 @@
-[
-  { "id": 1, "user": "Admin", "role": "Super Admin", "ip": "172.20.10.2", "location": "Toshkent", "time": "2026-03-20 09:15", "duration": "4h 12m", "status": "Active", "type": "login" },
-  { "id": 2, "user": "SuperAdmin", "role": "Super Admin", "ip": "192.168.1.5", "location": "Samarqand", "time": "2026-03-20 08:30", "duration": "0h 45m", "status": "Closed", "type": "login" },
-  { "id": 3, "user": "Noma'lum", "role": "Mehmon", "ip": "45.132.22.10", "location": "Amsterdam (Proxy)", "time": "2026-03-19 23:45", "duration": "—", "status": "Blocked", "type": "hack", "action": "SQL Injection urinishi" },
-  { "id": 4, "user": "BuxoroAdmin", "role": "Tuman Admin", "ip": "213.230.102.15", "location": "Buxoro", "time": "2026-03-19 18:20", "duration": "2h 10m", "status": "Closed", "type": "login" },
-  { "id": 5, "user": "Noma'lum", "role": "Mehmon", "ip": "185.101.44.7", "location": "Moscow", "time": "2026-03-19 14:10", "duration": "—", "status": "Blocked", "type": "hack", "action": "Brute Force parolni buzish" },
-  { "id": 6, "user": "SchoolAdmin102", "role": "Maktab Admin", "ip": "82.200.155.40", "location": "Toshkent", "time": "2026-03-19 12:05", "duration": "1h 30m", "status": "Closed", "type": "login" },
-  { "id": 7, "user": "Noma'lum", "role": "Mehmon", "ip": "103.242.112.5", "location": "Kiyev", "time": "2026-03-19 03:22", "duration": "—", "status": "Blocked", "type": "hack", "action": "XSS xuruji (.js yuklash)" }
-]
+[]
