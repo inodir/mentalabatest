@@ -380,6 +380,7 @@ export default function SuperAdminDashboard() {
 
   // Districts ranking
   const districtsRanked = (dtmUser?.districts ?? [])
+    .filter(d => selectedRegion === "all" || d.region === selectedRegion)
     .map(d => ({
       name: d.district.length > 18 ? d.district.slice(0, 18) + "…" : d.district,
       pct: d.tested_percent,
