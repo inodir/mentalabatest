@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,52 +8,72 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useDTMDashboard } from "@/hooks/useDTMDashboard";
 import { useAuth } from "@/hooks/useAuth";
-import { GenderLanguageCharts } from "@/components/dashboard/GenderLanguageCharts";
-import { SubjectMasteryChart } from "@/components/dashboard/SubjectMasteryChart";
-import { BallDistributionChart } from "@/components/dashboard/BallDistributionChart";
-import { DTMReadinessCards } from "@/components/dashboard/DTMReadinessCards";
-import { MandatoryChart } from "@/components/dashboard/MandatoryChart";
-import { TimeBasedStats } from "@/components/dashboard/TimeBasedStats";
-import { Users, FileText, TrendingUp, School, Settings, RefreshCw, AlertCircle, Loader2, MapPin } from "lucide-react";
+import {
+  Users, CheckCircle, XCircle, TrendingUp, School, Settings,
+  RefreshCw, AlertCircle, Loader2, AlertTriangle, Trophy, MapPin,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Cell, PieChart, Pie, Legend,
 } from "recharts";
-import { DistrictsChart } from "@/components/dashboard/DistrictsChart";
-import { TopSchoolsTable } from "@/components/dashboard/TopSchoolsTable";
-import { FunnelStats } from "@/components/dashboard/FunnelStats";
-import { ScoreHistogram } from "@/components/dashboard/ScoreHistogram";
-import { LanguageScoreChart } from "@/components/dashboard/LanguageScoreChart";
-import { TopStudents } from "@/components/dashboard/TopStudents";
-import { InactiveSchools } from "@/components/dashboard/InactiveSchools";
-import { ScatterSchools } from "@/components/dashboard/ScatterSchools";
-import { SubjectComparison } from "@/components/dashboard/SubjectComparison";
-import { RadarSubjects } from "@/components/dashboard/RadarSubjects";
-import { DailyTrend } from "@/components/dashboard/DailyTrend";
-import { RegionalHeatmap } from "@/components/dashboard/RegionalHeatmap";
-import { ReadinessGauge } from "@/components/dashboard/ReadinessGauge";
-import { SchoolRiskTable } from "@/components/dashboard/SchoolRiskTable";
 import { PDFExportButton } from "@/components/ui/pdf-export-button";
 import { exportSuperAdminPDF } from "@/lib/exportPDF";
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08 },
-  },
+const PASS_LINE = 70;
+
+const anim = {
+  hidden: { opacity: 0, y: 14 },
+  visible: (i = 0) => ({
+    opacity: 1, y: 0,
+    transition: { duration: 0.35, delay: i * 0.06, ease: [0.4, 0, 0.2, 1] as const },
+  }),
 };
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] as const } },
+// ─── Small stat card ────────────────────────────────────────────────
+function KPI({
+  label, value, sub, icon: Icon, color, i,
+}: {
+  label: string; value: string | number; sub?: string;
+  icon: React.ElementType; color: string; i: number;
+}) {
+  return (
+    <motion.div custom={i} variants={anim} initial="hidden" animate="visible">
+      <Card className="rounded-2xl border-border/50">
+        <CardContent className="p-5 flex items-start gap-4">
+          <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${color}`}>
+            <Icon className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground truncate">{label}</p>
+            <p className="text-2xl font-bold leading-tight">{value}</p>
+            {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
+// ─── Section title ───────────────────────────────────────────────────
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-3">
+      <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground px-0.5">
+        {title}
+      </h2>
+      {children}
+    </div>
+  );
+}
+
+// ─── Tooltip ────────────────────────────────────────────────────────
+const ChartTooltipStyle = {
+  backgroundColor: "hsl(var(--card))",
+  border: "1px solid hsl(var(--border))",
+  borderRadius: "12px",
+  fontSize: "12px",
+  boxShadow: "0 4px 16px rgba(0,0,0,.08)",
 };
 
 export default function SuperAdminDashboard() {
@@ -62,107 +81,155 @@ export default function SuperAdminDashboard() {
   const { stats, loading, error, mode, setMode, progress, retry, loadedEntities } = useDTMDashboard();
   const { dtmUser } = useAuth();
 
+  // ─── Error State ───────────────────────────────────────────────────
   if (error) {
     return (
       <AdminLayout variant="super">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="space-y-6"
-        >
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Bosh sahifa</h1>
-            <p className="text-muted-foreground">DTM platformasi umumiy statistikasi</p>
-          </div>
-
-          <div className="glass-card rounded-2xl border-destructive/30">
-            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="relative mb-6">
-                <div className="absolute inset-0 rounded-full bg-destructive/20 blur-xl scale-150" />
-                <div className="relative rounded-full bg-destructive/10 p-4">
-                  <AlertCircle className="h-10 w-10 text-destructive" />
-                </div>
+        <div className="space-y-6">
+          <h1 className="text-3xl font-bold">Bosh sahifa</h1>
+          <Card className="rounded-2xl border-destructive/30">
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center gap-4">
+              <AlertCircle className="h-12 w-12 text-destructive" />
+              <div>
+                <p className="font-semibold text-lg">
+                  {error === "NO_CONFIG" && "API sozlanmagan"}
+                  {error === "API_KEY_INVALID" && "API kaliti noto'g'ri"}
+                  {error === "NETWORK_ERROR" && "Tarmoq xatosi"}
+                </p>
+                <p className="text-muted-foreground text-sm mt-1">
+                  {error === "NO_CONFIG" && "Sozlamalar sahifasidan API kalitini kiriting"}
+                  {error === "API_KEY_INVALID" && "API kaliti noto'g'ri yoki muddati o'tgan"}
+                  {error === "NETWORK_ERROR" && "Internet aloqani tekshiring"}
+                </p>
               </div>
-              <h3 className="text-lg font-semibold mb-2">
-                {error === "NO_CONFIG" && "API sozlamalari topilmadi"}
-                {error === "API_KEY_INVALID" && "API kaliti noto'g'ri"}
-                {error === "NETWORK_ERROR" && "Tarmoq xatosi"}
-                {error === "INVALID_URL" && "URL noto'g'ri formatda"}
-              </h3>
-              <p className="text-muted-foreground mb-6 max-w-md text-sm">
-                {error === "NO_CONFIG" && "Dashboard'ni ko'rish uchun avval API sozlamalarini kiriting."}
-                {error === "API_KEY_INVALID" && "API kalitingiz noto'g'ri yoki muddati o'tgan. Sozlamalarni tekshiring."}
-                {error === "NETWORK_ERROR" && "Serverga ulanib bo'lmadi. Internet aloqangizni tekshiring."}
-                {error === "INVALID_URL" && "MAIN_URL http:// yoki https:// bilan boshlanishi kerak."}
-              </p>
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 {error !== "NO_CONFIG" && (
                   <Button variant="outline" onClick={retry} className="rounded-xl">
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Qayta urinish
+                    <RefreshCw className="mr-2 h-4 w-4" /> Qayta urinish
                   </Button>
                 )}
                 <Button onClick={() => navigate("/super-admin/settings")} className="rounded-xl">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Sozlamalarni ochish
+                  <Settings className="mr-2 h-4 w-4" /> Sozlamalar
                 </Button>
               </div>
             </CardContent>
-          </div>
-        </motion.div>
+          </Card>
+        </div>
       </AdminLayout>
     );
   }
 
+  // ─── Computed values ───────────────────────────────────────────────
+  const total        = stats?.totalUsers ?? 0;
+  const submitted    = stats?.resultUsersCount ?? 0;
+  const notSubmitted = stats?.noResultUsersCount ?? 0;
+  const submitPct    = total > 0 ? ((submitted / total) * 100).toFixed(1) : "0";
+  const avgBall      = stats?.averageTotalPoint ?? 0;
+
+  const passed     = loadedEntities.filter(u => u.has_result && (u.total_point ?? 0) >= PASS_LINE).length;
+  const failed     = loadedEntities.filter(u => u.has_result && (u.total_point ?? 0) > 0 && (u.total_point ?? 0) < PASS_LINE).length;
+  const passPct    = submitted > 0 ? ((passed / submitted) * 100).toFixed(1) : "0";
+
+  // Score range bands  
+  const bands = [
+    { label: "0–40",    min: 0,   max: 40  },
+    { label: "40–70",   min: 40,  max: 70  },
+    { label: "70–100",  min: 70,  max: 100 },
+    { label: "100–130", min: 100, max: 130 },
+    { label: "130–160", min: 130, max: 160 },
+    { label: "160–189", min: 160, max: 190 },
+  ];
+  const scoreBands = bands.map(b => ({
+    label: b.label,
+    soni: loadedEntities.filter(u => {
+      const p = u.total_point ?? 0;
+      return u.has_result && p >= b.min && p < b.max;
+    }).length,
+  }));
+
+  // Top schools by submission %
+  const topSchoolsBySubmit = (dtmUser?.schools ?? [])
+    .filter(s => (s.registered_count ?? 0) > 0)
+    .map(s => ({
+      name: s.name.length > 20 ? s.name.slice(0, 20) + "…" : s.name,
+      pct: Math.round(((s.answered_count ?? 0) / (s.registered_count ?? 1)) * 100),
+    }))
+    .sort((a, b) => b.pct - a.pct)
+    .slice(0, 10);
+
+  // Top schools by avg score
+  const topSchoolsByScore = (dtmUser?.schools ?? [])
+    .filter(s => (s.avg_total_ball ?? 0) > 0)
+    .map(s => ({
+      name: s.name.length > 20 ? s.name.slice(0, 20) + "…" : s.name,
+      ball: Math.round((s.avg_total_ball ?? 0) * 10) / 10,
+    }))
+    .sort((a, b) => b.ball - a.ball)
+    .slice(0, 10);
+
+  // Districts ranking
+  const districtsRanked = (dtmUser?.districts ?? [])
+    .map(d => ({
+      name: d.district.length > 18 ? d.district.slice(0, 18) + "…" : d.district,
+      pct: d.tested_percent,
+      registered: d.registered_count,
+      answered: d.answered_count,
+    }))
+    .sort((a, b) => b.pct - a.pct)
+    .slice(0, 12);
+
+  // Alert schools — low submission or low avg
+  const alertSchools = (dtmUser?.schools ?? [])
+    .filter(s => (s.registered_count ?? 0) >= 10)
+    .map(s => ({
+      name: s.name,
+      district: s.district ?? "—",
+      registered: s.registered_count ?? 0,
+      answered: s.answered_count ?? 0,
+      pct: s.tested_percent ?? 0,
+      avg: s.avg_total_ball ?? 0,
+    }))
+    .filter(s => s.pct < 40 || (s.avg > 0 && s.avg < PASS_LINE))
+    .sort((a, b) => a.pct - b.pct)
+    .slice(0, 15);
+
+  const pieData = [
+    { name: `O'tdi (≥${PASS_LINE})`, value: passed,     fill: "hsl(142 71% 45%)" },
+    { name: "O'tmadi",               value: failed,     fill: "hsl(0 72% 55%)"   },
+    { name: "Topshirmagan",           value: notSubmitted, fill: "hsl(215 16% 65%)" },
+  ].filter(d => d.value > 0);
+
+  const isLive = !loading && loadedEntities.length > 0;
+
   return (
     <AdminLayout variant="super">
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="space-y-8"
-      >
-        {/* Header */}
-        <motion.div variants={itemVariants} className="flex items-center justify-between">
+      <div className="space-y-8">
+
+        {/* ── Header ─────────────────────────────────────────────── */}
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text">
-              Bosh sahifa
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              DTM platformasi umumiy statistikasi
-            </p>
+            <h1 className="text-3xl font-bold tracking-tight">Bosh sahifa</h1>
+            <p className="text-muted-foreground mt-1">DTM platformasi umumiy tahlili</p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {progress && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center gap-2 text-sm text-muted-foreground glass-card rounded-full px-4 py-2"
-              >
+              <div className="flex items-center gap-2 text-sm text-muted-foreground glass-card rounded-full px-4 py-2">
                 <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                <span>{progress.loaded}/{progress.total}</span>
-              </motion.div>
+                <span>{progress.loaded}/{progress.total} yuklandi</span>
+              </div>
             )}
 
             {stats?.isApproximate && !loading && (
-              <Badge variant="secondary" className="text-xs rounded-full px-3 py-1">
-                Taxminiy
-              </Badge>
-            )}
-
-            {!stats?.isApproximate && stats && !loading && (
-              <Badge variant="default" className="text-xs rounded-full px-3 py-1">
-                Aniq (100%)
-              </Badge>
+              <Badge variant="secondary" className="rounded-full">Taxminiy</Badge>
             )}
 
             <div className="flex items-center gap-2 glass-card rounded-full px-4 py-2">
-              <Label htmlFor="mode-toggle" className="text-xs font-medium">Aniq</Label>
+              <Label htmlFor="mode-toggle" className="text-xs font-medium">Aniq ma'lumot</Label>
               <Switch
                 id="mode-toggle"
                 checked={mode === "accurate"}
-                onCheckedChange={(checked) => setMode(checked ? "accurate" : "fast")}
+                onCheckedChange={c => setMode(c ? "accurate" : "fast")}
                 disabled={loading}
               />
             </div>
@@ -170,411 +237,292 @@ export default function SuperAdminDashboard() {
             {!loading && stats && (
               <PDFExportButton
                 label="PDF hisobot"
-                onExport={() =>
-                  exportSuperAdminPDF({
-                    totalUsers: stats.totalUsers,
-                    answeredUsers: stats.resultUsersCount,
-                    testedPercent: dtmUser?.stats?.tested_percent,
-                    schoolCount: stats.totalSchools,
-                    avgBall: dtmUser?.stats?.dtm_readiness?.avg_total_ball,
-                    passLine: dtmUser?.stats?.risk_stats?.pass_line ?? dtmUser?.stats?.dtm_readiness?.pass_line,
-                    schools: dtmUser?.schools,
-                    districts: dtmUser?.districts,
-                    topStudents: loadedEntities,
-                    adminName: dtmUser?.full_name,
-                  })
-                }
+                onExport={() => exportSuperAdminPDF({
+                  totalUsers: stats.totalUsers,
+                  answeredUsers: stats.resultUsersCount,
+                  testedPercent: parseFloat(submitPct),
+                  schoolCount: stats.totalSchools,
+                  avgBall: avgBall,
+                  passLine: PASS_LINE,
+                  schools: dtmUser?.schools,
+                  districts: dtmUser?.districts,
+                  topStudents: loadedEntities,
+                  adminName: dtmUser?.full_name,
+                })}
               />
             )}
 
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={retry}
-              disabled={loading}
-              className="rounded-full h-10 w-10 glass-card border-0"
-            >
+            <Button variant="outline" size="icon" onClick={retry} disabled={loading} className="rounded-xl">
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             </Button>
-          </div>
-        </motion.div>
 
-        {/* Stats Grid */}
-        <motion.div variants={itemVariants} className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+            <Button onClick={() => navigate("/super-admin/settings")} className="rounded-xl">
+              <Settings className="mr-2 h-4 w-4" /> Sozlamalar
+            </Button>
+          </div>
+        </div>
+
+        {/* ── 1. Asosiy ko'rsatkichlar ────────────────────────────── */}
+        <Section title="Asosiy ko'rsatkichlar">
           {loading ? (
-            <>
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="glass-card rounded-2xl p-6">
-                  <Skeleton className="h-20 animate-shimmer rounded-xl" />
-                </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              {[...Array(5)].map((_, i) => (
+                <Card key={i} className="rounded-2xl">
+                  <CardContent className="p-5"><Skeleton className="h-16" /></CardContent>
+                </Card>
               ))}
-            </>
+            </div>
           ) : (
-            <>
-              <StatCard
-                title="Ro'yxatdan o'tganlar"
-                value={dtmUser?.stats?.registered_count?.toLocaleString() || 0}
-                icon={Users}
-                description="/me dan"
-                index={0}
-              />
-              <StatCard
-                title="Javob berganlar"
-                value={dtmUser?.stats?.answered_count?.toLocaleString() || 0}
-                icon={FileText}
-                index={1}
-              />
-              <StatCard
-                title="Test topshirganlar %"
-                value={`${dtmUser?.stats?.tested_percent?.toFixed(1) || 0}%`}
-                icon={TrendingUp}
-                index={2}
-              />
-              <StatCard
-                title="Jami maktablar"
-                value={dtmUser?.stats?.school_count?.toLocaleString() || 0}
-                icon={School}
-                index={3}
-              />
-            </>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              <KPI i={0} label="Jami ro'yxatdagi o'quvchilar" value={total.toLocaleString()} icon={Users}
+                color="bg-blue-500/15 text-blue-600" />
+              <KPI i={1} label="Test topshirganlar" value={submitted.toLocaleString()}
+                sub={`${submitPct}%`} icon={CheckCircle} color="bg-green-500/15 text-green-600" />
+              <KPI i={2} label="Hali topshirmaganlar" value={notSubmitted.toLocaleString()}
+                sub={`${(100 - parseFloat(submitPct)).toFixed(1)}%`} icon={XCircle} color="bg-red-500/15 text-red-600" />
+              <KPI i={3} label={`O'tish balli (${PASS_LINE}+) olganlar`}
+                value={isLive ? passed.toLocaleString() : "—"} sub={isLive ? `${passPct}% topshirganlardan` : ""}
+                icon={Trophy} color="bg-yellow-500/15 text-yellow-600" />
+              <KPI i={4} label="Barcha maktablar o'rtacha balli"
+                value={avgBall > 0 ? `${avgBall.toFixed(1)} / 189` : "—"}
+                icon={TrendingUp} color="bg-purple-500/15 text-purple-600" />
+            </div>
           )}
-        </motion.div>
+        </Section>
 
-        {/* Time-based Stats */}
-        <motion.div variants={itemVariants}>
-          <TimeBasedStats
-            users={loadedEntities}
-            loading={loading}
-            isApproximate={stats?.isApproximate}
-            totalCount={stats?.totalUsers}
-          />
-        </motion.div>
-
-
-        {!loading && dtmUser?.stats?.dtm_readiness && (
-          <motion.div variants={itemVariants} className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-            <StatCard
-              title="O'rtacha ball"
-              value={dtmUser.stats.dtm_readiness.avg_total_ball?.toFixed(1) || 0}
-              icon={TrendingUp}
-              index={0}
-            />
-          </motion.div>
-        )}
-
-        {/* Charts & Analysis */}
-        {!loading && dtmUser?.stats && (
-          <>
-            <motion.div variants={itemVariants}>
-              <GenderLanguageCharts
-                genderStats={dtmUser.stats.gender_stats}
-                languageStats={dtmUser.stats.language_stats}
-              />
-            </motion.div>
-
-            <motion.div variants={itemVariants}>
-              <DTMReadinessCards
-                riskStats={dtmUser.stats.risk_stats}
-                dtmReadiness={dtmUser.stats.dtm_readiness}
-                genderResultStats={dtmUser.stats.gender_result_stats}
-              />
-            </motion.div>
-
-            <motion.div variants={itemVariants} className="grid gap-5 lg:grid-cols-2">
-              <SubjectMasteryChart subjectMastery={dtmUser.stats.subject_mastery} />
-              <MandatoryChart mandatoryChart={dtmUser.stats.mandatory_chart} />
-            </motion.div>
-
-            <motion.div variants={itemVariants}>
-              <BallDistributionChart ballDistribution={dtmUser.stats.ball_distribution} />
-            </motion.div>
-          </>
-        )}
-
-        {/* Districts + Schools deep analytics */}
-        {!loading && dtmUser && (
-          <>
-            {/* Districts comparison */}
-            {dtmUser.districts && dtmUser.districts.length > 0 && (
-              <motion.div variants={itemVariants}>
-                <DistrictsChart districts={dtmUser.districts} />
-              </motion.div>
-            )}
-
-            {/* Top/Bottom schools by avg score */}
-            {dtmUser.schools && dtmUser.schools.length > 0 && (
-              <motion.div variants={itemVariants}>
-                <TopSchoolsTable schools={dtmUser.schools} />
-              </motion.div>
-            )}
-
-            {/* Regional summary */}
-            {dtmUser.districts && dtmUser.districts.length > 0 && (() => {
-              const regionMap = new Map<string, { answered: number; registered: number; schools: number }>();
-              for (const d of dtmUser.districts) {
-                const prev = regionMap.get(d.region) ?? { answered: 0, registered: 0, schools: 0 };
-                regionMap.set(d.region, {
-                  answered: prev.answered + d.answered_count,
-                  registered: prev.registered + d.registered_count,
-                  schools: prev.schools + d.school_count,
-                });
-              }
-              const regionData = Array.from(regionMap.entries())
-                .map(([name, v]) => ({
-                  name: name.length > 16 ? name.slice(0, 16) + "…" : name,
-                  fullName: name,
-                  pct: v.registered > 0 ? Math.round((v.answered / v.registered) * 100) : 0,
-                  schools: v.schools,
-                  answered: v.answered,
-                  registered: v.registered,
-                }))
-                .sort((a, b) => b.pct - a.pct);
-              return (
-                <motion.div variants={itemVariants}>
-                  <div className="glass-card rounded-2xl overflow-hidden">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                        <MapPin className="h-5 w-5 text-primary" />
-                        Viloyatlar bo'yicha qamrov
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="h-[280px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={regionData}>
-                            <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                            <XAxis
-                              dataKey="name"
-                              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                              angle={-30}
-                              textAnchor="end"
-                              height={55}
+        {/* ── 2. Ball taqsimoti + O'tdi/O'tmadi ─────────────────── */}
+        {isLive && (
+          <Section title="Ball taqsimoti">
+            <div className="grid gap-5 lg:grid-cols-3">
+              {/* Score range bars */}
+              <Card className="rounded-2xl lg:col-span-2">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    O'quvchilar ball oralig'i bo'yicha
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[220px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={scoreBands} margin={{ top: 8 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" vertical={false} />
+                        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                        <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                        <Tooltip
+                          contentStyle={ChartTooltipStyle}
+                          formatter={(v: number) => [`${v.toLocaleString()} o'quvchi`, "Soni"]}
+                        />
+                        <Bar dataKey="soni" radius={[6, 6, 0, 0]}>
+                          {scoreBands.map((b, i) => (
+                            <Cell
+                              key={b.label}
+                              fill={i < 2 ? "hsl(0 72% 55%)" : i === 2 ? "hsl(38 92% 50%)" : "hsl(142 71% 45%)"}
                             />
-                            <YAxis
-                              tick={{ fill: "hsl(var(--muted-foreground))" }}
-                              tickFormatter={(v) => `${v}%`}
-                              domain={[0, 100]}
-                            />
-                            <Tooltip
-                              contentStyle={{
-                                backgroundColor: "hsl(var(--card))",
-                                border: "1px solid hsl(var(--border))",
-                                borderRadius: "12px",
-                                boxShadow: "0 8px 32px -8px hsl(var(--glass-shadow))",
-                              }}
-                              formatter={(v: number, _: string, props: { payload?: typeof regionData[0] }) => [
-                                `${v}%`,
-                                `${props.payload?.answered ?? 0} / ${props.payload?.registered ?? 0}`,
-                              ]}
-                              labelFormatter={(label: string) => {
-                                const item = regionData.find((r) => r.name === label);
-                                return item ? `${item.fullName} (${item.schools} maktab)` : label;
-                              }}
-                            />
-                            <Bar dataKey="pct" radius={[8, 8, 0, 0]}>
-                              {regionData.map((entry, i) => (
-                                <Cell
-                                  key={i}
-                                  fill={
-                                    entry.pct >= 80 ? "hsl(142 71% 45%)"
-                                    : entry.pct >= 60 ? "hsl(217 91% 55%)"
-                                    : entry.pct >= 40 ? "hsl(38 92% 50%)"
-                                    : "hsl(0 72% 51%)"
-                                  }
-                                />
-                              ))}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </CardContent>
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
-                </motion.div>
-              );
-            })()}
-          </>
+                </CardContent>
+              </Card>
+
+              {/* Pie chart */}
+              <Card className="rounded-2xl">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Umumiy holat
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[220px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={pieData} dataKey="value" cx="50%" cy="45%"
+                          outerRadius={72} innerRadius={40}
+                          paddingAngle={3} label={false}>
+                          {pieData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={ChartTooltipStyle}
+                          formatter={(v: number) => [`${v.toLocaleString()} o'quvchi`]}
+                        />
+                        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: "11px" }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </Section>
         )}
 
-        <motion.div variants={itemVariants} className="grid gap-5 lg:grid-cols-2">
-          <div className="glass-card rounded-2xl overflow-hidden">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-semibold">So'nggi foydalanuvchilar</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="space-y-3">
-                  {[...Array(5)].map((_, i) => (
-                    <Skeleton key={i} className="h-14 rounded-xl animate-shimmer" />
-                  ))}
-                </div>
-              ) : stats?.recentUsers && stats.recentUsers.length > 0 ? (
-                <div className="space-y-2">
-                  {stats.recentUsers.slice(0, 8).map((user, index) => (
-                    <motion.div
-                      key={user.id || index}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="flex items-center justify-between rounded-xl border border-border/50 p-3.5 hover:bg-muted/50 transition-colors duration-200"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{user.full_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {user.school_code || "Maktab ko'rsatilmagan"}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {user.has_result ? (
-                          <Badge className="text-xs rounded-full bg-primary/10 text-primary border-0 font-semibold">
-                            {user.total_point} ball
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="text-xs rounded-full">
-                            Natija yo'q
-                          </Badge>
-                        )}
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-                  Foydalanuvchilar topilmadi
-                </div>
-              )}
-            </CardContent>
-          </div>
+        {/* ── 3. Maktablar reytingi ──────────────────────────────── */}
+        {(dtmUser?.schools?.length ?? 0) > 0 && (
+          <Section title="Maktablar reytingi">
+            <div className="grid gap-5 lg:grid-cols-2">
+              {/* By submission rate */}
+              <Card className="rounded-2xl">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    Topshirish foizi bo'yicha top 10 maktab
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[280px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={topSchoolsBySubmit} layout="vertical" margin={{ left: 8, right: 30 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border/40" />
+                        <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }}
+                          tickFormatter={v => `${v}%`} />
+                        <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 9 }} />
+                        <Tooltip
+                          contentStyle={ChartTooltipStyle}
+                          formatter={(v: number) => [`${v}%`, "Topshirish"]}
+                        />
+                        <Bar dataKey="pct" radius={[0, 6, 6, 0]} name="pct">
+                          {topSchoolsBySubmit.map((s, i) => (
+                            <Cell key={i} fill={s.pct >= 80 ? "hsl(142 71% 45%)" : s.pct >= 50 ? "hsl(38 92% 50%)" : "hsl(0 72% 55%)"} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <div className="glass-card rounded-2xl overflow-hidden">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-semibold">Ball taqsimoti</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Skeleton className="h-[300px] rounded-xl animate-shimmer" />
-              ) : stats?.recentUsers && stats.recentUsers.some(u => u.has_result) ? (
-                <div className="h-[300px]">
+              {/* By avg score */}
+              <Card className="rounded-2xl">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-blue-500" />
+                    O'rtacha ball bo'yicha top 10 maktab
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[280px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={topSchoolsByScore} layout="vertical" margin={{ left: 8, right: 40 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border/40" />
+                        <XAxis type="number" domain={[0, 189]} tick={{ fontSize: 10 }} />
+                        <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 9 }} />
+                        <Tooltip
+                          contentStyle={ChartTooltipStyle}
+                          formatter={(v: number) => [`${v} ball`, "O'rtacha ball"]}
+                        />
+                        <Bar dataKey="ball" fill="hsl(217 91% 55%)" radius={[0, 6, 6, 0]}>
+                          {topSchoolsByScore.map((s, i) => (
+                            <Cell key={i} fill={
+                              i === 0 ? "hsl(38 92% 50%)" : i === 1 ? "hsl(215 70% 60%)" : "hsl(217 91% 55%)"
+                            } />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </Section>
+        )}
+
+        {/* ── 4. Tumanlar reytingi ───────────────────────────────── */}
+        {districtsRanked.length > 0 && (
+          <Section title="Tumanlar reytingi">
+            <Card className="rounded-2xl">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-purple-500" />
+                  Topshirish foizi bo'yicha tumanlar (top 12)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[260px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={stats.recentUsers
-                        .filter(u => u.has_result && u.total_point)
-                        .slice(0, 10)
-                        .map(u => ({
-                          name: u.full_name?.substring(0, 12) || "N/A",
-                          ball: u.total_point || 0,
-                        }))}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                      <XAxis
-                        dataKey="name"
-                        tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                        angle={-45}
-                        textAnchor="end"
-                        height={60}
-                      />
-                      <YAxis tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                    <BarChart data={districtsRanked} margin={{ top: 8, right: 16 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 9 }} interval={0} angle={-20} textAnchor="end" height={48} />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} tickFormatter={v => `${v}%`} />
                       <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "12px",
-                          boxShadow: "0 8px 32px -8px hsl(var(--glass-shadow))",
-                        }}
+                        contentStyle={ChartTooltipStyle}
+                        formatter={(v: number) => [`${v.toFixed(1)}%`, "Topshirish"]}
                       />
-                      <Bar
-                        dataKey="ball"
-                        fill="hsl(var(--primary))"
-                        radius={[8, 8, 0, 0]}
-                      />
+                      <Bar dataKey="pct" radius={[6, 6, 0, 0]} name="pct">
+                        {districtsRanked.map((d, i) => (
+                          <Cell key={i} fill={d.pct >= 80 ? "hsl(142 71% 45%)" : d.pct >= 50 ? "hsl(217 91% 55%)" : "hsl(0 72% 55%)"} />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-              ) : (
-                <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-                  Ball ma'lumotlari mavjud emas
+              </CardContent>
+            </Card>
+          </Section>
+        )}
+
+        {/* ── 5. Diqqat talab maktablar ─────────────────────────── */}
+        {alertSchools.length > 0 && (
+          <Section title="Diqqat talab maktablar">
+            <Card className="rounded-2xl border-orange-200 dark:border-orange-900/40">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-orange-500" />
+                  Topshirish foizi past (&lt;40%) yoki o'rtacha ball {PASS_LINE} dan past
+                  <Badge variant="destructive" className="ml-auto">{alertSchools.length} ta maktab</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border/50 text-muted-foreground text-xs">
+                        <th className="text-left py-2 pr-4 font-medium">Maktab</th>
+                        <th className="text-left py-2 pr-4 font-medium">Tuman</th>
+                        <th className="text-right py-2 pr-4 font-medium">Ro'yxatda</th>
+                        <th className="text-right py-2 pr-4 font-medium">Topshirdi</th>
+                        <th className="text-right py-2 pr-4 font-medium">Foiz</th>
+                        <th className="text-right py-2 font-medium">O'rt. ball</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {alertSchools.map((s, i) => (
+                        <tr key={i} className="border-b border-border/30 hover:bg-muted/30 transition-colors">
+                          <td className="py-2.5 pr-4 font-medium max-w-[200px] truncate">{s.name}</td>
+                          <td className="py-2.5 pr-4 text-muted-foreground text-xs">{s.district}</td>
+                          <td className="py-2.5 pr-4 text-right">{s.registered.toLocaleString()}</td>
+                          <td className="py-2.5 pr-4 text-right">{s.answered.toLocaleString()}</td>
+                          <td className="py-2.5 pr-4 text-right">
+                            <span className={`font-semibold ${s.pct >= 50 ? "text-yellow-600" : "text-red-500"}`}>
+                              {s.pct.toFixed(0)}%
+                            </span>
+                          </td>
+                          <td className="py-2.5 text-right">
+                            <span className={`font-semibold ${s.avg >= 70 ? "text-green-600" : s.avg > 0 ? "text-red-500" : "text-muted-foreground"}`}>
+                              {s.avg > 0 ? s.avg.toFixed(1) : "—"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              )}
-            </CardContent>
+              </CardContent>
+            </Card>
+          </Section>
+        )}
+
+        {/* Loading skeleton for charts */}
+        {loading && (
+          <div className="space-y-5">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i} className="rounded-2xl">
+                <CardContent className="p-6"><Skeleton className="h-40" /></CardContent>
+              </Card>
+            ))}
           </div>
-        </motion.div>
-
-        {/* ─── Funnel + Daily Trend ─── */}
-        {!loading && stats && (
-          <motion.div variants={itemVariants} className="grid gap-5 lg:grid-cols-2">
-            <FunnelStats
-              registered={stats.totalUsers}
-              answered={stats.resultUsersCount}
-              passed={dtmUser?.stats?.dtm_readiness?.passed_count}
-              passLine={70}
-            />
-            <DailyTrend users={loadedEntities} />
-          </motion.div>
         )}
 
-        {/* ─── Readiness Gauge + Score Histogram ─── */}
-        {!loading && (
-          <motion.div variants={itemVariants} className="grid gap-5 lg:grid-cols-2">
-            {dtmUser?.stats?.dtm_readiness && (
-              <ReadinessGauge
-                readinessIndex={dtmUser.stats.dtm_readiness.readiness_index}
-                avgTotalBall={dtmUser.stats.dtm_readiness.avg_total_ball}
-                passedCount={dtmUser.stats.dtm_readiness.passed_count}
-                testedCount={dtmUser.stats.dtm_readiness.tested_count}
-                passLine={70}
-              />
-            )}
-            <ScoreHistogram users={loadedEntities} />
-          </motion.div>
-        )}
-
-        {/* ─── Language Score + Radar Subjects ─── */}
-        {!loading && (
-          <motion.div variants={itemVariants} className="grid gap-5 lg:grid-cols-2">
-            <LanguageScoreChart users={loadedEntities} />
-            <RadarSubjects subjectMastery={dtmUser?.stats?.subject_mastery} />
-          </motion.div>
-        )}
-
-        {/* ─── Scatter Schools ─── */}
-        {!loading && dtmUser?.schools && dtmUser.schools.length > 0 && (
-          <motion.div variants={itemVariants}>
-            <ScatterSchools schools={dtmUser.schools} />
-          </motion.div>
-        )}
-
-        {/* ─── Subject Comparison (primary vs secondary) ─── */}
-        {!loading && dtmUser?.schools && dtmUser.schools.length > 0 && (
-          <motion.div variants={itemVariants}>
-            <SubjectComparison schools={dtmUser.schools} />
-          </motion.div>
-        )}
-
-        {/* ─── Regional Heatmap ─── */}
-        {!loading && dtmUser?.districts && dtmUser.districts.length > 0 && (
-          <motion.div variants={itemVariants}>
-            <RegionalHeatmap districts={dtmUser.districts} />
-          </motion.div>
-        )}
-
-        {/* ─── Top Students + Inactive Schools ─── */}
-        {!loading && (
-          <motion.div variants={itemVariants} className="grid gap-5 lg:grid-cols-2">
-            <TopStudents users={loadedEntities} />
-            <InactiveSchools schools={dtmUser?.schools} />
-          </motion.div>
-        )}
-
-        {/* ─── School Risk & Readiness Table (with filters) ─── */}
-        {!loading && dtmUser?.schools && dtmUser.schools.length > 0 && (
-          <motion.div variants={itemVariants}>
-            <SchoolRiskTable
-              schools={dtmUser.schools}
-              passLine={70}
-            />
-          </motion.div>
-        )}
-
-      </motion.div>
+      </div>
     </AdminLayout>
   );
 }

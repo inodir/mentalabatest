@@ -1,273 +1,341 @@
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Users, FileText, TrendingUp, Percent, CheckCircle2, XCircle,
-} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useSchoolDTMData } from "@/hooks/useSchoolDTMData";
 import { useAuth } from "@/hooks/useAuth";
-import { GenderLanguageCharts } from "@/components/dashboard/GenderLanguageCharts";
-import { SubjectMasteryChart } from "@/components/dashboard/SubjectMasteryChart";
-import { BallDistributionChart } from "@/components/dashboard/BallDistributionChart";
-import { DTMReadinessCards } from "@/components/dashboard/DTMReadinessCards";
-import { MandatoryChart } from "@/components/dashboard/MandatoryChart";
-import { FunnelStats } from "@/components/dashboard/FunnelStats";
-import { DailyTrend } from "@/components/dashboard/DailyTrend";
-import { RadarSubjects } from "@/components/dashboard/RadarSubjects";
-import { ScoreHistogram } from "@/components/dashboard/ScoreHistogram";
-import { TopStudents } from "@/components/dashboard/TopStudents";
-import { ReadinessGauge } from "@/components/dashboard/ReadinessGauge";
-import { LanguageScoreChart } from "@/components/dashboard/LanguageScoreChart";
+import { Users, CheckCircle, XCircle, TrendingUp, Trophy, AlertTriangle, FileText } from "lucide-react";
 import { motion } from "framer-motion";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Cell, PieChart, Pie, Legend,
+} from "recharts";
 import { PDFExportButton } from "@/components/ui/pdf-export-button";
 import { exportSchoolPDF } from "@/lib/exportPDF";
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.08 } },
+const PASS_LINE = 70;
+
+const ChartTooltipStyle = {
+  backgroundColor: "hsl(var(--card))",
+  border: "1px solid hsl(var(--border))",
+  borderRadius: "12px",
+  fontSize: "12px",
 };
-const itemVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] as const } },
-};
+
+function KPI({ label, value, sub, icon: Icon, color, i }: {
+  label: string; value: string | number; sub?: string;
+  icon: React.ElementType; color: string; i: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: i * 0.06 }}
+    >
+      <Card className="rounded-2xl border-border/50">
+        <CardContent className="p-5 flex items-start gap-4">
+          <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${color}`}>
+            <Icon className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">{label}</p>
+            <p className="text-2xl font-bold leading-tight">{value}</p>
+            {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-3">
+      <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">{title}</h2>
+      {children}
+    </div>
+  );
+}
 
 export default function SchoolDashboard() {
   const { dtmUser } = useAuth();
   const { stats, loading, schoolCode, students } = useSchoolDTMData();
 
-  const schoolName = dtmUser?.school?.name || dtmUser?.full_name || "Bosh sahifa";
+  const schoolName = dtmUser?.school?.name || dtmUser?.full_name || "Maktab";
 
-  const recentStudents = [...students]
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 8);
+  const total      = stats?.totalStudents ?? 0;
+  const submitted  = stats?.studentsWithResults ?? 0;
+  const notSub     = stats?.studentsWithoutResults ?? 0;
+  const submitPct  = total > 0 ? ((submitted / total) * 100).toFixed(1) : "0";
+  const avgBall    = stats?.averageScore ?? 0;
+
+  // Score bands
+  const bands = [
+    { label: "0–40",    min: 0,   max: 40  },
+    { label: "40–70",   min: 40,  max: 70  },
+    { label: "70–100",  min: 70,  max: 100 },
+    { label: "100–130", min: 100, max: 130 },
+    { label: "130–160", min: 130, max: 160 },
+    { label: "160–189", min: 160, max: 190 },
+  ];
+
+  const scoreBands = bands.map(b => ({
+    label: b.label,
+    soni: students.filter(u => {
+      const p = u.dtm?.total_ball as number ?? 0;
+      return u.dtm?.tested && p >= b.min && p < b.max;
+    }).length,
+  }));
+
+  const passed    = students.filter(u => u.dtm?.tested && ((u.dtm?.total_ball as number) ?? 0) >= PASS_LINE).length;
+  const failed    = students.filter(u => u.dtm?.tested && ((u.dtm?.total_ball as number) ?? 0) > 0 && ((u.dtm?.total_ball as number) ?? 0) < PASS_LINE).length;
+  const passPct   = submitted > 0 ? ((passed / submitted) * 100).toFixed(1) : "0";
+
+  // Subject mastery bars from dtmUser.stats
+  const subjectMastery = (dtmUser?.stats?.subject_mastery ?? []).slice(0, 8).map(s => ({
+    name: s.subject.length > 20 ? s.subject.slice(0, 20) + "…" : s.subject,
+    mastery: Math.round(s.mastery_percent),
+    avg: Math.round(s.avg_point * 10) / 10,
+  }));
+
+  // Top 10 students by score
+  const topStudents = [...students]
+    .filter(u => u.dtm?.tested && (u.dtm?.total_ball as number) > 0)
+    .sort((a, b) => ((b.dtm?.total_ball as number) ?? 0) - ((a.dtm?.total_ball as number) ?? 0))
+    .slice(0, 10);
+
+  // Students under 70 who haven't submitted
+  const riskStudents = students.filter(u =>
+    !u.dtm?.tested || ((u.dtm?.total_ball as number) ?? 0) < PASS_LINE
+  ).slice(0, 10);
+
+  const pieData = [
+    { name: `O'tdi (≥${PASS_LINE})`, value: passed,  fill: "hsl(142 71% 45%)" },
+    { name: "O'tmadi",               value: failed,  fill: "hsl(0 72% 55%)"   },
+    { name: "Topshirmagan",           value: notSub,  fill: "hsl(215 16% 65%)" },
+  ].filter(d => d.value > 0);
 
   return (
     <AdminLayout variant="school">
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="space-y-6"
-      >
+      <div className="space-y-8">
+
         {/* Header */}
-        <motion.div variants={itemVariants} className="flex items-start justify-between gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">{schoolName}</h1>
             <p className="text-muted-foreground mt-1">
-              DTM statistikasi
-              {schoolCode && (
-                <Badge variant="secondary" className="ml-2">
-                  Maktab kodi: {schoolCode}
-                </Badge>
-              )}
+              DTM tahlil sahifasi
+              {schoolCode && <Badge variant="secondary" className="ml-2">Kod: {schoolCode}</Badge>}
             </p>
           </div>
           {!loading && stats && (
             <PDFExportButton
               label="PDF hisobot"
-              onExport={() =>
-                exportSchoolPDF({
-                  totalUsers: stats.totalStudents,
-                  answeredUsers: stats.studentsWithResults,
-                  testedPercent: stats.testedPercent,
-                  avgBall: stats.averageScore,
-                  adminName: dtmUser?.full_name,
-                })
-              }
+              onExport={() => exportSchoolPDF({
+                totalUsers: total,
+                answeredUsers: submitted,
+                testedPercent: parseFloat(submitPct),
+                avgBall,
+                passLine: PASS_LINE,
+                adminName: dtmUser?.full_name,
+                schoolName,
+              })}
             />
           )}
-        </motion.div>
+        </div>
 
+        {/* 1. Asosiy ko'rsatkichlar */}
+        <Section title="Asosiy ko'rsatkichlar">
+          {loading ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {[...Array(4)].map((_, i) => (
+                <Card key={i} className="rounded-2xl"><CardContent className="p-5"><Skeleton className="h-14" /></CardContent></Card>
+              ))}
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <KPI i={0} label="Jami o'quvchilar" value={total.toLocaleString()} icon={Users} color="bg-blue-500/15 text-blue-600" />
+              <KPI i={1} label="Test topshirganlar" value={submitted.toLocaleString()} sub={`${submitPct}%`} icon={CheckCircle} color="bg-green-500/15 text-green-600" />
+              <KPI i={2} label="Topshirmaganlar" value={notSub.toLocaleString()} icon={XCircle} color="bg-red-500/15 text-red-600" />
+              <KPI i={3} label={`${PASS_LINE}+ ball olganlar`} value={passed} sub={`${passPct}% topshirganlardan`} icon={Trophy} color="bg-yellow-500/15 text-yellow-600" />
+            </div>
+          )}
+          {!loading && avgBall > 0 && (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <KPI i={4} label="O'rtacha ball" value={`${avgBall.toFixed(1)} / 189`} icon={TrendingUp} color="bg-purple-500/15 text-purple-600" />
+            </div>
+          )}
+        </Section>
+
+        {/* 2. Ball taqsimoti */}
         {schoolCode && (
-          <>
-            {/* Stats Grid */}
-            <motion.div variants={itemVariants} className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {loading ? (
-                [...Array(4)].map((_, i) => (
-                  <div key={i} className="glass-card rounded-2xl p-6">
-                    <Skeleton className="h-20 rounded-xl animate-shimmer" />
-                  </div>
-                ))
-              ) : (
-                <>
-                  <StatCard
-                    title="Jami o'quvchilar"
-                    value={stats.totalStudents.toLocaleString()}
-                    icon={Users}
-                    index={0}
-                  />
-                  <StatCard
-                    title="Natijasi borlar"
-                    value={stats.studentsWithResults.toLocaleString()}
-                    icon={CheckCircle2}
-                    description="test topshirgan"
-                    index={1}
-                  />
-                  <StatCard
-                    title="Natijasi yo'qlar"
-                    value={stats.studentsWithoutResults.toLocaleString()}
-                    icon={XCircle}
-                    description="hali topshirmagan"
-                    index={2}
-                  />
-                  <StatCard
-                    title="Test topshirish %"
-                    value={`${stats.testedPercent.toFixed(1)}%`}
-                    icon={Percent}
-                    index={3}
-                  />
-                </>
-              )}
-            </motion.div>
-
-            {/* O'rtacha ball alohida StatCard */}
-            {!loading && stats.averageScore > 0 && (
-              <motion.div variants={itemVariants} className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <StatCard
-                  title="O'rtacha ball"
-                  value={`${stats.averageScore} / 189`}
-                  icon={TrendingUp}
-                  index={0}
-                />
-              </motion.div>
-            )}
-
-            {/* DTM Readiness */}
-            {!loading && dtmUser?.stats && (
-              <motion.div variants={itemVariants}>
-                <DTMReadinessCards
-                  riskStats={dtmUser.stats.risk_stats}
-                  dtmReadiness={dtmUser.stats.dtm_readiness}
-                  genderResultStats={dtmUser.stats.gender_result_stats}
-                />
-              </motion.div>
-            )}
-
-            {/* Tayyorlik ko'rsatkichi + Til bo'yicha ball */}
-            {!loading && dtmUser?.stats?.dtm_readiness && (
-              <motion.div variants={itemVariants} className="grid gap-5 lg:grid-cols-2">
-                <ReadinessGauge
-                  readinessIndex={dtmUser.stats.dtm_readiness.readiness_index}
-                  avgTotalBall={dtmUser.stats.dtm_readiness.avg_total_ball}
-                  passedCount={dtmUser.stats.dtm_readiness.passed_count}
-                  testedCount={dtmUser.stats.dtm_readiness.tested_count}
-                  passLine={70}
-                />
-                <LanguageScoreChart users={students as unknown as import("@/lib/dtm-api").DTMUser[]} />
-              </motion.div>
-            )}
-
-            {/* Gender + Language Charts */}
-            {!loading && dtmUser?.stats && (
-              <motion.div variants={itemVariants}>
-                <GenderLanguageCharts
-                  genderStats={dtmUser.stats.gender_stats}
-                  languageStats={dtmUser.stats.language_stats}
-                />
-              </motion.div>
-            )}
-
-            {/* Subject Mastery + Mandatory Chart */}
-            {!loading && dtmUser?.stats && (
-              <motion.div variants={itemVariants} className="grid gap-5 lg:grid-cols-2">
-                <SubjectMasteryChart subjectMastery={dtmUser.stats.subject_mastery} />
-                <MandatoryChart mandatoryChart={dtmUser.stats.mandatory_chart} />
-              </motion.div>
-            )}
-
-            {/* Ball Distribution */}
-            {!loading && dtmUser?.stats?.ball_distribution && (
-              <motion.div variants={itemVariants}>
-                <BallDistributionChart ballDistribution={dtmUser.stats.ball_distribution} />
-              </motion.div>
-            )}
-
-            {/* Bosqichli tahlil + Kunlik trend */}
-            {!loading && dtmUser?.stats && (
-              <motion.div variants={itemVariants} className="grid gap-5 lg:grid-cols-2">
-                <FunnelStats
-                  registered={stats.totalStudents}
-                  answered={stats.studentsWithResults}
-                  passed={dtmUser.stats.dtm_readiness?.passed_count}
-                  passLine={70}
-                />
-                <DailyTrend users={students as unknown as import("@/lib/dtm-api").DTMUser[]} />
-              </motion.div>
-            )}
-
-            {/* Radar + Score Histogram */}
-            {!loading && (
-              <motion.div variants={itemVariants} className="grid gap-5 lg:grid-cols-2">
-                <RadarSubjects subjectMastery={dtmUser?.stats?.subject_mastery} />
-                <ScoreHistogram users={students as unknown as import("@/lib/dtm-api").DTMUser[]} />
-              </motion.div>
-            )}
-
-            {/* Top o'quvchilar */}
-            {!loading && students.length > 0 && (
-              <motion.div variants={itemVariants}>
-                <TopStudents users={students as unknown as import("@/lib/dtm-api").DTMUser[]} />
-              </motion.div>
-            )}
-
-            {/* So'nggi ro'yxatdan o'tganlar */}
-            <motion.div variants={itemVariants}>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    So'nggi ro'yxatdan o'tganlar
-                  </CardTitle>
+          <Section title="Ball taqsimoti">
+            <div className="grid gap-5 lg:grid-cols-3">
+              <Card className="rounded-2xl lg:col-span-2">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">O'quvchilar ball oralig'i bo'yicha</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {loading ? (
-                    <div className="space-y-3">
-                      {[...Array(5)].map((_, i) => (
-                        <Skeleton key={i} className="h-14 rounded-xl" />
-                      ))}
-                    </div>
-                  ) : recentStudents.length > 0 ? (
-                    <div className="space-y-3">
-                      {recentStudents.map((student, idx) => (
-                        <motion.div
-                          key={student.id}
-                          initial={{ opacity: 0, x: -8 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: idx * 0.05 }}
-                          className="flex items-center justify-between rounded-xl border border-border/50 p-3 hover:bg-muted/50 transition-colors"
-                        >
-                          <div>
-                            <p className="font-medium">{student.full_name}</p>
-                            <p className="text-sm text-muted-foreground">{student.phone || "Telefon yo'q"}</p>
-                          </div>
-                          <div className="text-right">
-                            {student.dtm?.tested ? (
-                              <>
-                                {student.dtm.total_ball != null && (
-                                  <p className="text-lg font-bold text-primary">{student.dtm.total_ball}</p>
-                                )}
-                                <Badge variant="default" className="text-xs">Topshirgan</Badge>
-                              </>
-                            ) : (
-                              <Badge variant="secondary" className="text-xs">Topshirmagan</Badge>
-                            )}
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex h-[200px] items-center justify-center text-muted-foreground">
-                      O'quvchilar topilmadi
-                    </div>
-                  )}
+                  <div className="h-[220px]">
+                    {loading ? <Skeleton className="h-full" /> : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={scoreBands} margin={{ top: 8 }}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" vertical={false} />
+                          <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                          <YAxis tick={{ fontSize: 11 }} />
+                          <Tooltip contentStyle={ChartTooltipStyle}
+                            formatter={(v: number) => [`${v} o'quvchi`, "Soni"]} />
+                          <Bar dataKey="soni" radius={[6, 6, 0, 0]}>
+                            {scoreBands.map((b, i) => (
+                              <Cell key={b.label} fill={i < 2 ? "hsl(0 72% 55%)" : i === 2 ? "hsl(38 92% 50%)" : "hsl(142 71% 45%)"} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
-            </motion.div>
-          </>
+
+              <Card className="rounded-2xl">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Umumiy holat</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[220px]">
+                    {loading ? <Skeleton className="h-full" /> : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={pieData} dataKey="value" cx="50%" cy="45%"
+                            outerRadius={72} innerRadius={40} paddingAngle={3}>
+                            {pieData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                          </Pie>
+                          <Tooltip contentStyle={ChartTooltipStyle} formatter={(v: number) => [`${v} o'quvchi`]} />
+                          <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: "11px" }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </Section>
         )}
-      </motion.div>
+
+        {/* 3. Fan ko'nikmasi */}
+        {subjectMastery.length > 0 && (
+          <Section title="Fan bo'yicha o'rtacha ball">
+            <Card className="rounded-2xl">
+              <CardContent className="pt-5">
+                <div className="h-[240px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={subjectMastery} layout="vertical" margin={{ left: 8, right: 50 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border/40" />
+                      <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} tickFormatter={v => `${v}%`} />
+                      <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 9 }} />
+                      <Tooltip contentStyle={ChartTooltipStyle}
+                        formatter={(v: number, name: string) => [
+                          name === "mastery" ? `${v}%` : `${v} ball`,
+                          name === "mastery" ? "Ko'nikma" : "O'rt. ball",
+                        ]} />
+                      <Bar dataKey="mastery" radius={[0, 6, 6, 0]} name="mastery">
+                        {subjectMastery.map((s, i) => (
+                          <Cell key={i} fill={s.mastery >= 70 ? "hsl(142 71% 45%)" : s.mastery >= 40 ? "hsl(38 92% 50%)" : "hsl(0 72% 55%)"} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </Section>
+        )}
+
+        {/* 4. Top o'quvchilar */}
+        {topStudents.length > 0 && (
+          <Section title="Eng yuqori natija ko'rsatgan o'quvchilar">
+            <Card className="rounded-2xl">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Trophy className="h-4 w-4 text-yellow-500" />
+                  Top 10 o'quvchi
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {topStudents.map((u, i) => {
+                    const ball = (u.dtm?.total_ball as number) ?? 0;
+                    return (
+                      <div key={u.id} className="flex items-center gap-3 rounded-xl border border-border/40 p-3">
+                        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold
+                          ${i === 0 ? "bg-yellow-500/20 text-yellow-600" : i === 1 ? "bg-slate-300/40 text-slate-600" : i === 2 ? "bg-orange-500/20 text-orange-600" : "bg-muted text-muted-foreground"}`}>
+                          {i + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{u.full_name}</p>
+                          <p className="text-xs text-muted-foreground">{u.phone || "—"}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-lg font-bold ${ball >= 70 ? "text-green-600" : "text-red-500"}`}>{ball}</p>
+                          <p className="text-xs text-muted-foreground">/ 189</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </Section>
+        )}
+
+        {/* 5. Diqqat talab o'quvchilar */}
+        {riskStudents.length > 0 && (
+          <Section title="Topshirmagan yoki past ball olgan o'quvchilar">
+            <Card className="rounded-2xl border-orange-200 dark:border-orange-900/40">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-orange-500" />
+                  Diqqat kerak bo'lgan o'quvchilar
+                  <Badge variant="destructive" className="ml-auto">{riskStudents.length} ta</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {riskStudents.map((u, i) => {
+                    const ball = (u.dtm?.total_ball as number) ?? 0;
+                    const tested = u.dtm?.tested ?? false;
+                    return (
+                      <div key={u.id || i} className="flex items-center gap-3 rounded-xl border border-orange-200/50 dark:border-orange-900/30 p-3">
+                        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{u.full_name}</p>
+                          <p className="text-xs text-muted-foreground">{u.phone || "—"}</p>
+                        </div>
+                        <div className="text-right">
+                          {tested ? (
+                            <Badge variant="destructive" className="text-xs">{ball} ball</Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">Topshirmagan</Badge>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </Section>
+        )}
+
+        {loading && (
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i} className="rounded-2xl"><CardContent className="p-6"><Skeleton className="h-32" /></CardContent></Card>
+            ))}
+          </div>
+        )}
+
+      </div>
     </AdminLayout>
   );
 }
