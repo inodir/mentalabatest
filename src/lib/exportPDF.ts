@@ -550,9 +550,9 @@ function drawSchoolsTable(doc: Doc, schools: DTMSchoolInfo[], passLine: number, 
     head: [["#", "Maktab nomi", "Viloyat", "Tuman", "Ro'yxat", "Topshirdi", "%", "Ball", "Majb.", "Xavf"]],
     body: rows,
     margin: { left: 14, right: 14 },
-    styles:      { fontSize: 7.5, cellPadding: 2.5, overflow: "linebreak" },
-    headStyles:  { fillColor: C.primary, textColor: 255, fontStyle: "bold", fontSize: 7.5 },
-    alternateRowStyles: { fillColor: C.light },
+    styles:      { fontSize: 7, cellPadding: 3, overflow: "linebreak" },
+    headStyles:  { fillColor: [15, 23, 42], textColor: 255, fontStyle: "bold", fontSize: 7.5 },
+    alternateRowStyles: { fillColor: [248, 250, 252] }, // Slate-50 Very light
     columnStyles: {
       0:  { halign: "center", cellWidth: 7 },
       1:  { cellWidth: 48 },
@@ -560,18 +560,22 @@ function drawSchoolsTable(doc: Doc, schools: DTMSchoolInfo[], passLine: number, 
       3:  { cellWidth: 26 },
       4:  { halign: "right", cellWidth: 14 },
       5:  { halign: "right", cellWidth: 14 },
-      6:  { halign: "center", cellWidth: 10 },
+      6:  { halign: "center", fontStyle: "bold", cellWidth: 12 },
       7:  { halign: "center", fontStyle: "bold", cellWidth: 12 },
       8:  { halign: "center", cellWidth: 12 },
-      9:  { halign: "center", cellWidth: 20 },
+      9:  { cellWidth: 20 },
     },
     willDrawCell: (hookData) => {
       if (hookData.section === "body" && hookData.column.index === 9) {
         const val = String(hookData.cell.raw);
-        if (val === "Yuqori xavf")  { doc.setFillColor(...C.cardRed);    doc.rect(hookData.cell.x, hookData.cell.y, hookData.cell.width, hookData.cell.height, "F"); doc.setTextColor(...C.danger); }
-        else if (val === "O'rta xavf") { doc.setFillColor(...C.cardYellow); doc.rect(hookData.cell.x, hookData.cell.y, hookData.cell.width, hookData.cell.height, "F"); doc.setTextColor(...C.warning); }
-        else if (val === "Xavfsiz")  { doc.setFillColor(...C.cardGreen);  doc.rect(hookData.cell.x, hookData.cell.y, hookData.cell.width, hookData.cell.height, "F"); doc.setTextColor(...C.success); }
-        else { doc.setTextColor(...C.muted); }
+        let dotColor = C.muted;
+        if (val === "Yuqori xavf") dotColor = C.danger;
+        else if (val === "O'rta xavf") dotColor = C.warning;
+        else if (val === "Xavfsiz") dotColor = C.success;
+        
+        doc.setFillColor(...dotColor);
+        doc.circle(hookData.cell.x + 3, hookData.cell.y + hookData.cell.height / 2, 1.3, "F");
+        doc.setTextColor(...dotColor);
       }
     },
   });
@@ -600,21 +604,25 @@ function drawDistrictsTable(doc: Doc, districts: DTMDistrictInfo[], y: number): 
     body: rows,
     margin: { left: 14, right: 14 },
     styles:      { fontSize: 8.5, cellPadding: 3 },
-    headStyles:  { fillColor: C.primary, textColor: 255, fontStyle: "bold" },
-    alternateRowStyles: { fillColor: C.light },
+    headStyles:  { fillColor: [15, 23, 42], textColor: 255, fontStyle: "bold" },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
     columnStyles: {
       0: { halign: "center", cellWidth: 10 },
       3: { halign: "center" },
       4: { halign: "right" },
       5: { halign: "right" },
-      6: { halign: "center", fontStyle: "bold" },
+      6: { halign: "center" },
     },
     willDrawCell: (hookData) => {
       if (hookData.section === "body" && hookData.column.index === 6) {
         const val = parseFloat(String(hookData.cell.raw));
-        if (val >= 80)      { doc.setTextColor(...C.success); }
-        else if (val >= 50) { doc.setTextColor(...C.warning); }
-        else                { doc.setTextColor(...C.danger);  }
+        let dotColor = C.danger;
+        if (val >= 80)      dotColor = C.success;
+        else if (val >= 50) dotColor = C.warning;
+        
+        doc.setFillColor(...dotColor);
+        doc.circle(hookData.cell.x + 3, hookData.cell.y + hookData.cell.height / 2, 1.5, "F");
+        doc.setTextColor(...dotColor);
       }
     },
   });
