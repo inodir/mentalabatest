@@ -13,6 +13,7 @@ export default function SecurityDashboard() {
   const navigate = useNavigate();
   
   const [logs, setLogs] = useState(logsData);
+  const [viewingCapture, setViewingCapture] = useState<string | null>(null);
   const [blockedIPs, setBlockedIPs] = useState<string[]>(() => {
     return JSON.parse(localStorage.getItem("blocked_ips") || "[]");
   });
@@ -216,7 +217,12 @@ export default function SecurityDashboard() {
                             {!isIpBlocked ? (
                               <Button size="sm" variant="destructive" className="h-7 text-[10px] px-2 rounded-lg bg-red-600 hove:bg-red-700" onClick={() => blockIP(l.ip)}>Bloklash</Button>
                             ) : (
-                              <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 rounded-lg text-emerald-600 border-emerald-500/30 hover:bg-emerald-50" onClick={() => unblockIP(l.ip)}>O'chirish</Button>
+                              <div className="flex items-center gap-1">
+                                <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 rounded-lg text-emerald-600 border-emerald-500/30 hover:bg-emerald-50" onClick={() => unblockIP(l.ip)}>O'chirish</Button>
+                                <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 rounded-lg text-red-600 border-red-500/20 bg-red-500/5 hover:bg-red-500/10 gap-1 flex items-center" onClick={() => setViewingCapture(l.ip)}>
+                                  📷 Screen
+                                </Button>
+                              </div>
                             )}
                           </div>
                         </td>
@@ -250,6 +256,48 @@ export default function SecurityDashboard() {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* 🖼️ Screen Capture Modal Simulation */}
+        {viewingCapture && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setViewingCapture(null)}>
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-card border border-border/80 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="p-4 border-b border-border/50 flex items-center justify-between">
+                <h3 className="font-bold flex items-center gap-2 text-sm"><ShieldAlert className="h-4 w-4 text-red-600" /> Ekran Tasviri (Sandbox): IP {viewingCapture}</h3>
+                <Button size="icon" variant="ghost" className="rounded-full h-8 w-8" onClick={() => setViewingCapture(null)}><XCircle className="h-4 w-4" /></Button>
+              </div>
+              <div className="p-0 aspect-video bg-black/95 relative flex flex-col items-center justify-center font-mono text-[11px] text-emerald-400">
+                <div className="absolute top-3 left-3 text-red-600 text-[10px] animate-pulse font-bold flex items-center gap-1">● REC - CAPTURED</div>
+                <pre className="p-6 w-full h-full overflow-hidden text-emerald-500 opacity-80 select-none">
+{`
+# Session ID: ${Math.random().toString(36).substring(2, 10).toUpperCase()}
+# Timestamp: ${new Date().toLocaleTimeString()}
+# User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)
+# Location: ${logs.find(l => l.ip === viewingCapture)?.location || "Aniq emas"} (IP orqali)
+# Path: /super-admin/compare_entities?filter=all
+# Payload: UNION SELECT null, username, password FROM adm_users--
+# Local IP: 192.168.1.13
+
+[SYSTEM] Dom rendering captured to internal node capture. Buffer flushed.
+[ALERT] Remote view bound to WebSocket channel 5.
+[EXEC] block_ip(${viewingCapture});
+`}
+                </pre>
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex items-center justify-center">
+                  <div className="text-center">
+                    <Lock className="h-12 w-12 mx-auto text-red-500 mb-2 animate-bounce" />
+                    <p className="text-sm font-semibold text-white">Xavf to'xtatildi! User blokka tushdi.</p>
+                    <p className="text-xs text-muted-foreground mt-1">Noma'lum skriptlar ishga tushirilgan sahifa holati saqlandi.</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </div>
     </AdminLayout>
