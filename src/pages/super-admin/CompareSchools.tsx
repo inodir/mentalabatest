@@ -1,21 +1,68 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
-import { BarChart, Users, CheckCircle, TrendingUp, School } from "lucide-react";
+import { useDTMDashboard } from "@/hooks/useDTMDashboard";
+import { BarChart as BarChartIcon, Users, CheckCircle, TrendingUp, School, ArrowUpRight, ArrowDownRight, Globe, Award, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+
+const PASS_LINE = 70;
 
 export default function CompareSchools() {
   const { dtmUser } = useAuth();
+  const { loadedEntities, mode, loading } = useDTMDashboard();
   const schools = dtmUser?.schools ?? [];
 
   const [schoolA, setSchoolA] = useState<string>("none");
   const [schoolB, setSchoolB] = useState<string>("none");
 
-  const dataA = schools.find(s => s.code === schoolA);
-  const dataB = schools.find(s => s.code === schoolB);
+  const dataA = useMemo(() => {
+    if (schoolA === "none") return null;
+    const currSchool = schools.find(s => s.code === schoolA);
+    const list = loadedEntities.filter(u => u.school_code === schoolA);
+    const registered = list.length || currSchool?.registered_count || 0;
+    const answered = list.filter(u => u.has_result).length || currSchool?.answered_count || 0;
+    const passed = list.filter(u => u.has_result && (u.total_point ?? 0) >= PASS_LINE).length;
+    const totalScore = list.filter(u => u.has_result).reduce((sum, u) => sum + (u.total_point ?? 0), 0);
+    const avg = answered > 0 ? totalScore / answered : (currSchool?.avg_total_ball ?? 0);
+
+    return {
+      name: currSchool?.name || "Maktab A", code: schoolA, district: currSchool?.district || "—", region: currSchool?.region || "—",
+      registered, answered, passed, pct: registered > 0 ? (answered / registered) * 100 : 0, avg,
+      boys: list.filter(u => u.gender === "male").length, girls: list.filter(u => u.gender === "female").length,
+      uz: list.filter(u => u.language === "uz").length, ru: list.filter(u => u.language === "ru").length,
+    };
+  }, [schoolA, loadedEntities, schools]);
+
+  const dataB = useMemo(() => {
+    if (schoolB === "none") return null;
+    const currSchool = schools.find(s => s.code === schoolB);
+    const list = loadedEntities.filter(u => u.school_code === schoolB);
+    const registered = list.length || currSchool?.registered_count || 0;
+    const answered = list.filter(u => u.has_result).length || currSchool?.answered_count || 0;
+    const passed = list.filter(u => u.has_result && (u.total_point ?? 0) >= PASS_LINE).length;
+    const totalScore = list.filter(u => u.has_result).reduce((sum, u) => sum + (u.total_point ?? 0), 0);
+    const avg = answered > 0 ? totalScore / answered : (currSchool?.avg_total_ball ?? 0);
+
+    return {
+      name: currSchool?.name || "Maktab B", code: schoolB, district: currSchool?.district || "—", region: currSchool?.region || "—",
+      registered, answered, passed, pct: registered > 0 ? (answered / registered) * 100 : 0, avg,
+      boys: list.filter(u => u.gender === "male").length, girls: list.filter(u => u.gender === "female").length,
+      uz: list.filter(u => u.language === "uz").length, ru: list.filter(u => u.language === "ru").length,
+    };
+  }, [schoolB, loadedEntities, schools]);
+
+  const comparisonChartData = useMemo(() => {
+    if (!dataA && !dataB) return [];
+    return [
+      { name: "Topshirish (%)", A: Math.round(dataA?.pct ?? 0), B: Math.round(dataB?.pct ?? 0) },
+      { name: "O'rtacha Ball", A: Math.round(dataA?.avg ?? 0), B: Math.round(dataB?.avg ?? 0) },
+      { name: "O'tish (%)", A: dataA?.answered ? Math.round((dataA.passed / dataA.answered) * 100) : 0, B: dataB?.answered ? Math.round((dataB.passed / dataB.answered) * 100) : 0 },
+    ];
+  }, [dataA, dataB]);
 
   return (
     <AdminLayout variant="super">
@@ -55,6 +102,38 @@ export default function CompareSchools() {
             </Select>
           </div>
         </div>
+
+        {/* Unified Comparison Chart */}
+        {(dataA || dataB) && (
+          <Card className="rounded-2xl border-primary/10 bg-background/40 backdrop-blur-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <BarChartIcon className="h-5 w-5 text-primary" /> Vizual taqqoslash
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {mode === "fast" && (
+                <div className="flex items-center gap-2 text-amber-600 bg-amber-500/10 p-3 rounded-xl mb-3 text-xs border border-amber-500/20">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>Aniqroq vizualizatsiya va gender/til tahlili uchun Bosh sahifada <strong>"Aniq rejim"</strong>ni yoqing.</span>
+                </div>
+              )}
+              <div className="h-[250px] mt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={comparisonChartData} margin={{ top: 20, right: 30, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "12px", fontSize: "12px" }} />
+                    <Legend iconType="circle" />
+                    <Bar dataKey="A" name={dataA?.name || "1-Maktab"} fill="hsl(217 91% 60%)" radius={[4, 4, 0, 0]} barSize={35} />
+                    <Bar dataKey="B" name={dataB?.name || "2-Maktab"} fill="hsl(262 83% 58%)" radius={[4, 4, 0, 0]} barSize={35} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Comparison Dashboard */}
         <div className="grid gap-6 md:grid-cols-2">
@@ -129,10 +208,39 @@ function SchoolCompareCard({ title, school }: { title: string, school: any }) {
               <span className="font-bold">{avg} ball</span>
             </div>
             <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(avg / 189) * 100}%` }} />
+              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(100, (avg / 189) * 100)}%` }} />
             </div>
           </div>
         </div>
+
+        {/* Detailed Splits (Conditional on mode) */}
+        {(school.boys > 0 || school.girls > 0 || school.uz > 0 || school.ru > 0) && (
+          <div className="pt-3 border-t border-border/30 grid grid-cols-2 gap-2 text-xs">
+            <div className="space-y-1 bg-background/50 p-2 rounded-xl border border-border/30">
+              <span className="text-muted-foreground block">Jinsi (O'g'il / Qiz)</span>
+              <div className="flex items-center justify-between font-bold">
+                <span className="text-blue-600">{school.boys}</span>
+                <span className="text-pink-600">{school.girls}</span>
+              </div>
+            </div>
+            <div className="space-y-1 bg-background/50 p-2 rounded-xl border border-border/30">
+              <span className="text-muted-foreground block">Tili (Uz / Ru)</span>
+              <div className="flex items-center justify-between font-bold">
+                <span className="text-slate-700 dark:text-slate-300">{school.uz}</span>
+                <span className="text-indigo-600">{school.ru}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {school.passed > 0 && (
+          <div className="pt-2 flex items-center justify-between text-xs bg-green-500/5 p-2 rounded-xl border border-green-500/10">
+            <span className="flex items-center gap-1 text-green-700 dark:text-green-400">
+              <Award className="h-3.5 w-3.5" /> O'tish balli yig'ganlar
+            </span>
+            <span className="font-bold text-green-600">{school.passed} o'quvchi</span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
