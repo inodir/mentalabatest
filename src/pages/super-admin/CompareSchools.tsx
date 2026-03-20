@@ -161,10 +161,10 @@ function SchoolCompareCard({ title, school }: { title: string, school: any }) {
     );
   }
 
-  const registered = school.registered_count ?? 0;
-  const answered = school.answered_count ?? 0;
-  const pct = Math.round(school.tested_percent ?? 0);
-  const avg = Math.round((school.avg_total_ball ?? 0) * 10) / 10;
+  const registered = school.registered ?? school.registered_count ?? 0;
+  const answered = school.answered ?? school.answered_count ?? 0;
+  const pct = Math.round(school.pct ?? school.tested_percent ?? 0);
+  const avg = Math.round((school.avg ?? school.avg_total_ball ?? 0) * 10) / 10;
 
   return (
     <Card className="rounded-2xl border-primary/20 bg-gradient-to-b from-transparent to-primary/5">
