@@ -9,10 +9,10 @@ import { Label } from "@/components/ui/label";
 import { useDTMDashboard } from "@/hooks/useDTMDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Users, CheckCircle, XCircle, TrendingUp, School, Settings, Shield,
+  Users, CheckCircle, XCircle, TrendingUp, School, Settings, Shield, ShieldAlert,
   RefreshCw, AlertCircle, Loader2, AlertTriangle, Trophy, MapPin, Clock, Award,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, PieChart, Pie, Legend,
@@ -376,7 +376,23 @@ export default function SuperAdminDashboard() {
   const hourlyChart = hourlyData.map((count, hour) => ({
     hour: `${hour}:00`,
     count
-  })).filter(h => h.count > 0 || h.hour === "12:00" || h.hour === "15:00"); // keep active or core hours
+  })).filter(h => h.count > 0 || h.hour === "12:00" || h.hour === "15:00");
+
+  // ─── Real-Time Alert Banner State ────────────────────────────────
+  const [currentAlertIndex, setCurrentAlertIndex] = useState(0);
+  const [alerts, setAlerts] = useState<any[]>([
+    { text: "Admin Ismatov online (Toshkent)", type: "online" },
+    { text: "Diqqat! IP 172.20.10.3 SQL Injection xuruji blokda!", type: "attack" },
+    { text: "Direktor online (Samarqand Maktab #4)", type: "online" },
+    { text: "Noma'lum bot faolligi to'xtatildi (IP 192.168.1.55)", type: "attack" }
+  ]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setCurrentAlertIndex(prev => (prev + 1) % alerts.length);
+    }, 4500);
+    return () => clearInterval(id);
+  }, [alerts.length]);
 
   // Districts ranking
   const districtsRanked = (dtmUser?.districts ?? [])
@@ -415,6 +431,36 @@ export default function SuperAdminDashboard() {
 
   return (
     <AdminLayout variant="super">
+      {/* 🚨 Live Security & Activity Ticker Alert */}
+      <div className="mx-2 mt-2">
+        <AnimatePresence mode="wait">
+          <motion.div 
+            key={currentAlertIndex}
+            initial={{ opacity: 0, y: -10, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.98 }}
+            transition={{ duration: 0.35 }}
+            className={`p-3 rounded-2xl flex items-center justify-between shadow-sm border text-xs font-semibold ${
+              alerts[currentAlertIndex]?.type === "attack" 
+                ? "bg-red-500/10 border-red-500/30 text-red-600" 
+                : "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {alerts[currentAlertIndex]?.type === "attack" ? (
+                <ShieldAlert className="h-4 w-4 animate-pulse" />
+              ) : (
+                <Users className="h-4 w-4 animate-bounce" />
+              )}
+              <span>Tizim Xabari: {alerts[currentAlertIndex]?.text}</span>
+            </div>
+            <Badge variant="outline" className={`rounded-full text-[10px] px-2 ${
+              alerts[currentAlertIndex]?.type === "attack" ? "bg-red-600/10 text-red-600 border-red-500/30" : "bg-emerald-600/10 text-emerald-600 border-emerald-500/30"
+            }`}>Faol</Badge>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
       <div className="space-y-8">
 
         {/* ── Header ─────────────────────────────────────────────── */}
