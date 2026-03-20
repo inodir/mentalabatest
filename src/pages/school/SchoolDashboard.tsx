@@ -108,6 +108,28 @@ export default function SchoolDashboard() {
   const failed    = students.filter(u => u.dtm?.tested && ((u.dtm?.total_ball as number) ?? 0) > 0 && ((u.dtm?.total_ball as number) ?? 0) < PASS_LINE).length;
   const passPct   = submitted > 0 ? ((passed / submitted) * 100).toFixed(1) : "0";
 
+  // Language stats
+  const l_uz = students.filter(u => u.language?.toLowerCase() === "uz" || u.language === "o'zbek").length;
+  const l_ru = students.filter(u => u.language?.toLowerCase() === "ru" || u.language === "rus").length;
+  const l_other = students.length - l_uz - l_ru;
+
+  // Gender stats
+  const g_male = students.filter(u => u.gender?.toLowerCase() === "erkak" || u.gender?.toLowerCase() === "male" || u.gender === "M").length;
+  const g_female = students.filter(u => u.gender?.toLowerCase() === "ayol" || u.gender?.toLowerCase() === "female" || u.gender === "F").length;
+  const g_other = students.length - g_male - g_female;
+
+  const langData = [
+    { name: "O'zbek", value: l_uz, fill: "hsl(217 91% 60%)" },
+    { name: "Rus",    value: l_ru, fill: "hsl(0 84% 60%)"    },
+    { name: "Boshqa", value: l_other, fill: "hsl(0 0% 60%)"   },
+  ].filter(d => d.value > 0);
+
+  const genderData = [
+    { name: "O'g'il", value: g_male,   fill: "hsl(210 100% 50%)" },
+    { name: "Qiz",   value: g_female, fill: "hsl(330 100% 70%)" },
+    { name: "Noma'lum", value: g_other, fill: "hsl(0 0% 60%)"   },
+  ].filter(d => d.value > 0);
+
   // Subject mastery bars from dtmUser.stats
   const subjectMastery = (dtmUser?.stats?.subject_mastery ?? []).slice(0, 8).map(s => ({
     name: s.subject.length > 20 ? s.subject.slice(0, 20) + "…" : s.subject,
@@ -240,6 +262,52 @@ export default function SchoolDashboard() {
                           <Pie data={pieData} dataKey="value" cx="50%" cy="45%"
                             outerRadius={72} innerRadius={40} paddingAngle={3}>
                             {pieData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                          </Pie>
+                          <Tooltip contentStyle={ChartTooltipStyle} formatter={(v: number) => [`${v} o'quvchi`]} />
+                          <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: "11px" }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Language Pie */}
+              <Card className="rounded-2xl">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Til bo'yicha tahlil</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[200px]">
+                    {loading ? <Skeleton className="h-full" /> : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={langData} dataKey="value" cx="50%" cy="45%"
+                            outerRadius={68} innerRadius={35} paddingAngle={3}>
+                            {langData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                          </Pie>
+                          <Tooltip contentStyle={ChartTooltipStyle} formatter={(v: number) => [`${v} o'quvchi`]} />
+                          <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: "11px" }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Gender Pie */}
+              <Card className="rounded-2xl">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Jins bo'yicha tahlil</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[200px]">
+                    {loading ? <Skeleton className="h-full" /> : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={genderData} dataKey="value" cx="50%" cy="45%"
+                            outerRadius={68} innerRadius={35} paddingAngle={3}>
+                            {genderData.map((d, i) => <Cell key={i} fill={d.fill} />)}
                           </Pie>
                           <Tooltip contentStyle={ChartTooltipStyle} formatter={(v: number) => [`${v} o'quvchi`]} />
                           <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: "11px" }} />

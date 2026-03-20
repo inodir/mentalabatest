@@ -15,6 +15,7 @@ import {
   GraduationCap,
   Settings,
   MapPin,
+  BarChart,
 } from "lucide-react";
 
 interface NavItem {
@@ -27,6 +28,7 @@ const superAdminNavItems: NavItem[] = [
   { title: "Bosh sahifa", href: "/super-admin", icon: LayoutDashboard },
   { title: "Foydalanuvchilar", href: "/super-admin/users", icon: Users },
   { title: "Maktablar", href: "/super-admin/schools", icon: School },
+  { title: "Solishtirish", href: "/super-admin/compare", icon: BarChart },
   { title: "Tuman adminlari", href: "/super-admin/district-admins", icon: MapPin },
   { title: "Sozlamalar", href: "/super-admin/settings", icon: Settings },
 ];
