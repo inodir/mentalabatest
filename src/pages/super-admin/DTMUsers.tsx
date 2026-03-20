@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -622,21 +623,26 @@ export default function DTMUsers() {
                               {page * limit + index + 1}
                             </TableCell>
                             <TableCell>
-                              <div className="space-y-1">
-                                <p className="font-medium truncate max-w-[200px]">
-                                  {user.full_name || "—"}
-                                </p>
-                                {user.district && (
-                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    <span className="truncate max-w-[180px]">
-                                      {user.district}
-                                    </span>
-                                  </div>
-                                )}
+                              <div className="flex items-center gap-3">
+                                <div className="flex-shrink-0 h-9 w-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center font-bold text-primary border border-primary/20 shadow-sm">
+                                  {user.full_name ? user.full_name[0].toUpperCase() : "?"}
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="font-semibold text-sm truncate max-w-[200px] text-foreground group-hover:text-primary transition-colors">
+                                    {user.full_name || "—"}
+                                  </p>
+                                  {user.district && (
+                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                      <span className="truncate max-w-[180px]">
+                                        {user.district}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline" className="font-mono">
+                              <Badge variant="outline" className="font-mono rounded-lg bg-background/50 border-border/60 hover:bg-background">
                                 {user.school_code || "—"}
                               </Badge>
                             </TableCell>
@@ -644,7 +650,7 @@ export default function DTMUsers() {
                               {user.phone ? (
                                 <a
                                   href={`tel:${user.phone}`}
-                                  className="inline-flex items-center gap-1 text-primary hover:underline text-sm"
+                                  className="inline-flex items-center gap-1 text-primary hover:underline text-sm font-medium"
                                 >
                                   <Phone className="h-3 w-3" />
                                   {user.phone}
@@ -655,13 +661,13 @@ export default function DTMUsers() {
                             </TableCell>
                             <TableCell className="text-center">
                               {user.has_result ? (
-                                <Badge className="bg-success/20 text-success border-success/30 gap-1">
-                                  <CheckCircle2 className="h-3 w-3" />
+                                <Badge className="bg-green-500/15 text-green-600 border-green-500/30 gap-1 rounded-full px-2.5 py-0.5 font-medium shadow-none">
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
                                   Bor
                                 </Badge>
                               ) : (
-                                <Badge variant="secondary" className="gap-1">
-                                  <XCircle className="h-3 w-3" />
+                                <Badge variant="secondary" className="gap-1 rounded-full px-2.5 py-0.5 shadow-none text-muted-foreground bg-muted/50">
+                                  <XCircle className="h-3.5 w-3.5" />
                                   Yo'q
                                 </Badge>
                               )}
@@ -672,15 +678,16 @@ export default function DTMUsers() {
                             <TableCell className="text-center">
                               {user.total_point != null ? (
                                 <Badge 
-                                  className={
-                                    user.total_point >= 150
-                                      ? "bg-success/20 text-success border-success/30"
-                                      : user.total_point >= 100
-                                      ? "bg-warning/20 text-warning border-warning/30"
-                                      : "bg-muted text-muted-foreground"
-                                  }
+                                  className={cn(
+                                    "gap-1 rounded-lg px-2 py-1 font-bold shadow-none",
+                                    user.total_point >= 70 // Updated pass score limit frame from earlier instructions
+                                      ? "bg-gradient-to-br from-green-500/15 to-green-500/5 text-green-600 border-green-500/30"
+                                      : user.total_point >= 40
+                                      ? "bg-gradient-to-br from-yellow-500/15 to-yellow-500/5 text-yellow-600 border-yellow-500/30"
+                                      : "bg-gradient-to-br from-red-500/15 to-red-500/5 text-red-600 border-red-500/30"
+                                  )}
                                 >
-                                  <Award className="h-3 w-3 mr-1" />
+                                  <Award className="h-3.5 w-3.5" />
                                   {user.total_point}
                                 </Badge>
                               ) : (
@@ -688,7 +695,7 @@ export default function DTMUsers() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center justify-center gap-1">
+                              <div className="flex items-center justify-center gap-1.5">
                                 <FileButton 
                                   url={user.test_file_url} 
                                   type="test" 
