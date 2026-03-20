@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/select";
 import { useState, useMemo, useEffect } from "react";
 
+import logsData from "@/data/security_logs.json";
+
 const PASS_LINE = 70;
 
 const anim = {
@@ -380,16 +382,18 @@ export default function SuperAdminDashboard() {
 
   // ─── Real-Time Alert Banner State ────────────────────────────────
   const [currentAlertIndex, setCurrentAlertIndex] = useState(0);
-  const [alerts, setAlerts] = useState<any[]>([
-    { text: "Admin Ismatov online (Toshkent)", type: "online" },
-    { text: "Diqqat! IP 172.20.10.3 SQL Injection xuruji blokda!", type: "attack" },
-    { text: "Direktor online (Samarqand Maktab #4)", type: "online" },
-    { text: "Noma'lum bot faolligi to'xtatildi (IP 192.168.1.55)", type: "attack" }
-  ]);
+  const [alerts, setAlerts] = useState<any[]>(() => {
+    const online = logsData.filter((l: any) => l.status === "Active").map((l: any) => ({ text: `${l.user} online (${l.location})`, type: "online" }));
+    const attacks = logsData.filter((l: any) => l.status === "Blocked").map((l: any) => ({ text: `Diqqat! IP ${l.ip} xuruji blokda! (${l.action || "Hack attempt"})`, type: "attack" }));
+    const list = [...online, ...attacks];
+    return list.length > 0 ? list : [{ text: "Tizim xavfsiz. Hech qanday xatar yo'q.", type: "online" }];
+  });
 
   useEffect(() => {
     const id = setInterval(() => {
-      setCurrentAlertIndex(prev => (prev + 1) % alerts.length);
+      if (alerts.length > 0) {
+        setCurrentAlertIndex(prev => (prev + 1) % alerts.length);
+      }
     }, 4500);
     return () => clearInterval(id);
   }, [alerts.length]);
