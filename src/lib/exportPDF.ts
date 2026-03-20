@@ -243,6 +243,40 @@ function drawBarChart(
   return y + chartH + 14;
 }
 
+// ─── DRAW PIE CHART ON CANVAS helper ───────────────────────────────────
+function drawPieChartOnCanvas(data: { value: number; color: string }[]) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 300;
+  canvas.height = 300;
+  const ctx = canvas.getContext("2d")!;
+  
+  const total = data.reduce((sum, d) => sum + d.value, 0);
+  if (total === 0) return null;
+
+  let startAngle = -Math.PI / 2;
+  ctx.clearRect(0, 0, 300, 300);
+
+  data.forEach(d => {
+    const slice = (d.value / total) * 2 * Math.PI;
+    if (slice === 0) return;
+    ctx.fillStyle = d.color;
+    ctx.beginPath();
+    ctx.moveTo(150, 150);
+    ctx.arc(150, 150, 130, startAngle, startAngle + slice);
+    ctx.closePath();
+    ctx.fill();
+    startAngle += slice;
+  });
+
+  // Donut hole
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(150, 150, 65, 0, 2 * Math.PI);
+  ctx.fill();
+
+  return canvas.toDataURL("image/png");
+}
+
 // ─── SUMMARY STAT CARDS ─────────────────────────────────────────────
 function drawSummaryCards(doc: Doc, data: ExportData, y: number): number {
   y = sectionHeader(doc, "Umumiy ko'rsatkichlar", y, "📈");
@@ -276,6 +310,41 @@ function drawSummaryCards(doc: Doc, data: ExportData, y: number): number {
     doc.setTextColor(...C.muted);
     doc.text(c.label, bx + 1 + (boxW - 3) / 2, by + 13.5, { align: "center" });
   });
+
+  // ── Participation Pie Chart ──
+  const total = data.totalUsers ?? 0;
+  const answered = data.answeredUsers ?? 0;
+  const notAnswered = total - answered;
+
+  if (total > 0) {
+    const pPie = drawPieChartOnCanvas([
+      { value: answered, color: "#10b981" }, // Emerald
+      { value: Math.max(0, notAnswered), color: "#cbd5e1" } // Slate light
+    ]);
+    if (pPie) {
+      const pieY = y + (row + 1) * 20 + 4;
+      doc.addImage(pPie, "PNG", 20, pieY, 35, 35);
+      
+      const textX = 60;
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...C.dark);
+      doc.text("Test topshirish holati (Natijalar)", textX, pieY + 10);
+
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      // Answered
+      doc.setFillColor(16, 185, 129); doc.roundedRect(textX, pieY + 18, 3, 3, 1, 1, "F");
+      doc.text(`Natijasi bor: ${answered} ta (${((answered/total)*100).toFixed(1)}%)`, textX + 5, pieY + 20.5);
+      // Not Answered
+      doc.setFillColor(203, 213, 225); doc.roundedRect(textX, pieY + 25, 3, 3, 1, 1, "F");
+      doc.text(`Natija chiqmagan: ${Math.max(0, notAnswered)} ta (${((Math.max(0, notAnswered)/total)*100).toFixed(1)}%)`, textX + 5, pieY + 27.5);
+
+      doc.setTextColor(0, 0, 0);
+      return pieY + 41;
+    }
+  }
+
   doc.setTextColor(0, 0, 0);
   return y + (row + 1) * 20 + 6;
 }
@@ -375,50 +444,83 @@ function drawDemographics(doc: Doc, data: ExportData, y: number): number {
   const W = doc.internal.pageSize.getWidth();
   const LANG: Record<string, string> = { uz: "O'zbek", ru: "Rus", en: "Ingliz", kk: "Qozoq" };
 
-  // ─ gender table
+  // 14mm Padding
+  const currentX = 14;
+
+  // ─ Gender Pie ─
   if (data.genderStats) {
-    const gRows: string[][] = [];
     const total = (data.genderStats.male ?? 0) + (data.genderStats.female ?? 0);
-    if (data.genderStats.male !== undefined)
-      gRows.push(["Erkak", String(data.genderStats.male), total > 0 ? `${((data.genderStats.male!/total)*100).toFixed(1)}%` : "—"]);
-    if (data.genderStats.female !== undefined)
-      gRows.push(["Ayol", String(data.genderStats.female), total > 0 ? `${((data.genderStats.female!/total)*100).toFixed(1)}%` : "—"]);
+    const gPie = drawPieChartOnCanvas([
+      { value: data.genderStats.male ?? 0, color: "#0ea5e9" },   // Sky blue
+      { value: data.genderStats.female ?? 0, color: "#ec4899" }  // Pink
+    ]);
 
-    autoTable(doc, {
-      startY: y,
-      tableWidth: (W - 28) / 2 - 2,
-      head: [["Jins", "Soni", "Foiz"]],
-      body: gRows,
-      margin: { left: 14 },
-      styles:      { fontSize: 8, cellPadding: 3 },
-      headStyles:  { fillColor: C.primary, textColor: 255 },
-      alternateRowStyles: { fillColor: C.light },
-    });
+    if (gPie) {
+      doc.addImage(gPie, "PNG", currentX, y, 40, 40);
+    }
+
+    const textX = currentX + 45;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...C.dark);
+    doc.text("Jins bo'yicha taqsimot", textX, y + 8);
+
+    doc.setFontSize(8);
+    // Male
+    doc.setFillColor(14, 165, 233); doc.roundedRect(textX, y + 15, 3, 3, 1, 1, "F");
+    doc.setFont("helvetica", "normal"); 
+    doc.text(`O'g'il bolalar: ${data.genderStats.male ?? 0} ta (${total > 0 ? ((data.genderStats.male! / total) * 100).toFixed(1) : 0}%)`, textX + 5, y + 17.5);
+    // Female
+    doc.setFillColor(236, 72, 153); doc.roundedRect(textX, y + 22, 3, 3, 1, 1, "F");
+    doc.text(`Qiz bolalar: ${data.genderStats.female ?? 0} ta (${total > 0 ? ((data.genderStats.female! / total) * 100).toFixed(1) : 0}%)`, textX + 5, y + 24.5);
+    
+    doc.setFont("helvetica", "bold");
+    doc.text(`Jami: ${total} ta`, textX, y + 33);
   }
 
-  // ─ language table
+  // ─ Language Pie ─
   if (data.languageStats) {
-    const lRows = Object.entries(data.languageStats).map(([lang, count]) => [
-      LANG[lang] ?? lang, String(count)
-    ]);
+    const startX = W / 2 + 5;
     const total = Object.values(data.languageStats).reduce((s, v) => s + v, 0);
-    const lRowsFull = Object.entries(data.languageStats).map(([lang, count]) => [
-      LANG[lang] ?? lang, String(count), total > 0 ? `${((count/total)*100).toFixed(1)}%` : "—"
-    ]);
+    
+    // Convert to items
+    const colors = ["#2563eb", "#dc2626", "#eab308", "#8b5cf6", "#6b7280"];
+    const lItems = Object.entries(data.languageStats).map(([lang, count], i) => ({
+      label: LANG[lang] ?? lang,
+      value: count,
+      color: colors[i % colors.length]
+    }));
 
-    autoTable(doc, {
-      startY: y,
-      tableWidth: (W - 28) / 2 - 2,
-      head: [["Til", "Soni", "Foiz"]],
-      body: lRowsFull,
-      margin: { left: (W - 28) / 2 + 16 },
-      styles:      { fontSize: 8, cellPadding: 3 },
-      headStyles:  { fillColor: C.purple, textColor: 255 },
-      alternateRowStyles: { fillColor: C.light },
+    const lPie = drawPieChartOnCanvas(lItems);
+    if (lPie) {
+      doc.addImage(lPie, "PNG", startX, y, 40, 40);
+    }
+
+    const textX = startX + 45;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...C.dark);
+    doc.text("Ta'lim tili", textX, y + 8);
+
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    lItems.forEach((item, i) => {
+      const rx = textX;
+      const ry = y + 15 + i * 6;
+      if (ry > y + 42) return; 
+      
+      const rgb = item.color.startsWith('#') 
+        ? [parseInt(item.color.slice(1,3), 16), parseInt(item.color.slice(3,5), 16), parseInt(item.color.slice(5,7), 16)] 
+        : [100, 100, 100];
+        
+      doc.setFillColor(rgb[0], rgb[1], rgb[2]);
+      doc.roundedRect(rx, ry, 3, 3, 1, 1, "F");
+      doc.text(`${item.label}: ${item.value} ta (${total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)`, rx + 5, ry + 2.5);
     });
   }
 
-  return doc.lastAutoTable.finalY + 8;
+  doc.setTextColor(0, 0, 0);
+  return y + 45;
 }
 
 // ─── SCHOOLS TABLE ───────────────────────────────────────────────────
