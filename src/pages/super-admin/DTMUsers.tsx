@@ -78,22 +78,33 @@ const SubjectScore = ({
   
   const percentage = (score / maxScore) * 100;
   const colorClass = percentage >= 80 
-    ? "text-success bg-success/10 border-success/30" 
+    ? "text-green-600 bg-green-500/10 border-green-500/30" 
     : percentage >= 60 
-    ? "text-warning bg-warning/10 border-warning/30"
-    : "text-muted-foreground bg-muted border-border";
+    ? "text-yellow-600 bg-yellow-500/10 border-yellow-500/30"
+    : "text-muted-foreground bg-muted/60 border-border/50";
+
+  const getShortLabel = (str: string) => {
+    const s = str.toLowerCase();
+    if (s.includes("ona tili")) return "Ona";
+    if (s.includes("matematika")) return "Mat";
+    if (s.includes("tarix")) return "Tar";
+    return str.split(" ")[0].slice(0, 4);
+  };
+  
+  const displayLabel = getShortLabel(label);
 
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border text-xs font-medium ${colorClass}`}>
-            <Icon className="h-3 w-3" />
-            <span>{score}</span>
+          <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-semibold ${colorClass} hover:shadow-sm transition-all cursor-help`}>
+            <Icon className="h-2.5 w-2.5 opacity-80" />
+            <span>{displayLabel}: <span className="font-bold">{score}</span></span>
           </div>
         </TooltipTrigger>
-        <TooltipContent>
-          <p>{label}: {score}/{maxScore} ({Math.round(percentage)}%)</p>
+        <TooltipContent className="text-xs">
+          <p className="font-semibold">{label}</p>
+          <p className="text-muted-foreground">{score} / {maxScore} ({Math.round(percentage)}%)</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
