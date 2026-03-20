@@ -30,7 +30,7 @@ export function exportSuperAdminExcel(schools: any[], districts: any[], filename
       "Tuman": s.district || "—",
       "Kodi": s.code || s.schoolCode || "—",
       "O'quvchilar soni": s.registered_count ?? 0,
-      "Topshirganlar": s.answered_count ?? 0,
+      "Topshirganlar (Natijasi bor)": s.answered_count ?? 0,
       "Foiz (%)": s.tested_percent ? `${s.tested_percent.toFixed(1)}%` : "0%",
       "O'rtacha ball": s.avg_total_ball ?? 0,
     }));
@@ -43,7 +43,7 @@ export function exportSuperAdminExcel(schools: any[], districts: any[], filename
       "Tuman": d.district || "—",
       "Maktablar soni": d.school_count ?? 0,
       "O'quvchilar": d.registered_count ?? 0,
-      "Topshirganlar": d.answered_count ?? 0,
+      "Topshirganlar (Natijasi bor)": d.answered_count ?? 0,
       "Foiz (%)": d.tested_percent ? `${d.tested_percent.toFixed(1)}%` : "0%",
       "O'rtacha ball": d.avg_total_ball ?? 0,
     }));
@@ -72,7 +72,7 @@ export function exportStudentsExcel(students: any[], filename = "O'quvchilar_Sta
       "Telefon": u.phone || "—",
       "Sinf/Guruh": u.group_name || "—",
       "Maktab kodi": u.school_code || "—",
-      "Holat": tested ? "Topshirgan" : "Topshirmagan",
+      "Holat": tested ? "Natijasi bor" : "Natija chiqmagan",
       "Umumiy ball": tested && ball > 0 ? ball : "—",
     };
   });

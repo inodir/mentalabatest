@@ -83,8 +83,8 @@ export default function DistrictDashboard() {
 
   // Pie chart
   const pieData = [
-    { name: "Topshirganlar", value: submitted, fill: "hsl(142 71% 45%)" },
-    { name: "Topshirmaganlar", value: notSub, fill: "hsl(215 16% 65%)" },
+    { name: "Natijasi bor", value: submitted, fill: "hsl(142 71% 45%)" },
+    { name: "Natija chiqmagan", value: notSub, fill: "hsl(215 16% 65%)" },
   ].filter(d => d.value > 0);
 
   // Top/Bottom schools by submission
@@ -177,8 +177,8 @@ export default function DistrictDashboard() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <KPI i={0} label="Jami o'quvchilar" value={totalStudents.toLocaleString()} icon={Users} color="bg-blue-500/15 text-blue-600" />
-              <KPI i={1} label="Test topshirganlar" value={submitted.toLocaleString()} sub={`${submitPct}%`} icon={CheckCircle} color="bg-green-500/15 text-green-600" />
-              <KPI i={2} label="Topshirmaganlar" value={notSub.toLocaleString()} icon={XCircle} color="bg-red-500/15 text-red-600" />
+              <KPI i={1} label="Natijasi bor" value={submitted.toLocaleString()} sub={`${submitPct}%`} icon={CheckCircle} color="bg-green-500/15 text-green-600" />
+              <KPI i={2} label="Natija chiqmagan" value={notSub.toLocaleString()} icon={XCircle} color="bg-red-500/15 text-red-600" />
               <KPI i={3} label="Maktablar soni" value={schoolStats.length} icon={School} color="bg-purple-500/15 text-purple-600" />
             </div>
           )}

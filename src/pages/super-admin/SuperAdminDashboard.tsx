@@ -368,7 +368,7 @@ export default function SuperAdminDashboard() {
   const pieData = [
     { name: `O'tdi (≥${PASS_LINE})`, value: passed,     fill: "hsl(142 71% 45%)" },
     { name: "O'tmadi",               value: failed,     fill: "hsl(0 72% 55%)"   },
-    { name: "Topshirmagan",           value: notSubmitted, fill: "hsl(215 16% 65%)" },
+    { name: "Natija chiqmagan",           value: notSubmitted, fill: "hsl(215 16% 65%)" },
   ].filter(d => d.value > 0);
 
   const isLive = !loading && loadedEntities.length > 0;
@@ -530,9 +530,9 @@ export default function SuperAdminDashboard() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               <KPI i={0} label="Jami ro'yxatdagi o'quvchilar" value={total.toLocaleString()} icon={Users}
                 color="bg-blue-500/15 text-blue-600" />
-              <KPI i={1} label="Test topshirganlar" value={submitted.toLocaleString()}
+              <KPI i={1} label="Natijasi bor" value={submitted.toLocaleString()}
                 sub={`${submitPct}%`} icon={CheckCircle} color="bg-green-500/15 text-green-600" />
-              <KPI i={2} label="Hali topshirmaganlar" value={notSubmitted.toLocaleString()}
+              <KPI i={2} label="Natija chiqmagan" value={notSubmitted.toLocaleString()}
                 sub={`${(100 - parseFloat(submitPct)).toFixed(1)}%`} icon={XCircle} color="bg-red-500/15 text-red-600" />
               <KPI i={3} label={`O'tish balli (${PASS_LINE}+) olganlar`}
                 value={isLive ? passed.toLocaleString() : "—"} sub={isLive ? `${passPct}% topshirganlardan` : ""}

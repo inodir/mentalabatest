@@ -187,7 +187,7 @@ export default function SchoolDashboard() {
   const pieData = [
     { name: `O'tdi (≥${PASS_LINE})`, value: passed,  fill: "hsl(142 71% 45%)" },
     { name: "O'tmadi",               value: failed,  fill: "hsl(0 72% 55%)"   },
-    { name: "Topshirmagan",           value: notSub,  fill: "hsl(215 16% 65%)" },
+    { name: "Natija chiqmagan",           value: notSub,  fill: "hsl(215 16% 65%)" },
   ].filter(d => d.value > 0);
 
   return (
@@ -279,8 +279,8 @@ export default function SchoolDashboard() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <KPI i={0} label="Jami o'quvchilar" value={total.toLocaleString()} icon={Users} color="bg-blue-500/15 text-blue-600" />
-              <KPI i={1} label="Test topshirganlar" value={submitted.toLocaleString()} sub={`${submitPct}%`} icon={CheckCircle} color="bg-green-500/15 text-green-600" />
-              <KPI i={2} label="Topshirmaganlar" value={notSub.toLocaleString()} icon={XCircle} color="bg-red-500/15 text-red-600" />
+              <KPI i={1} label="Natijasi bor" value={submitted.toLocaleString()} sub={`${submitPct}%`} icon={CheckCircle} color="bg-green-500/15 text-green-600" />
+              <KPI i={2} label="Natija chiqmagan" value={notSub.toLocaleString()} icon={XCircle} color="bg-red-500/15 text-red-600" />
               <KPI i={3} label={`${PASS_LINE}+ ball olganlar`} value={passed} sub={`${passPct}% topshirganlardan`} icon={Trophy} color="bg-yellow-500/15 text-yellow-600" />
             </div>
           )}
@@ -522,7 +522,7 @@ export default function SchoolDashboard() {
 
         {/* 5. Diqqat talab o'quvchilar */}
         {riskStudents.length > 0 && (
-          <Section title="Topshirmagan yoki past ball olgan o'quvchilar">
+          <Section title="Natija chiqmagan yoki past ball olgan o'quvchilar">
             <Card className="rounded-2xl border-orange-200 dark:border-orange-900/40">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -547,7 +547,7 @@ export default function SchoolDashboard() {
                           {tested ? (
                             <Badge variant="destructive" className="text-xs">{ball} ball</Badge>
                           ) : (
-                            <Badge variant="secondary" className="text-xs">Topshirmagan</Badge>
+                            <Badge variant="secondary" className="text-xs">Natija chiqmagan</Badge>
                           )}
                         </div>
                       </div>

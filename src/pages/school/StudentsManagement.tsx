@@ -156,8 +156,8 @@ export default function StudentsManagement() {
             <SelectTrigger className="w-[160px]"><SelectValue placeholder="Test holati" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Barcha holat</SelectItem>
-              <SelectItem value="tested">Topshirgan</SelectItem>
-              <SelectItem value="not_tested">Topshirmagan</SelectItem>
+               <SelectItem value="tested">Natijasi bor</SelectItem>
+              <SelectItem value="not_tested">Natija chiqmagan</SelectItem>
             </SelectContent>
           </Select>
 
@@ -241,8 +241,8 @@ export default function StudentsManagement() {
                         <TableCell>
                           {student.dtm ? (
                             student.dtm.tested
-                              ? <Badge variant="default">Topshirgan</Badge>
-                              : <Badge variant="secondary">Topshirmagan</Badge>
+                              ? <Badge variant="default">Natijasi bor</Badge>
+                              : <Badge variant="secondary">Natija chiqmagan</Badge>
                           ) : <Badge variant="outline">Ma'lumot yo'q</Badge>}
                         </TableCell>
                         {showResults && (
