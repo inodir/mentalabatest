@@ -28,6 +28,8 @@ interface AuthContextType {
   district: string | null;
   loading: boolean;
   dtmUser: DTMUserData | null;
+  sessionWarning: boolean;
+  setSessionWarning: (val: boolean) => void;
   signIn: (username: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -42,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [district, setDistrict] = useState<string | null>(null);
   const [dtmUser, setDtmUser] = useState<DTMUserData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionWarning, setSessionWarning] = useState(false);
 
   const applyDTMUser = useCallback((userData: DTMUserData) => {
     setDtmUser(userData);
@@ -90,11 +93,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Start/stop inactivity watcher when user logs in/out
   useEffect(() => {
     if (user) {
-      startInactivityWatch(async () => {
-        await dtmLogout();
-        clearState();
-        window.location.href = "/";
-      });
+      startInactivityWatch(
+        async () => {
+          await dtmLogout();
+          clearState();
+          window.location.href = "/";
+        },
+        () => setSessionWarning(true)
+      );
     } else {
       stopInactivityWatch();
     }
@@ -145,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, role, schoolId, district, loading, dtmUser, signIn, signOut, refresh }}
+      value={{ user, role, schoolId, district, loading, dtmUser, sessionWarning, setSessionWarning, signIn, signOut, refresh }}
     >
       {children}
     </AuthContext.Provider>

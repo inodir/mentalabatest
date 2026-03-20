@@ -8,10 +8,10 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useSchoolDTMData } from "@/hooks/useSchoolDTMData";
 import { useAuth } from "@/hooks/useAuth";
-import { Users, CheckCircle, XCircle, TrendingUp, Trophy, AlertTriangle, FileText } from "lucide-react";
+import { Users, CheckCircle, XCircle, TrendingUp, Trophy, AlertTriangle, FileText, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, PieChart, Pie, Legend,
 } from "recharts";
 import { PDFExportButton } from "@/components/ui/pdf-export-button";
@@ -69,6 +69,15 @@ export default function SchoolDashboard() {
   const { stats, loading, schoolCode, students } = useSchoolDTMData();
 
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [targetPct, setTargetPct] = useState<number>(() => {
+    const saved = localStorage.getItem(`targetPct_${schoolCode || "default"}`);
+    return saved ? parseInt(saved, 10) : 80;
+  });
+
+  const saveTarget = (val: number) => {
+    setTargetPct(val);
+    localStorage.setItem(`targetPct_${schoolCode || "default"}`, val.toString());
+  };
 
   useEffect(() => {
     if (!autoRefresh) return;
@@ -148,6 +157,33 @@ export default function SchoolDashboard() {
     !u.dtm?.tested || ((u.dtm?.total_ball as number) ?? 0) < PASS_LINE
   ).slice(0, 10);
 
+  // Timeline analytics for School Dashboard
+  const timelineData: Record<string, number> = {};
+  const hourlyData: number[] = Array(24).fill(0);
+
+  students.forEach(u => {
+    const res = u.dtm as any;
+    if (res?.created_at) {
+      const date = new Date(res.created_at);
+      const dateStr = date.toISOString().split("T")[0];
+      timelineData[dateStr] = (timelineData[dateStr] || 0) + 1;
+      hourlyData[date.getHours()]++;
+    }
+  });
+
+  const timelineChart = Object.entries(timelineData)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, count]) => {
+      const parts = date.split("-");
+      return { date: `${parts[2]}/${parts[1]}`, count };
+    })
+    .slice(-12);
+
+  const hourlyChart = hourlyData.map((count, hour) => ({
+    hour: `${hour}:00`,
+    count
+  })).filter(h => h.count > 0 || h.hour === "12:00" || h.hour === "16:00");
+
   const pieData = [
     { name: `O'tdi (≥${PASS_LINE})`, value: passed,  fill: "hsl(142 71% 45%)" },
     { name: "O'tmadi",               value: failed,  fill: "hsl(0 72% 55%)"   },
@@ -197,6 +233,41 @@ export default function SchoolDashboard() {
           </div>
         </div>
 
+        {/* 🚀 Target Progress Bar Banner */}
+        <Card className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20 shadow-sm overflow-hidden mb-6">
+          <CardContent className="p-5">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-yellow-600 animate-pulse" />
+                  <h3 className="font-bold text-lg">Ko'rsatkich Maqsadi (Target)</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">Maqsad: {targetPct}%. Joriysi: {submitPct}%</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs text-muted-foreground">O'zgartirish:</span>
+                  <input 
+                    type="range" min="10" max="100" step="5" 
+                    value={targetPct} onChange={(e) => saveTarget(parseInt(e.target.value))} 
+                    className="w-24 h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary" 
+                  />
+                </div>
+              </div>
+              <div className="w-full sm:w-1/2 space-y-2">
+                <div className="flex items-center justify-between text-xs font-medium">
+                  <span>Progress</span>
+                  <span className={parseFloat(submitPct) >= targetPct ? "text-green-600 font-bold" : "text-muted-foreground"}>
+                    {parseFloat(submitPct) >= targetPct ? "Maqsad bajarildi! 🎉" : `${Math.round((parseFloat(submitPct) / targetPct) * 100)}%`}
+                  </span>
+                </div>
+                <div className="h-4 bg-muted/40 rounded-full border border-border/20 overflow-hidden relative">
+                  <div className="h-full bg-gradient-to-r from-green-500/80 to-green-500 rounded-full transition-all duration-500 ease-out" style={{ width: `${Math.min(100, (parseFloat(submitPct) / targetPct) * 100)}%` }} />
+                  <div className="absolute top-0 bottom-0 border-r border-red-500/80" style={{ left: `${targetPct}%` }} title={`Target: ${targetPct}%`} />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* 1. Asosiy ko'rsatkichlar */}
         <Section title="Asosiy ko'rsatkichlar">
           {loading ? (
@@ -219,6 +290,57 @@ export default function SchoolDashboard() {
             </div>
           )}
         </Section>
+
+        {/* 1.5 Vaqt va faollik tahlili */}
+        {!loading && timelineChart.length > 0 && (
+          <Section title="Vaqt va faollik tahlili">
+            <div className="grid gap-5 lg:grid-cols-2">
+              {/* Daily LineChart */}
+              <Card className="rounded-2xl">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-blue-500" /> Kunlik topshirishlar dinamikasi
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[200px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={timelineChart} margin={{ left: 5, right: 15, top: 5, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+                        <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip contentStyle={ChartTooltipStyle} formatter={(v: number) => [`${v} o'quvchi`, "Topshirdi"]} />
+                        <Line type="monotone" dataKey="count" stroke="hsl(217 91% 60%)" strokeWidth={2.5} dot={{ r: 4, fill: "hsl(var(--background))", stroke: "hsl(217 91% 60%)" }} activeDot={{ r: 6 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Hourly BarChart */}
+              <Card className="rounded-2xl">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-purple-500" /> Soatbay faollik
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[200px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={hourlyChart} margin={{ left: 5, right: 5, top: 5, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" vertical={false} />
+                        <XAxis dataKey="hour" tick={{ fontSize: 9 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip contentStyle={ChartTooltipStyle} formatter={(v: number) => [`${v} o'quvchi`, "Faollik"]} />
+                        <Bar dataKey="count" fill="hsl(262 83% 58%)" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </Section>
+        )}
 
         {/* 2. Ball taqsimoti */}
         {schoolCode && (

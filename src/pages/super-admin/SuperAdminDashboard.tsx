@@ -10,11 +10,11 @@ import { useDTMDashboard } from "@/hooks/useDTMDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Users, CheckCircle, XCircle, TrendingUp, School, Settings,
-  RefreshCw, AlertCircle, Loader2, AlertTriangle, Trophy, MapPin,
+  RefreshCw, AlertCircle, Loader2, AlertTriangle, Trophy, MapPin, Clock,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, PieChart, Pie, Legend,
 } from "recharts";
 import { PDFExportButton } from "@/components/ui/pdf-export-button";
@@ -265,6 +265,80 @@ export default function SuperAdminDashboard() {
     .sort((a, b) => b.ball - a.ball)
     .slice(0, 10);
 
+  // Bottom schools by submission % (Lowest 5)
+  const bottomSchoolsBySubmit = [...aggregSchools]
+    .filter(s => (s.registered_count ?? 0) > 0)
+    .map(s => ({
+      name: s.name.length > 20 ? s.name.slice(0, 20) + "…" : s.name,
+      pct: Math.round(((s.answered_count ?? 0) / (s.registered_count ?? 1)) * 100),
+    }))
+    .sort((a, b) => a.pct - b.pct)
+    .slice(0, 5);
+
+  // Bottom schools by avg score (Lowest 5)
+  const bottomSchoolsByScore = [...aggregSchools]
+    .filter(s => (s.avg_total_ball ?? 0) > 0)
+    .map(s => ({
+      name: s.name.length > 20 ? s.name.slice(0, 20) + "…" : s.name,
+      ball: Math.round((s.avg_total_ball ?? 0) * 10) / 10,
+    }))
+    .sort((a, b) => a.ball - b.ball)
+    .slice(0, 5);
+
+  // Subject diagnostics computation
+  const subjectsStats = {
+    onaTili: { sum: 0, count: 0 },
+    matematika: { sum: 0, count: 0 },
+    tarix: { sum: 0, count: 0 },
+  };
+
+  baseEntities.forEach(u => {
+    const res = u.test_results;
+    if (!res) return;
+    res.mandatory?.forEach(m => {
+      const n = m.name.toLowerCase();
+      if (n.includes("ona tili")) { subjectsStats.onaTili.sum += m.point ?? 0; subjectsStats.onaTili.count++; }
+      if (n.includes("matematika")) { subjectsStats.matematika.sum += m.point ?? 0; subjectsStats.matematika.count++; }
+      if (n.includes("tarix")) { subjectsStats.tarix.sum += m.point ?? 0; subjectsStats.tarix.count++; }
+    });
+  });
+
+  const subjectAverages = [
+    { name: "Ona tili", pct: Math.round(subjectsStats.onaTili.count > 0 ? (subjectsStats.onaTili.sum / subjectsStats.onaTili.count) / 11 * 100 : 100) },
+    { name: "Matematika", pct: Math.round(subjectsStats.matematika.count > 0 ? (subjectsStats.matematika.sum / subjectsStats.matematika.count) / 11 * 100 : 100) },
+    { name: "Tarix", pct: Math.round(subjectsStats.tarix.count > 0 ? (subjectsStats.tarix.sum / subjectsStats.tarix.count) / 11 * 100 : 100) },
+  ].sort((a, b) => a.pct - b.pct);
+
+  const worstSubject = subjectAverages.length > 0 && subjectAverages[0].pct < 85 ? subjectAverages[0] : null;
+
+  // Timeline analytics Grouping
+  const timelineData: Record<string, number> = {};
+  const hourlyData: number[] = Array(24).fill(0);
+
+  baseEntities.forEach(u => {
+    const res = u.test_results as any;
+    if (res?.created_at) {
+      const date = new Date(res.created_at);
+      const dateStr = date.toISOString().split("T")[0]; // YYYY-MM-DD
+      timelineData[dateStr] = (timelineData[dateStr] || 0) + 1;
+      const hour = date.getHours();
+      hourlyData[hour]++;
+    }
+  });
+
+  const timelineChart = Object.entries(timelineData)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, count]) => {
+      const parts = date.split("-");
+      return { date: `${parts[2]}/${parts[1]}`, count }; // DD/MM
+    })
+    .slice(-12); // Last 12 points
+
+  const hourlyChart = hourlyData.map((count, hour) => ({
+    hour: `${hour}:00`,
+    count
+  })).filter(h => h.count > 0 || h.hour === "12:00" || h.hour === "15:00"); // keep active or core hours
+
   // Districts ranking
   const districtsRanked = (dtmUser?.districts ?? [])
     .map(d => ({
@@ -421,6 +495,27 @@ export default function SuperAdminDashboard() {
           </motion.div>
         )}
 
+        {/* ── Subject Diagnostics Alert ── */}
+        {worstSubject && (
+          <motion.div 
+            initial={{ opacity: 0, y: -5 }} 
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-800 dark:text-yellow-400 px-4 py-3 rounded-2xl flex items-center justify-between shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-500/20 rounded-xl">
+                <AlertCircle className="h-5 w-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-sm font-bold">Diagnostika: Maslahat</p>
+                <p className="text-xs opacity-90 mt-0.5">
+                  Foydalanuvchilar orasida <b>{worstSubject.name}</b> fani o'rtacha o'zlashtirish ko'rsatkichi eng past: <b>{worstSubject.pct}%</b>. Ushbu fanga ko'proq e'tibor qaratish tavsiya qilinadi.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* ── 1. Asosiy ko'rsatkichlar ────────────────────────────── */}
         <Section title="Asosiy ko'rsatkichlar">
           {loading ? (
@@ -569,72 +664,163 @@ export default function SuperAdminDashboard() {
           </Section>
         )}
 
-        {/* ── 3. Maktablar reytingi ──────────────────────────────── */}
-        {(dtmUser?.schools?.length ?? 0) > 0 && (
-          <Section title="Maktablar reytingi">
+        {/* ── 2.5 Vaqt va Faollik Tahlili ── */}
+        {mode === "accurate" && timelineChart.length > 0 && (
+          <Section title="Vaqt va faollik tahlili">
             <div className="grid gap-5 lg:grid-cols-2">
-              {/* By submission rate */}
+              {/* Daily LineChart */}
               <Card className="rounded-2xl">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    Topshirish foizi bo'yicha top 10 maktab
+                    <TrendingUp className="h-4 w-4 text-blue-500" />
+                    Kunlik topshirishlar dinamikasi (Oxirgi 12 nuqta)
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[280px]">
+                  <div className="h-[220px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={topSchoolsBySubmit} layout="vertical" margin={{ left: 8, right: 30 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border/40" />
-                        <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }}
-                          tickFormatter={v => `${v}%`} />
-                        <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 9 }} />
-                        <Tooltip
-                          contentStyle={ChartTooltipStyle}
-                          formatter={(v: number) => [`${v}%`, "Topshirish"]}
-                        />
-                        <Bar dataKey="pct" radius={[0, 6, 6, 0]} name="pct">
-                          {topSchoolsBySubmit.map((s, i) => (
-                            <Cell key={i} fill={s.pct >= 80 ? "hsl(142 71% 45%)" : s.pct >= 50 ? "hsl(38 92% 50%)" : "hsl(0 72% 55%)"} />
-                          ))}
-                        </Bar>
-                      </BarChart>
+                      <LineChart data={timelineChart} margin={{ left: 5, right: 15, top: 5, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+                        <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip contentStyle={ChartTooltipStyle} formatter={(v: number) => [`${v} o'quvchi`, "Topshirdi"]} />
+                        <Line type="monotone" dataKey="count" stroke="hsl(217 91% 60%)" strokeWidth={2.5} dot={{ r: 4, fill: "hsl(var(--background))", stroke: "hsl(217 91% 60%)" }} activeDot={{ r: 6 }} />
+                      </LineChart>
                     </ResponsiveContainer>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* By avg score */}
+              {/* Hourly BarChart */}
               <Card className="rounded-2xl">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-blue-500" />
-                    O'rtacha ball bo'yicha top 10 maktab
+                    <Clock className="h-4 w-4 text-purple-500" />
+                    Kun vaqti bo'yicha faollik (Soatbay)
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[280px]">
+                  <div className="h-[220px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={topSchoolsByScore} layout="vertical" margin={{ left: 8, right: 40 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border/40" />
-                        <XAxis type="number" domain={[0, 189]} tick={{ fontSize: 10 }} />
-                        <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 9 }} />
-                        <Tooltip
-                          contentStyle={ChartTooltipStyle}
-                          formatter={(v: number) => [`${v} ball`, "O'rtacha ball"]}
-                        />
-                        <Bar dataKey="ball" fill="hsl(217 91% 55%)" radius={[0, 6, 6, 0]}>
-                          {topSchoolsByScore.map((s, i) => (
-                            <Cell key={i} fill={
-                              i === 0 ? "hsl(38 92% 50%)" : i === 1 ? "hsl(215 70% 60%)" : "hsl(217 91% 55%)"
-                            } />
-                          ))}
-                        </Bar>
+                      <BarChart data={hourlyChart} margin={{ left: 5, right: 5, top: 5, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" vertical={false} />
+                        <XAxis dataKey="hour" tick={{ fontSize: 9 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip contentStyle={ChartTooltipStyle} formatter={(v: number) => [`${v} o'quvchi`, "Faollik"]} />
+                        <Bar dataKey="count" fill="hsl(262 83% 58%)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          </Section>
+        )}
+
+        {/* ── 3. Maktablar reytingi ──────────────────────────────── */}
+        {(dtmUser?.schools?.length ?? 0) > 0 && (
+          <Section title="Maktablar reytingi">
+            <div className="space-y-6">
+              <div className="grid gap-5 lg:grid-cols-2">
+                {/* By submission rate */}
+                <Card className="rounded-2xl">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      Topshirish foizi bo'yicha top 10 maktab
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[280px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={topSchoolsBySubmit} layout="vertical" margin={{ left: 8, right: 30 }}>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border/40" />
+                          <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} tickFormatter={v => `${v}%`} />
+                          <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 9 }} />
+                          <Tooltip contentStyle={ChartTooltipStyle} formatter={(v: number) => [`${v}%`, "Topshirish"]} />
+                          <Bar dataKey="pct" radius={[0, 6, 6, 0]} name="pct">
+                            {topSchoolsBySubmit.map((s, i) => <Cell key={i} fill={s.pct >= 80 ? "hsl(142 71% 45%)" : s.pct >= 50 ? "hsl(38 92% 50%)" : "hsl(0 72% 55%)"} />)}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* By avg score */}
+                <Card className="rounded-2xl">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-blue-500" />
+                      O'rtacha ball bo'yicha top 10 maktab
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[280px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={topSchoolsByScore} layout="vertical" margin={{ left: 8, right: 40 }}>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border/40" />
+                          <XAxis type="number" domain={[0, 189]} tick={{ fontSize: 10 }} />
+                          <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 9 }} />
+                          <Tooltip contentStyle={ChartTooltipStyle} formatter={(v: number) => [`${v} ball`, "O'rtacha ball"]} />
+                          <Bar dataKey="ball" fill="hsl(217 91% 55%)" radius={[0, 6, 6, 0]}>
+                            {topSchoolsByScore.map((s, i) => <Cell key={i} fill={i === 0 ? "hsl(38 92% 50%)" : i === 1 ? "hsl(215 70% 60%)" : "hsl(217 91% 55%)"} />)}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* ── Bottom 5 Rankings Grid ── */}
+              <div className="grid gap-5 lg:grid-cols-2">
+                {/* Lowest submission rate */}
+                <Card className="rounded-2xl border-red-500/10 bg-gradient-to-b from-transparent to-red-500/[0.02]">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2 text-red-600">
+                      <AlertCircle className="h-4 w-4" />
+                      Eng past topshirish ko'rsatkichi (Quyi 5)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[220px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={bottomSchoolsBySubmit} layout="vertical" margin={{ left: 8, right: 30 }}>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border/40" />
+                          <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} tickFormatter={v => `${v}%`} />
+                          <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 9 }} />
+                          <Tooltip contentStyle={ChartTooltipStyle} formatter={(v: number) => [`${v}%`, "Topshirish"]} />
+                          <Bar dataKey="pct" radius={[0, 6, 6, 0]} fill="hsl(0 72% 55%)" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Lowest avg score */}
+                <Card className="rounded-2xl border-red-500/10 bg-gradient-to-b from-transparent to-red-500/[0.02]">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2 text-red-600">
+                      <AlertCircle className="h-4 w-4" />
+                      Eng past o'rtacha ball (Quyi 5)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[220px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={bottomSchoolsByScore} layout="vertical" margin={{ left: 8, right: 35 }}>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border/40" />
+                          <XAxis type="number" domain={[0, 189]} tick={{ fontSize: 10 }} />
+                          <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 9 }} />
+                          <Tooltip contentStyle={ChartTooltipStyle} formatter={(v: number) => [`${v} ball`, "O'rtacha ball"]} />
+                          <Bar dataKey="ball" radius={[0, 6, 6, 0]} fill="hsl(0 72% 55%)" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </Section>
         )}

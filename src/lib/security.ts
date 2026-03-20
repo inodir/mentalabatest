@@ -79,7 +79,11 @@ export function getRemainingAttempts(): number {
 // --- Inactivity Auto-Logout ---
 
 let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
+let inactivityWarningTimer: ReturnType<typeof setTimeout> | null = null;
 let onInactivityLogout: (() => void) | null = null;
+let onInactivityWarning: (() => void) | null = null;
+
+const WARNING_TIMEOUT_MS = INACTIVITY_TIMEOUT_MS - (2 * 60 * 1000); // 13 minutes (2 min warning)
 
 const ACTIVITY_EVENTS: (keyof WindowEventMap)[] = [
   "mousedown", "mousemove", "keydown", "scroll", "touchstart", "click",
@@ -87,16 +91,26 @@ const ACTIVITY_EVENTS: (keyof WindowEventMap)[] = [
 
 function resetInactivityTimer() {
   if (inactivityTimer) clearTimeout(inactivityTimer);
+  if (inactivityWarningTimer) clearTimeout(inactivityWarningTimer);
+  
   if (onInactivityLogout) {
     inactivityTimer = setTimeout(() => {
       onInactivityLogout?.();
     }, INACTIVITY_TIMEOUT_MS);
   }
+
+  if (onInactivityWarning) {
+    inactivityWarningTimer = setTimeout(() => {
+      onInactivityWarning?.();
+    }, WARNING_TIMEOUT_MS);
+  }
 }
 
-export function startInactivityWatch(logoutCallback: () => void) {
+export function startInactivityWatch(logoutCallback: () => void, warningCallback?: () => void) {
   stopInactivityWatch();
   onInactivityLogout = logoutCallback;
+  if (warningCallback) onInactivityWarning = warningCallback;
+  
   ACTIVITY_EVENTS.forEach((event) => {
     window.addEventListener(event, resetInactivityTimer, { passive: true });
   });
@@ -108,7 +122,12 @@ export function stopInactivityWatch() {
     clearTimeout(inactivityTimer);
     inactivityTimer = null;
   }
+  if (inactivityWarningTimer) {
+    clearTimeout(inactivityWarningTimer);
+    inactivityWarningTimer = null;
+  }
   onInactivityLogout = null;
+  onInactivityWarning = null;
   ACTIVITY_EVENTS.forEach((event) => {
     window.removeEventListener(event, resetInactivityTimer);
   });

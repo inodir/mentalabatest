@@ -1,7 +1,9 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, AlertTriangle, RefreshCw } from "lucide-react";
 import { AdminSidebar } from "./AdminSidebar";
+import { useAuth } from "@/hooks/useAuth";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -9,6 +11,7 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ children, variant }: AdminLayoutProps) {
+  const { sessionWarning, setSessionWarning } = useAuth();
   const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark");
 
   useEffect(() => {
@@ -43,6 +46,34 @@ export function AdminLayout({ children, variant }: AdminLayoutProps) {
             {dark ? <Sun className="h-4 w-4 text-yellow-500" /> : <Moon className="h-4 w-4 text-slate-700" />}
           </Button>
         </div>
+        <AnimatePresence>
+          {sessionWarning && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="bg-card p-6 rounded-2xl border border-border/80 shadow-xl max-w-sm w-full mx-4 text-center space-y-4"
+              >
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-yellow-500/15">
+                  <AlertTriangle className="h-6 w-6 text-yellow-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold">Faollik to'xtadi</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Sessiya muddati tugashiga 2 daqiqa qoldi. Davom etishni xohlaysizmi?
+                  </p>
+                </div>
+                <div className="flex gap-3 justify-center">
+                  <Button onClick={() => setSessionWarning(false)} className="rounded-xl w-full">
+                    <RefreshCw className="mr-2 h-4 w-4" /> Davom etish
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
         <div className="container mx-auto p-6 lg:p-8">{children}</div>
       </main>
     </div>
