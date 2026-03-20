@@ -10,7 +10,7 @@ import { useDTMDashboard } from "@/hooks/useDTMDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Users, CheckCircle, XCircle, TrendingUp, School, Settings,
-  RefreshCw, AlertCircle, Loader2, AlertTriangle, Trophy, MapPin, Clock,
+  RefreshCw, AlertCircle, Loader2, AlertTriangle, Trophy, MapPin, Clock, Award,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -309,6 +309,46 @@ export default function SuperAdminDashboard() {
   ].sort((a, b) => a.pct - b.pct);
 
   const worstSubject = subjectAverages.length > 0 && subjectAverages[0].pct < 85 ? subjectAverages[0] : null;
+
+  // ── RICH SUBJECT AVERAGES (All Subjects) ───────────────────────
+  const subjectsStatsAll: Record<string, { sum: number, count: number }> = {};
+  filteredEntities.forEach(u => {
+    const res = u.test_results;
+    if (!res) return;
+    
+    res.mandatory?.forEach((m: any) => {
+      const name = m.name?.trim();
+      if (!name || name.toLowerCase() === "noma'lum") return;
+      if (!subjectsStatsAll[name]) subjectsStatsAll[name] = { sum: 0, count: 0 };
+      subjectsStatsAll[name].sum += (m.point ?? 0);
+      subjectsStatsAll[name].count++;
+    });
+
+    if (res.primary) {
+      const name = res.primary.name?.trim();
+      if (name && name.toLowerCase() !== "noma'lum") {
+        if (!subjectsStatsAll[name]) subjectsStatsAll[name] = { sum: 0, count: 0 };
+        subjectsStatsAll[name].sum += (res.primary.point ?? 0);
+        subjectsStatsAll[name].count++;
+      }
+    }
+
+    if (res.secondary) {
+      const name = res.secondary.name?.trim();
+      if (name && name.toLowerCase() !== "noma'lum") {
+        if (!subjectsStatsAll[name]) subjectsStatsAll[name] = { sum: 0, count: 0 };
+        subjectsStatsAll[name].sum += (res.secondary.point ?? 0);
+        subjectsStatsAll[name].count++;
+      }
+    }
+  });
+
+  const subjectAveragesAll = Object.entries(subjectsStatsAll).map(([name, s]) => ({
+    name: name.length > 18 ? name.slice(0, 16) + "…" : name,
+    fullName: name,
+    avg: Math.round((s.sum / s.count) * 10) / 10,
+    count: s.count,
+  })).sort((a, b) => b.avg - a.avg).slice(0, 15); // Top 15 subjects
 
   // Timeline analytics Grouping
   const timelineData: Record<string, number> = {};
@@ -707,6 +747,59 @@ export default function SuperAdminDashboard() {
                         <YAxis tick={{ fontSize: 10 }} />
                         <Tooltip contentStyle={ChartTooltipStyle} formatter={(v: number) => [`${v} o'quvchi`, "Faollik"]} />
                         <Bar dataKey="count" fill="hsl(262 83% 58%)" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </Section>
+        )}
+
+        {/* 2.5 Fanlar kesimida tahlil */}
+        {subjectAveragesAll.length > 0 && (
+          <Section title="Fanlar kesimida tahlil">
+            <div className="grid gap-5 lg:grid-cols-2">
+              {/* Average Score BarChart */}
+              <Card className="rounded-2xl">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Award className="h-4 w-4 text-primary" />
+                    Fanlar bo'yicha o'rtacha ball
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[350px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={subjectAveragesAll} layout="vertical" margin={{ left: 8, right: 30 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border/40" />
+                        <XAxis type="number" tick={{ fontSize: 10 }} />
+                        <YAxis dataKey="name" type="category" width={110} tick={{ fontSize: 9 }} />
+                        <Tooltip contentStyle={ChartTooltipStyle} formatter={(v: number) => [`${v} ball`, "O'rtacha ball"]} />
+                        <Bar dataKey="avg" radius={[0, 6, 6, 0]} fill="hsl(217 91% 60%)" barSize={14} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Popularity Count BarChart */}
+              <Card className="rounded-2xl">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Users className="h-4 w-4 text-green-500" />
+                    Fanlarni tanlagan o'quvchilar qamrovi
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[350px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={[...subjectAveragesAll].sort((a,b) => b.count - a.count)} layout="vertical" margin={{ left: 8, right: 30 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border/40" />
+                        <XAxis type="number" tick={{ fontSize: 10 }} />
+                        <YAxis dataKey="name" type="category" width={110} tick={{ fontSize: 9 }} />
+                        <Tooltip contentStyle={ChartTooltipStyle} formatter={(v: number) => [`${v} ta`, "O'quvchilar soni"]} />
+                        <Bar dataKey="count" radius={[0, 6, 6, 0]} fill="hsl(142 71% 45%)" barSize={14} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
