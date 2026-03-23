@@ -210,12 +210,25 @@ export default function SuperAdminDashboard() {
 
   // Score range bands  
   const bands = [
-    { label: "0–40",    min: 0,   max: 40  },
-    { label: "40–70",   min: 40,  max: 70  },
-    { label: "70–100",  min: 70,  max: 100 },
-    { label: "100–130", min: 100, max: 130 },
-    { label: "130–160", min: 130, max: 160 },
-    { label: "160–189", min: 160, max: 190 },
+    { label: "0–10",    min: 0,   max: 10  },
+    { label: "10–20",   min: 10,  max: 20  },
+    { label: "20–30",   min: 20,  max: 30  },
+    { label: "30–40",   min: 30,  max: 40  },
+    { label: "40–50",   min: 40,  max: 50  },
+    { label: "50–60",   min: 50,  max: 60  },
+    { label: "60–70",   min: 60,  max: 70  },
+    { label: "70–80",   min: 70,  max: 80  },
+    { label: "80–90",   min: 80,  max: 90  },
+    { label: "90–100",  min: 90,  max: 100 },
+    { label: "100–110", min: 100, max: 110 },
+    { label: "110–120", min: 110, max: 120 },
+    { label: "120–130", min: 120, max: 130 },
+    { label: "130–140", min: 130, max: 140 },
+    { label: "140–150", min: 140, max: 150 },
+    { label: "150–160", min: 150, max: 160 },
+    { label: "160–170", min: 160, max: 170 },
+    { label: "170–180", min: 170, max: 180 },
+    { label: "180–189", min: 180, max: 190 },
   ];
   const scoreBands = bands.map(b => ({
     label: b.label,
@@ -231,8 +244,14 @@ export default function SuperAdminDashboard() {
   const l_other = baseEntities.length - l_uz - l_ru;
   
   // Gender stats
-  const g_male = baseEntities.filter(u => u.gender?.toLowerCase() === "erkak" || u.gender?.toLowerCase() === "male" || u.gender === "M").length;
-  const g_female = baseEntities.filter(u => u.gender?.toLowerCase() === "ayol" || u.gender?.toLowerCase() === "female" || u.gender === "F").length;
+  const g_male = baseEntities.filter(u => {
+    const g = u.gender?.toLowerCase()?.trim();
+    return g === "erkak" || g === "male" || g === "m" || g === "o'g'il" || g === "o'g`il";
+  }).length;
+  const g_female = baseEntities.filter(u => {
+    const g = u.gender?.toLowerCase()?.trim();
+    return g === "ayol" || g === "female" || g === "f" || g === "qiz";
+  }).length;
   const g_other = baseEntities.length - g_male - g_female;
 
   const langData = [
@@ -684,9 +703,9 @@ export default function SuperAdminDashboard() {
                         <Bar dataKey="soni" radius={[6, 6, 0, 0]}>
                           {scoreBands.map((b, i) => (
                             <Cell
-                              key={b.label}
-                              fill={i < 2 ? "hsl(0 72% 55%)" : i === 2 ? "hsl(38 92% 50%)" : "hsl(142 71% 45%)"}
-                            />
+                               key={b.label}
+                               fill={i < 4 ? "hsl(0 72% 55%)" : i < 7 ? "hsl(38 92% 50%)" : "hsl(142 71% 45%)"}
+                             />
                           ))}
                         </Bar>
                       </BarChart>
