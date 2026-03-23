@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,7 @@ import { toast } from "sonner";
 
 interface RegisterUserDialogProps {
   onUserCreated?: () => void;
-  allSchools?: { code: string; name?: string | null }[];
+  allSchools?: { code: string; name?: string | null; region?: string; district?: string }[];
 }
 
 export function RegisterUserDialog({ onUserCreated, allSchools = [] }: RegisterUserDialogProps) {
@@ -47,13 +47,49 @@ export function RegisterUserDialog({ onUserCreated, allSchools = [] }: RegisterU
     group_name: "",
   });
 
+  // Dynamic Location Lists
+  const regions = useMemo(() => {
+    return Array.from(new Set(allSchools.map(s => s.region).filter(Boolean))).sort() as string[];
+  }, [allSchools]);
+
+  const districts = useMemo(() => {
+    if (!formData.region) return [];
+    return Array.from(new Set(allSchools.filter(s => s.region === formData.region).map(s => s.district).filter(Boolean))).sort() as string[];
+  }, [allSchools, formData.region]);
+
+  const filteredSchools = useMemo(() => {
+    return allSchools.filter(s => {
+      const matchRegion = !formData.region || s.region === formData.region;
+      const matchDistrict = !formData.district || s.district === formData.district;
+      return matchRegion && matchDistrict;
+    });
+  }, [allSchools, formData.region, formData.district]);
+
   const handleChange = (key: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [key]: value };
+      
+      // Drilling resets
+      if (key === "region") {
+        next.district = "";
+        next.school_code = "";
+      } else if (key === "district") {
+        next.school_code = "";
+      } else if (key === "school_code") {
+        const school = allSchools.find(s => s.code === value);
+        if (school) {
+          next.region = school.region || prev.region;
+          next.district = school.district || prev.district;
+        }
+      }
+      
+      return next;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.full_name || !formData.phone || !formData.school_code || !formData.bot_id || !formData.password) {
+    if (!formData.full_name || !formData.phone || !formData.school_code || !formData.bot_id) {
       toast.error("Iltimos, barcha majburiy maydonlarni to'ldiring");
       return;
     }
@@ -120,62 +156,100 @@ export function RegisterUserDialog({ onUserCreated, allSchools = [] }: RegisterU
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-3 py-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="bot_id">Bot ID <span className="text-destructive">*</span></Label>
+            <Input
+              id="bot_id"
+              placeholder="5935882106"
+              value={formData.bot_id}
+              onChange={(e) => handleChange("bot_id", e.target.value)}
+              required
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="bot_id">Bot ID <span className="text-destructive">*</span></Label>
+              <Label htmlFor="full_name">F.I.O. <span className="text-destructive">*</span></Label>
               <Input
-                id="bot_id"
-                placeholder="5935882106"
-                value={formData.bot_id}
-                onChange={(e) => handleChange("bot_id", e.target.value)}
+                id="full_name"
+                placeholder="Xabibullayev"
+                value={formData.full_name}
+                onChange={(e) => handleChange("full_name", e.target.value)}
                 required
               />
             </div>
+
             <div className="space-y-1.5">
-              <Label htmlFor="password">Parol <span className="text-destructive">*</span></Label>
+              <Label htmlFor="phone">Telefon <span className="text-destructive">*</span></Label>
               <Input
-                id="password"
-                type="text"
-                placeholder="1111"
-                value={formData.password}
-                onChange={(e) => handleChange("password", e.target.value)}
+                id="phone"
+                placeholder="+998901234567"
+                value={formData.phone}
+                onChange={(e) => handleChange("phone", e.target.value)}
                 required
               />
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="full_name">F.I.O. <span className="text-destructive">*</span></Label>
-            <Input
-              id="full_name"
-              placeholder="Xabibullayev"
-              value={formData.full_name}
-              onChange={(e) => handleChange("full_name", e.target.value)}
-              required
-            />
-          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="region">Viloyat</Label>
+              {regions.length > 0 ? (
+                <Select value={formData.region} onValueChange={(v) => handleChange("region", v)}>
+                  <SelectTrigger id="region" className="h-9">
+                    <SelectValue placeholder="Tanlang" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {regions.map((r) => (
+                      <SelectItem key={r} value={r}>{r}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="region"
+                  placeholder="Toshkent shahar"
+                  value={formData.region}
+                  onChange={(e) => handleChange("region", e.target.value)}
+                />
+              )}
+            </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="phone">Telefon <span className="text-destructive">*</span></Label>
-            <Input
-              id="phone"
-              placeholder="+998901234567"
-              value={formData.phone}
-              onChange={(e) => handleChange("phone", e.target.value)}
-              required
-            />
+            <div className="space-y-1.5">
+              <Label htmlFor="district">Tuman</Label>
+              {districts.length > 0 ? (
+                <Select value={formData.district} onValueChange={(v) => handleChange("district", v)}>
+                  <SelectTrigger id="district" className="h-9">
+                    <SelectValue placeholder="Tanlang" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[200px]">
+                    {districts.map((d) => (
+                      <SelectItem key={d} value={d}>{d}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="district"
+                  placeholder="Yunusobod tumani"
+                  value={formData.district}
+                  onChange={(e) => handleChange("district", e.target.value)}
+                  disabled={!formData.region && regions.length > 0}
+                />
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="school_code">Maktab kodi <span className="text-destructive">*</span></Label>
-              {allSchools.length > 0 ? (
+              {filteredSchools.length > 0 ? (
                 <Select value={formData.school_code} onValueChange={(v) => handleChange("school_code", v)}>
                   <SelectTrigger id="school_code" className="h-9">
                     <SelectValue placeholder="Tanlang" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[200px]">
-                    {allSchools.map((s) => (
+                    {filteredSchools.map((s) => (
                       <SelectItem key={s.code} value={s.code}>
                         {s.code} {s.name ? `(${s.name})` : ""}
                       </SelectItem>
@@ -223,28 +297,6 @@ export function RegisterUserDialog({ onUserCreated, allSchools = [] }: RegisterU
                 placeholder="23"
                 value={formData.second_subject_id}
                 onChange={(e) => handleChange("second_subject_id", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="region">Viloyat</Label>
-              <Input
-                id="region"
-                placeholder="Toshkent shahar"
-                value={formData.region}
-                onChange={(e) => handleChange("region", e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="district">Tuman</Label>
-              <Input
-                id="district"
-                placeholder="Yunusobod tumani"
-                value={formData.district}
-                onChange={(e) => handleChange("district", e.target.value)}
               />
             </div>
           </div>

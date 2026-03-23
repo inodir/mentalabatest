@@ -304,7 +304,7 @@ export default function DTMUsers() {
   const navigate = useNavigate();
   const { dtmUser } = useAuth();
   const allSchools = useMemo(() =>
-    (dtmUser?.schools || []).map((s) => ({ code: s.code, name: s.name })),
+    (dtmUser?.schools || []).map((s) => ({ code: s.code, name: s.name, region: s.region, district: s.district })),
     [dtmUser?.schools]
   );
   const allGroupNames = useMemo(() => {
