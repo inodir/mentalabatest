@@ -27,6 +27,18 @@ interface RegisterUserDialogProps {
   allSchools?: { code: string; name?: string | null; region?: string; district?: string }[];
 }
 
+const SUBJECTS = [
+  { mt_id: 6, name_uz: "Biologiya" },
+  { mt_id: 7, name_uz: "Kimyo" },
+  { mt_id: 20, name_uz: "Matematika" },
+  { mt_id: 23, name_uz: "Ingliz tili" },
+  { mt_id: 24, name_uz: "Fizika" },
+  { mt_id: 25, name_uz: "Geografiya" },
+  { mt_id: 26, name_uz: "Tarix" },
+  { mt_id: 27, name_uz: "Ona tili va adabiyot" },
+  { mt_id: 35, name_uz: "Davlat va huquq asoslari" },
+];
+
 export function RegisterUserDialog({ onUserCreated, allSchools = [] }: RegisterUserDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -280,24 +292,34 @@ export function RegisterUserDialog({ onUserCreated, allSchools = [] }: RegisterU
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="first_subject_id">1-Fan ID</Label>
-              <Input
-                id="first_subject_id"
-                type="number"
-                placeholder="20"
-                value={formData.first_subject_id}
-                onChange={(e) => handleChange("first_subject_id", e.target.value)}
-              />
+              <Label htmlFor="first_subject_id">1-Fan</Label>
+              <Select value={formData.first_subject_id} onValueChange={(v) => handleChange("first_subject_id", v)}>
+                <SelectTrigger id="first_subject_id" className="h-9">
+                  <SelectValue placeholder="Tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUBJECTS.map((s) => (
+                    <SelectItem key={s.mt_id} value={String(s.mt_id)}>
+                      {s.name_uz}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="second_subject_id">2-Fan ID</Label>
-              <Input
-                id="second_subject_id"
-                type="number"
-                placeholder="23"
-                value={formData.second_subject_id}
-                onChange={(e) => handleChange("second_subject_id", e.target.value)}
-              />
+              <Label htmlFor="second_subject_id">2-Fan</Label>
+              <Select value={formData.second_subject_id} onValueChange={(v) => handleChange("second_subject_id", v)}>
+                <SelectTrigger id="second_subject_id" className="h-9">
+                  <SelectValue placeholder="Tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUBJECTS.map((s) => (
+                    <SelectItem key={s.mt_id} value={String(s.mt_id)}>
+                      {s.name_uz}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
