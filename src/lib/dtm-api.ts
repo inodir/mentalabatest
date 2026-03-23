@@ -411,3 +411,47 @@ export async function deleteDTMUser(settings: DTMApiSettings, userId: number): P
     return { success: false, error: err instanceof Error ? err.message : "Noma'lum xatolik" };
   }
 }
+
+// Create a new DTM user
+export async function createDTMUser(
+  settings: DTMApiSettings, 
+  user: {
+    bot_id: string;
+    full_name: string;
+    phone: string;
+    school_code: string;
+    first_subject_id: number;
+    second_subject_id: number;
+    password: string;
+    role: string;
+    language: string;
+    gender: string;
+    region?: string;
+    district?: string;
+    group_name?: string;
+  }
+): Promise<{ success: boolean; error?: string; data?: any }> {
+  try {
+    const baseUrl = settings.mainUrl.endsWith("/") ? settings.mainUrl : `${settings.mainUrl}/`;
+    const response = await fetch(`${baseUrl}api/v1/auth/register`, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "Content-Type": "application/json",
+        "x-api-key": settings.apiKey,
+      },
+      body: JSON.stringify(user),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      return { success: false, error: `Xatolik: ${response.status} ${errorText}` };
+    }
+
+    const data = await response.json().catch(() => ({}));
+    clearDTMCache();
+    return { success: true, data };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Noma'lum xatolik" };
+  }
+}

@@ -24,6 +24,7 @@ import {
 import { useDTMUsers } from "@/hooks/useDTMUsers";
 import { DTMUsersFilters, DTMFilters, filterDTMUsers } from "@/components/dtm/DTMUsersFilters";
 import { SyncSchoolsDialog } from "@/components/dtm/SyncSchoolsDialog";
+import { RegisterUserDialog } from "@/components/dtm/RegisterUserDialog";
 import {
   RefreshCw,
   Settings,
@@ -505,6 +506,7 @@ export default function DTMUsers() {
           </div>
 
           <div className="flex items-center gap-2">
+            <RegisterUserDialog onUserCreated={retry} allSchools={allSchools} />
             <SyncSchoolsDialog />
             <Button variant="outline" size="icon" onClick={retry} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
