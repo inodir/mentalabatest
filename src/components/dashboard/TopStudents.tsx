@@ -66,6 +66,7 @@ export function TopStudents({ users, limit = 20 }: TopStudentsProps) {
                   <p className="text-sm font-medium truncate">{user.full_name}</p>
                   <p className="text-[10px] text-muted-foreground truncate">
                     {user.school_name || user.school_code || "—"} · {user.district || "—"}
+                    {user.group_name && ` · ${user.group_name}`}
                   </p>
                 </div>
                 <Badge

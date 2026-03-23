@@ -144,24 +144,27 @@ export default function DTMSchoolDetails() {
   };
 
   const handleExportRegisteredCSV = () => {
-    const headers = ["F.I.O.", "Telefon", "Tuman", "Ro'yxatdan o'tgan sana"];
+    const headers = ["F.I.O.", "Telefon", "Guruh", "Tuman", "Ro'yxatdan o'tgan sana"];
     const rows = filteredRegistered.map((u) => [
       u.full_name,
       u.phone || "",
+      u.group_name || "—",
       u.district || "",
       format(new Date(u.created_at), "dd.MM.yyyy"),
     ]);
     downloadCSV(headers, rows, `${schoolCode}_royxat.csv`);
   };
 
+
   const handleExportResultsCSV = () => {
-    const headers = ["F.I.O.", "Telefon", "Tuman", "Majburiy fanlar", "1-fan", "1-fan ball", "2-fan", "2-fan ball", "Jami ball"];
+    const headers = ["F.I.O.", "Telefon", "Guruh", "Tuman", "Majburiy fanlar", "1-fan", "1-fan ball", "2-fan", "2-fan ball", "Jami ball"];
     const rows = filteredResults.map((u) => {
       const mandatory = u.test_results?.mandatory || [];
       const mandatoryTotal = mandatory.reduce((s, m) => s + m.point, 0);
       return [
         u.full_name,
         u.phone || "",
+        u.group_name || "—",
         u.district || "",
         mandatoryTotal,
         u.test_results?.primary?.name || "",
@@ -173,6 +176,7 @@ export default function DTMSchoolDetails() {
     });
     downloadCSV(headers, rows, `${schoolCode}_natijalar.csv`);
   };
+
 
   const displayName = schoolInfo?.full_name || schoolCode || "";
 
@@ -309,7 +313,9 @@ export default function DTMSchoolDetails() {
                       <TableHead className="w-10 text-center">#</TableHead>
                       <TableHead>F.I.O.</TableHead>
                       <TableHead>Telefon</TableHead>
+                      <TableHead>Guruh</TableHead>
                       <TableHead className="text-center">Majburiy</TableHead>
+
                       <TableHead>1-fan (ball)</TableHead>
                       <TableHead>2-fan (ball)</TableHead>
                       <TableHead className="text-center">Jami</TableHead>
@@ -327,10 +333,11 @@ export default function DTMSchoolDetails() {
                       ))
                     ) : filteredResults.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="py-16 text-center">
+                        <TableCell colSpan={9} className="py-16 text-center">
                           <FileText className="mx-auto h-10 w-10 text-muted-foreground/40" />
                           <p className="mt-3 text-sm text-muted-foreground">Natijalar topilmadi</p>
                         </TableCell>
+
                       </TableRow>
                     ) : (
                       filteredResults.map((user, idx) => {
@@ -341,6 +348,10 @@ export default function DTMSchoolDetails() {
                             <TableCell className="text-center text-muted-foreground text-xs">{idx + 1}</TableCell>
                             <TableCell className="font-medium">{user.full_name}</TableCell>
                             <TableCell className="text-muted-foreground">{user.phone || "—"}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{user.group_name || "—"}</Badge>
+                            </TableCell>
+
                             <TableCell className="text-center">
                               <Badge variant="outline" className="tabular-nums">{mandatoryTotal}/33</Badge>
                             </TableCell>
@@ -429,7 +440,9 @@ export default function DTMSchoolDetails() {
                       <TableHead className="w-10 text-center">#</TableHead>
                       <TableHead>F.I.O.</TableHead>
                       <TableHead>Telefon</TableHead>
+                      <TableHead>Guruh</TableHead>
                       <TableHead>Tuman</TableHead>
+
                       <TableHead>Sana</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -444,10 +457,11 @@ export default function DTMSchoolDetails() {
                       ))
                     ) : filteredRegistered.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="py-16 text-center">
+                        <TableCell colSpan={6} className="py-16 text-center">
                           <Users className="mx-auto h-10 w-10 text-muted-foreground/40" />
                           <p className="mt-3 text-sm text-muted-foreground">O'quvchilar topilmadi</p>
                         </TableCell>
+
                       </TableRow>
                     ) : (
                       filteredRegistered.map((user, idx) => (
@@ -455,6 +469,10 @@ export default function DTMSchoolDetails() {
                           <TableCell className="text-center text-muted-foreground text-xs">{idx + 1}</TableCell>
                           <TableCell className="font-medium">{user.full_name}</TableCell>
                           <TableCell className="text-muted-foreground">{user.phone || "—"}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{user.group_name || "—"}</Badge>
+                          </TableCell>
+
                           <TableCell className="text-muted-foreground">{user.district || "—"}</TableCell>
                           <TableCell className="text-muted-foreground">
                             {format(new Date(user.created_at), "dd.MM.yyyy")}
