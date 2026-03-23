@@ -120,6 +120,8 @@ export function RegisterUserDialog({ onUserCreated, allSchools = [] }: RegisterU
        second_subject_id: Number(formData.second_subject_id),
     };
 
+    console.log("Submitting DTM User Payload:", payload);
+
     const result = await createDTMUser(settings, payload);
     setLoading(false);
 
@@ -188,6 +190,7 @@ export function RegisterUserDialog({ onUserCreated, allSchools = [] }: RegisterU
                 value={formData.full_name}
                 onChange={(e) => handleChange("full_name", e.target.value)}
                 required
+                autoComplete="off"
               />
             </div>
 
@@ -196,9 +199,11 @@ export function RegisterUserDialog({ onUserCreated, allSchools = [] }: RegisterU
               <Input
                 id="phone"
                 placeholder="+998901234567"
+                type="tel"
                 value={formData.phone}
                 onChange={(e) => handleChange("phone", e.target.value)}
                 required
+                autoComplete="off"
               />
             </div>
           </div>
