@@ -245,12 +245,12 @@ export default function SuperAdminDashboard() {
   
   // Gender stats
   const g_male = baseEntities.filter(u => {
-    const g = u.gender?.toLowerCase()?.trim();
-    return g === "erkak" || g === "male" || g === "m" || g === "o'g'il" || g === "o'g`il";
+    const g = (u.gender ?? (u.dtm as any)?.gender ?? u.Gender)?.toString().toLowerCase()?.trim();
+    return g === "erkak" || g === "male" || g === "m" || g === "o'g'il" || g === "o'g`il" || g === "1";
   }).length;
   const g_female = baseEntities.filter(u => {
-    const g = u.gender?.toLowerCase()?.trim();
-    return g === "ayol" || g === "female" || g === "f" || g === "qiz";
+    const g = (u.gender ?? (u.dtm as any)?.gender ?? u.Gender)?.toString().toLowerCase()?.trim();
+    return g === "ayol" || g === "female" || g === "f" || g === "qiz" || g === "2";
   }).length;
   const g_other = baseEntities.length - g_male - g_female;
 
