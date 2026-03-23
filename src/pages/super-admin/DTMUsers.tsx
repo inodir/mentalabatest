@@ -329,9 +329,9 @@ export default function DTMUsers() {
 
   const [filters, setFilters] = useState<DTMFilters>({
     searchTerm: "",
-    schoolCode: "all",
+    schoolCode: [],
     hasResult: "all",
-    groupName: "all",
+    groupName: [],
   });
 
   const [expandedUser, setExpandedUser] = useState<number | null>(null);
@@ -360,7 +360,7 @@ export default function DTMUsers() {
   }, [deleteUser, retry]);
 
   // Check if any filter or search is active
-  const hasActiveFilter = filters.schoolCode !== "all" || filters.hasResult !== "all" || filters.groupName !== "all" || filters.searchTerm.trim().length > 0;
+  const hasActiveFilter = filters.schoolCode.length > 0 || filters.hasResult !== "all" || filters.groupName.length > 0 || filters.searchTerm.trim().length > 0;
 
   // Auto-load all users when a filter/search is activated
   useEffect(() => {
@@ -617,7 +617,7 @@ export default function DTMUsers() {
                         <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                           <div className="flex flex-col items-center gap-2">
                             <UsersIcon className="h-8 w-8 opacity-50" />
-                            {filters.searchTerm || filters.schoolCode !== "all" || filters.hasResult !== "all"
+                             {filters.searchTerm || filters.schoolCode.length > 0 || filters.hasResult !== "all" || filters.groupName.length > 0
                               ? "Qidiruv natijasi topilmadi"
                               : "Foydalanuvchilar topilmadi"}
                           </div>

@@ -13,12 +13,13 @@ import {
 } from "@/components/ui/select";
 import { Search, School, CheckCircle2, Filter, X, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 export interface DTMFilters {
   searchTerm: string;
-  schoolCode: string;
+  schoolCode: string[];
   hasResult: string;
-  groupName: string;
+  groupName: string[];
 }
 
 interface SchoolOption {
@@ -67,16 +68,16 @@ export function DTMUsersFilters({
   const clearFilters = () => {
     onFiltersChange({
       searchTerm: "",
-      schoolCode: "all",
+      schoolCode: [],
       hasResult: "all",
-      groupName: "all",
+      groupName: [],
     });
   };
 
   const activeFiltersCount = [
-    filters.schoolCode !== "all",
+    filters.schoolCode.length > 0,
     filters.hasResult !== "all",
-    filters.groupName !== "all",
+    filters.groupName.length > 0,
   ].filter(Boolean).length;
 
   return (
@@ -121,22 +122,14 @@ export function DTMUsersFilters({
           </div>
 
           {/* School filter */}
-          <Select value={filters.schoolCode} onValueChange={(v) => updateFilter("schoolCode", v)}>
-          <SelectTrigger className="w-[220px]">
-              <div className="flex items-center gap-2 truncate">
-                <School className="h-4 w-4 shrink-0" />
-                <span className="truncate"><SelectValue placeholder="Maktab" /></span>
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Barcha maktablar</SelectItem>
-              {schoolCodes.map((s) => (
-                <SelectItem key={s.code} value={s.code}>
-                  {s.name ? `${s.name} (${s.code})` : s.code}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={schoolCodes.map(s => ({ label: s.name ? `${s.name} (${s.code})` : s.code, value: s.code }))}
+            selected={filters.schoolCode}
+            onChange={(v: any) => updateFilter("schoolCode", v)}
+            placeholder="Maktablar"
+            icon={School}
+            className="w-[220px]"
+          />
 
           {/* Has result filter */}
           <Select value={filters.hasResult} onValueChange={(v) => updateFilter("hasResult", v)}>
@@ -155,20 +148,14 @@ export function DTMUsersFilters({
 
           {/* Group name filter */}
           {allGroupNames.length > 0 && (
-            <Select value={filters.groupName} onValueChange={(v) => updateFilter("groupName", v)}>
-              <SelectTrigger className="w-[180px]">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  <SelectValue placeholder="Guruh" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Barcha guruhlar</SelectItem>
-                {allGroupNames.map((g) => (
-                  <SelectItem key={g} value={g}>{g}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MultiSelect
+              options={allGroupNames.map(g => ({ label: g, value: g }))}
+              selected={filters.groupName}
+              onChange={(v: any) => updateFilter("groupName", v)}
+              placeholder="Guruhlar"
+              icon={Users}
+              className="w-[180px]"
+            />
           )}
 
           {/* Clear filters button */}
@@ -205,7 +192,7 @@ export function filterDTMUsers(users: DTMUser[], filters: DTMFilters): DTMUser[]
     }
 
     // School code filter
-    if (filters.schoolCode !== "all" && user.school_code !== filters.schoolCode) {
+    if (filters.schoolCode.length > 0 && !filters.schoolCode.includes(user.school_code)) {
       return false;
     }
 
@@ -216,7 +203,7 @@ export function filterDTMUsers(users: DTMUser[], filters: DTMFilters): DTMUser[]
     }
 
     // Group name filter
-    if (filters.groupName !== "all" && user.group_name !== filters.groupName) {
+    if (filters.groupName.length > 0 && (!user.group_name || !filters.groupName.includes(user.group_name))) {
       return false;
     }
 
