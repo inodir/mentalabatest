@@ -86,7 +86,7 @@ function LegendItem({
   value: number;
   total: number;
 }) {
-  const pct = total > 0 ? ((value / total) * 100).toFixed(1) : "0";
+  const pct = total > 0 ? ((value / total) * 100).toFixed(2) : "0.00";
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="flex items-center gap-2">

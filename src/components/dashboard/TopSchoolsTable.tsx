@@ -71,7 +71,7 @@ export function TopSchoolsTable({ schools }: TopSchoolsTableProps) {
                   className="font-bold text-white border-0 text-xs"
                   style={{ backgroundColor: scoreBg(school.avg_total_ball ?? 0) }}
                 >
-                  {(school.avg_total_ball ?? 0).toFixed(1)}
+                  {(school.avg_total_ball ?? 0).toFixed(2)}
                 </Badge>
               </div>
             </motion.div>
@@ -104,7 +104,7 @@ export function TopSchoolsTable({ schools }: TopSchoolsTableProps) {
                 <p className="text-[10px] text-muted-foreground">{school.district} · {school.answered_count ?? 0}/{school.registered_count ?? 0} natija</p>
               </div>
               <Badge variant="destructive" className="font-bold text-xs shrink-0">
-                {(school.avg_total_ball ?? 0).toFixed(1)}
+                {(school.avg_total_ball ?? 0).toFixed(2)}
               </Badge>
             </motion.div>
           ))}
@@ -123,7 +123,7 @@ export function TopSchoolsTable({ schools }: TopSchoolsTableProps) {
               {
                 label: "O'rt. ball",
                 value: withScore.length > 0
-                  ? (withScore.reduce((s, x) => s + (x.avg_total_ball ?? 0), 0) / withScore.length).toFixed(1)
+                  ? (withScore.reduce((s, x) => s + (x.avg_total_ball ?? 0), 0) / withScore.length).toFixed(2)
                   : "—",
               },
             ].map((item) => (

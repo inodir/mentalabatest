@@ -39,7 +39,7 @@ export function DailyTrend({ users }: DailyTrendProps) {
   });
 
   const totalInPeriod = data.reduce((s, d) => s + d.count, 0);
-  const avgPerDay = totalInPeriod > 0 ? (totalInPeriod / 14).toFixed(1) : "0";
+  const avgPerDay = totalInPeriod > 0 ? (totalInPeriod / 14).toFixed(2) : "0.00";
 
   return (
     <Card>

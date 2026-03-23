@@ -55,14 +55,12 @@ export default function DTMSchoolDetails() {
 
   const avgScore =
     usersWithResults.length > 0
-      ? Math.round(
-          usersWithResults
-            .filter((u) => u.total_point !== null && u.total_point !== undefined)
-            .reduce((sum, u) => sum + (u.total_point || 0), 0) /
-            usersWithResults.filter(
-              (u) => u.total_point !== null && u.total_point !== undefined
-            ).length
-        )
+      ? usersWithResults
+          .filter((u) => u.total_point !== null && u.total_point !== undefined)
+          .reduce((sum, u) => sum + (u.total_point || 0), 0) /
+          usersWithResults.filter(
+            (u) => u.total_point !== null && u.total_point !== undefined
+          ).length
       : 0;
 
   // Fetch school info from API
@@ -166,12 +164,12 @@ export default function DTMSchoolDetails() {
         u.phone || "",
         u.group_name || "—",
         u.district || "",
-        mandatoryTotal,
+        mandatoryTotal.toFixed(2),
         u.test_results?.primary?.name || "",
-        u.test_results?.primary?.point || 0,
+        (u.test_results?.primary?.point || 0).toFixed(2),
         u.test_results?.secondary?.name || "",
-        u.test_results?.secondary?.point || 0,
-        u.total_point ?? 0,
+        (u.test_results?.secondary?.point || 0).toFixed(2),
+        (u.total_point ?? 0).toFixed(2),
       ];
     });
     downloadCSV(headers, rows, `${schoolCode}_natijalar.csv`);
@@ -267,7 +265,7 @@ export default function DTMSchoolDetails() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">O'rtacha ball</p>
                 <p className="text-2xl font-bold tracking-tight">
-                  {loading ? <Skeleton className="h-8 w-16" /> : `${avgScore}/189`}
+                  {loading ? <Skeleton className="h-8 w-16" /> : `${Number(avgScore).toFixed(2)}/189`}
                 </p>
               </div>
             </CardContent>
@@ -353,13 +351,13 @@ export default function DTMSchoolDetails() {
                             </TableCell>
 
                             <TableCell className="text-center">
-                              <Badge variant="outline" className="tabular-nums">{mandatoryTotal}/33</Badge>
+                              <Badge variant="outline" className="tabular-nums">{mandatoryTotal.toFixed(2)}/33</Badge>
                             </TableCell>
                             <TableCell>
                               <span className="text-sm">{user.test_results?.primary?.name || "—"}</span>
                               {user.test_results?.primary && (
                                 <Badge variant="outline" className="ml-1.5 tabular-nums">
-                                  {user.test_results.primary.point}
+                                  {user.test_results.primary.point.toFixed(2)}
                                 </Badge>
                               )}
                             </TableCell>
@@ -367,7 +365,7 @@ export default function DTMSchoolDetails() {
                               <span className="text-sm">{user.test_results?.secondary?.name || "—"}</span>
                               {user.test_results?.secondary && (
                                 <Badge variant="outline" className="ml-1.5 tabular-nums">
-                                  {user.test_results.secondary.point}
+                                  {user.test_results.secondary.point.toFixed(2)}
                                 </Badge>
                               )}
                             </TableCell>
@@ -382,12 +380,12 @@ export default function DTMSchoolDetails() {
                                     : ""
                                 }`}
                               >
-                                {user.total_point ?? 0}/189
+                                {(user.total_point ?? 0).toFixed(2)}/189
                               </Badge>
                             </TableCell>
                             <TableCell className="text-center">
-                              {user.test_file_url ? (
-                                <a href={user.test_file_url} target="_blank" rel="noopener noreferrer">
+                              {user.test_result_file_url ? (
+                                <a href={user.test_result_file_url} target="_blank" rel="noopener noreferrer">
                                   <Button variant="outline" size="sm">
                                     <Download className="mr-1 h-3 w-3" />
                                     Yuklab olish
@@ -407,7 +405,7 @@ export default function DTMSchoolDetails() {
               {!loading && filteredResults.length > 0 && (
                 <div className="border-t px-4 py-3">
                   <p className="text-xs text-muted-foreground">
-                    Jami: {filteredResults.length} natija · O'rtacha: {avgScore}/189
+                    Jami: {filteredResults.length} natija · O'rtacha: {Number(avgScore).toFixed(2)}/189
                   </p>
                 </div>
               )}

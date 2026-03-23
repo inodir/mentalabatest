@@ -122,7 +122,7 @@ export function SchoolReadinessProgress({ schoolStats }: SchoolReadinessProgress
                 className="shrink-0 font-bold text-white border-0"
                 style={{ backgroundColor: getScoreColor(school.averageScore) }}
               >
-                {school.averageScore}
+                {school.averageScore.toFixed(2)}
               </Badge>
             </motion.div>
           ))}
@@ -162,7 +162,7 @@ export function SchoolReadinessProgress({ schoolStats }: SchoolReadinessProgress
                   </p>
                 </div>
                 <Badge variant="destructive" className="shrink-0 font-bold">
-                  {school.averageScore > 0 ? school.averageScore : "—"}
+                  {school.averageScore > 0 ? school.averageScore.toFixed(2) : "—"}
                 </Badge>
               </motion.div>
             ))

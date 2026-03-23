@@ -47,7 +47,7 @@ export function BallDistributionChart({ ballDistribution }: BallDistributionChar
                   fontSize: "12px",
                 }}
                 formatter={(value: number) => {
-                  const pct = total > 0 ? ((value / total) * 100).toFixed(1) : "0";
+                  const pct = total > 0 ? ((value / total) * 100).toFixed(2) : "0";
                   return [`${value} ta (${pct}%)`, "O'quvchilar"];
                 }}
               />

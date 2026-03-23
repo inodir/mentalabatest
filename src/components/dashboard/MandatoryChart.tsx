@@ -38,7 +38,7 @@ export function MandatoryChart({ mandatoryChart }: MandatoryChartProps) {
                   borderRadius: "var(--radius)",
                   fontSize: "12px",
                 }}
-                formatter={(value: number) => [`${value.toFixed(1)} ball`, "O'rtacha"]}
+                formatter={(value: number) => [`${value.toFixed(2)} ball`, "O'rtacha"]}
               />
               <Radar
                 dataKey="ball"

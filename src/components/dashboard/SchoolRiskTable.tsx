@@ -222,7 +222,7 @@ export function SchoolRiskTable({ schools, passLine = 70 }: SchoolRiskTableProps
                               className="font-bold text-sm"
                               style={{ color: risk.color }}
                             >
-                              {avg.toFixed(1)}
+                              {avg.toFixed(2)}
                             </span>
                           ) : (
                             <span className="text-muted-foreground text-xs">—</span>

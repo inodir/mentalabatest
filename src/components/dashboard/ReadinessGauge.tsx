@@ -105,7 +105,7 @@ export function ReadinessGauge({
               <circle cx={cx} cy={cy} r="6" fill={gaugeColor} />
               {/* Center text */}
               <text x={cx} y={cy + 22} textAnchor="middle" fontSize="22" fontWeight="bold" fill="currentColor">
-                {pct.toFixed(1)}%
+                {pct.toFixed(2)}%
               </text>
               <text x={cx} y={cy + 36} textAnchor="middle" fontSize="9" fill="hsl(var(--muted-foreground))">
                 Tayyorlik indeksi
@@ -128,12 +128,12 @@ export function ReadinessGauge({
           {/* Stats */}
           <div className="flex-1 space-y-3">
             {[
-              { label: "O'rtacha ball", value: avgTotalBall.toFixed(1) },
+              { label: "O'rtacha ball", value: avgTotalBall.toFixed(2) },
               { label: "O'tganlar", value: `${passedCount} / ${testedCount}` },
               { label: "O'tish balli", value: `${passLine} ball` },
               {
                 label: "O'tish foizi",
-                value: testedCount > 0 ? `${((passedCount / testedCount) * 100).toFixed(1)}%` : "—",
+                value: testedCount > 0 ? `${((passedCount / testedCount) * 100).toFixed(2)}%` : "—",
               },
             ].map((item) => (
               <div key={item.label} className="rounded-xl bg-muted/50 px-3 py-2">

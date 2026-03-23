@@ -56,14 +56,14 @@ export function DTMReadinessCards({ riskStats, dtmReadiness, genderResultStats }
           <CardContent className="space-y-4">
             <div className="text-center">
               <div className="text-4xl font-bold text-primary">
-                {dtmReadiness.readiness_index.toFixed(1)}%
+                {dtmReadiness.readiness_index.toFixed(2)}%
               </div>
               <p className="text-xs text-muted-foreground mt-1">Tayyorgarlik indeksi</p>
             </div>
             <Progress value={dtmReadiness.readiness_index} className="h-2" />
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="rounded-lg bg-muted/50 p-2.5 text-center">
-                <p className="text-lg font-semibold">{dtmReadiness.avg_total_ball.toFixed(1)}</p>
+                <p className="text-lg font-semibold">{dtmReadiness.avg_total_ball.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground">O'rtacha ball</p>
               </div>
               <div className="rounded-lg bg-muted/50 p-2.5 text-center">
@@ -91,7 +91,7 @@ export function DTMReadinessCards({ riskStats, dtmReadiness, genderResultStats }
           <CardContent className="space-y-4">
             <div className="text-center">
               <div className="text-4xl font-bold text-destructive">
-                {riskStats.risk_percent.toFixed(1)}%
+                {riskStats.risk_percent.toFixed(2)}%
               </div>
               <p className="text-xs text-muted-foreground mt-1">Xavf darajasi</p>
             </div>
@@ -135,11 +135,11 @@ export function DTMReadinessCards({ riskStats, dtmReadiness, genderResultStats }
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="rounded-md bg-muted/50 p-2 text-center">
-                    <p className="text-base font-semibold">{data.avg_total_ball.toFixed(1)}</p>
+                    <p className="text-base font-semibold">{data.avg_total_ball.toFixed(2)}</p>
                     <p className="text-[10px] text-muted-foreground">O'rt. ball</p>
                   </div>
                   <div className="rounded-md bg-muted/50 p-2 text-center">
-                    <p className="text-base font-semibold">{data.passed_percent.toFixed(1)}%</p>
+                    <p className="text-base font-semibold">{data.passed_percent.toFixed(2)}%</p>
                     <p className="text-[10px] text-muted-foreground">O'tganlar</p>
                   </div>
                 </div>

@@ -523,9 +523,9 @@ export default function SchoolDetails() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
-                            {user.test_file_url ? (
+                            {user.test_result_file_url ? (
                               <a
-                                href={user.test_file_url}
+                                href={user.test_result_file_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >

@@ -61,7 +61,7 @@ export function FunnelStats({ registered, answered, passed, passLine }: FunnelSt
                   style={{ backgroundColor: step.color }}
                 >
                   <span className="text-white text-xs font-bold">
-                    {widthPct.toFixed(1)}%
+                    {widthPct.toFixed(2)}%
                   </span>
                 </motion.div>
               </div>

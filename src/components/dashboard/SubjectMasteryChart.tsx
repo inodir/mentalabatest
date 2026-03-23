@@ -62,7 +62,7 @@ export function SubjectMasteryChart({ subjectMastery }: SubjectMasteryChartProps
                   fontSize: "12px",
                 }}
                 formatter={(value: number, _: string, props: any) => [
-                  `${value.toFixed(1)} ball (${props.payload.questionsCount} ta savol)`,
+                  `${value.toFixed(2)} ball (${props.payload.questionsCount} ta savol)`,
                   props.payload.fullName,
                 ]}
               />
