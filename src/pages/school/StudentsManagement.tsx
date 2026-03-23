@@ -2,6 +2,8 @@ import { useState, useMemo } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DebouncedInput } from "@/components/ui/debounced-input";
+
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -120,12 +122,13 @@ export default function StudentsManagement() {
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[200px] max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
+            <DebouncedInput
               placeholder="F.I.O. bo'yicha qidirish..."
               value={searchTerm}
-              onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+              onDebounceChange={(v) => { setSearchTerm(v); setPage(1); }}
               className="pl-9"
             />
+
           </div>
 
           <Select value={groupFilter} onValueChange={handleFilterChange(setGroupFilter)}>

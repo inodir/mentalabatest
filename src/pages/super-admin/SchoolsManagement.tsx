@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DebouncedInput } from "@/components/ui/debounced-input";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DTMSchoolsList } from "@/components/dtm/DTMSchoolsList";
 import {
@@ -1047,12 +1049,12 @@ export default function SchoolsManagement() {
          <div className="flex flex-col gap-4 sm:flex-row">
            <div className="relative flex-1">
              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-             <Input
-               placeholder="Qidirish..."
-               value={searchTerm}
-               onChange={(e) => setSearchTerm(e.target.value)}
-               className="pl-9"
-             />
+              <DebouncedInput
+                placeholder="Qidirish..."
+                value={searchTerm}
+                onDebounceChange={setSearchTerm}
+                className="pl-9"
+              />
            </div>
           <Select value={regionFilter} onValueChange={(value) => {
             setRegionFilter(value);

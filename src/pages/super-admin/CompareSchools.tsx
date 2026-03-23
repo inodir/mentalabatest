@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -13,21 +14,31 @@ const PASS_LINE = 70;
 
 export default function CompareSchools() {
   const { dtmUser } = useAuth();
-  const { loadedEntities, mode, loading } = useDTMDashboard();
+  const { loadedEntities, mode, setMode, loading } = useDTMDashboard();
   const schools = dtmUser?.schools ?? [];
+
+  // Force accurate mode for full comparison data
+  useEffect(() => {
+    if (setMode) {
+      setMode("accurate");
+    }
+  }, [setMode]);
+
+
 
   const [schoolA, setSchoolA] = useState<string>("none");
   const [schoolB, setSchoolB] = useState<string>("none");
 
   const dataA = useMemo(() => {
     if (schoolA === "none") return null;
-    const currSchool = schools.find(s => s.code === schoolA);
-    const list = loadedEntities.filter(u => u.school_code === schoolA);
+    const currSchool = schools.find(s => String(s.code) === String(schoolA));
+    const list = loadedEntities.filter(u => String(u.school_code) === String(schoolA));
     const registered = list.length || currSchool?.registered_count || 0;
     const answered = list.filter(u => u.has_result).length || currSchool?.answered_count || 0;
     const passed = list.filter(u => u.has_result && (u.total_point ?? 0) >= PASS_LINE).length;
     const totalScore = list.filter(u => u.has_result).reduce((sum, u) => sum + (u.total_point ?? 0), 0);
     const avg = answered > 0 ? totalScore / answered : (currSchool?.avg_total_ball ?? 0);
+
 
     return {
       name: currSchool?.name || "Maktab A", code: schoolA, district: currSchool?.district || "—", region: currSchool?.region || "—",
@@ -39,13 +50,14 @@ export default function CompareSchools() {
 
   const dataB = useMemo(() => {
     if (schoolB === "none") return null;
-    const currSchool = schools.find(s => s.code === schoolB);
-    const list = loadedEntities.filter(u => u.school_code === schoolB);
+    const currSchool = schools.find(s => String(s.code) === String(schoolB));
+    const list = loadedEntities.filter(u => String(u.school_code) === String(schoolB));
     const registered = list.length || currSchool?.registered_count || 0;
     const answered = list.filter(u => u.has_result).length || currSchool?.answered_count || 0;
     const passed = list.filter(u => u.has_result && (u.total_point ?? 0) >= PASS_LINE).length;
     const totalScore = list.filter(u => u.has_result).reduce((sum, u) => sum + (u.total_point ?? 0), 0);
     const avg = answered > 0 ? totalScore / answered : (currSchool?.avg_total_ball ?? 0);
+
 
     return {
       name: currSchool?.name || "Maktab B", code: schoolB, district: currSchool?.district || "—", region: currSchool?.region || "—",
@@ -96,8 +108,9 @@ export default function CompareSchools() {
       }
     };
 
-    if (schoolA !== "none") loadedEntities.filter(u => u.school_code === schoolA).forEach(u => processUser(u, "A"));
-    if (schoolB !== "none") loadedEntities.filter(u => u.school_code === schoolB).forEach(u => processUser(u, "B"));
+    if (schoolA !== "none") loadedEntities.filter(u => String(u.school_code) === String(schoolA)).forEach(u => processUser(u, "A"));
+    if (schoolB !== "none") loadedEntities.filter(u => String(u.school_code) === String(schoolB)).forEach(u => processUser(u, "B"));
+
 
     return Object.entries(stats).map(([name, s]) => ({
       name: name.length > 24 ? name.slice(0, 22) + "…" : name,
@@ -155,11 +168,12 @@ export default function CompareSchools() {
             </CardHeader>
             <CardContent>
               {mode === "fast" && (
-                <div className="flex items-center gap-2 text-amber-600 bg-amber-500/10 p-3 rounded-xl mb-3 text-xs border border-amber-500/20">
+                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 bg-amber-500/10 p-3 rounded-xl mb-3 text-xs border border-amber-500/20">
                   <AlertCircle className="h-4 w-4" />
                   <span>Aniqroq vizualizatsiya va gender/til tahlili uchun Bosh sahifada <strong>"Aniq rejim"</strong>ni yoqing.</span>
                 </div>
               )}
+
               <div className="h-[250px] mt-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={comparisonChartData} margin={{ top: 20, right: 30, left: 10, bottom: 5 }}>
@@ -295,7 +309,8 @@ function SchoolCompareCard({ title, school }: { title: string, school: any }) {
               <span className="text-muted-foreground block">Tili (Uz / Ru)</span>
               <div className="flex items-center justify-between font-bold">
                 <span className="text-slate-700 dark:text-slate-300">{school.uz}</span>
-                <span className="text-indigo-600">{school.ru}</span>
+                <span className="text-indigo-600 dark:text-indigo-400">{school.ru}</span>
+
               </div>
             </div>
           </div>
