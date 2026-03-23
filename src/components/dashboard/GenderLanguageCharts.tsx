@@ -10,6 +10,10 @@ interface GenderLanguageChartsProps {
 const GENDER_LABELS: Record<string, string> = {
   male: "Erkak",
   female: "Ayol",
+  m: "Erkak",
+  f: "Ayol",
+  M: "Erkak",
+  F: "Ayol",
 };
 
 const LANGUAGE_LABELS: Record<string, string> = {

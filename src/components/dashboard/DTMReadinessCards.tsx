@@ -36,6 +36,10 @@ interface DTMReadinessCardsProps {
 const GENDER_LABELS: Record<string, string> = {
   male: "Erkak",
   female: "Ayol",
+  m: "Erkak",
+  f: "Ayol",
+  M: "Erkak",
+  F: "Ayol",
 };
 
 export function DTMReadinessCards({ riskStats, dtmReadiness, genderResultStats }: DTMReadinessCardsProps) {

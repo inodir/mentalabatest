@@ -8,12 +8,25 @@ interface ScoreHistogramProps {
 }
 
 const RANGES = [
-  { label: "0–30",   min: 0,   max: 30   },
-  { label: "31–60",  min: 31,  max: 60   },
-  { label: "61–90",  min: 61,  max: 90   },
-  { label: "91–120", min: 91,  max: 120  },
-  { label: "121–150",min: 121, max: 150  },
-  { label: "151–189",min: 151, max: 189  },
+  { label: "0–10",    min: 0,   max: 10   },
+  { label: "11–20",   min: 11,  max: 20   },
+  { label: "21–30",   min: 21,  max: 30   },
+  { label: "31–40",   min: 31,  max: 40   },
+  { label: "41–50",   min: 41,  max: 50   },
+  { label: "51–60",   min: 51,  max: 60   },
+  { label: "61–70",   min: 61,  max: 70   },
+  { label: "71–80",   min: 71,  max: 80   },
+  { label: "81–90",   min: 81,  max: 90   },
+  { label: "91–100",  min: 91,  max: 100  },
+  { label: "101–110", min: 101, max: 110  },
+  { label: "111–120", min: 111, max: 120  },
+  { label: "121–130", min: 121, max: 130  },
+  { label: "131–140", min: 131, max: 140  },
+  { label: "141–150", min: 141, max: 150  },
+  { label: "151–160", min: 151, max: 160  },
+  { label: "161–170", min: 161, max: 170  },
+  { label: "171–180", min: 171, max: 180  },
+  { label: "181–189", min: 181, max: 189  },
 ];
 
 const COLORS = [
