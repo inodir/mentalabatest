@@ -34,6 +34,7 @@ interface UseDistrictDTMDashboardResult {
   error: DistrictDashboardError;
   progress: { loaded: number; total: number } | null;
   retry: () => void;
+  lastSynced: Date | null;
 }
 
 export function useDistrictDTMDashboard() {
@@ -42,6 +43,7 @@ export function useDistrictDTMDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<DistrictDashboardError>(null);
   const [progress, setProgress] = useState<{ loaded: number; total: number } | null>(null);
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -142,6 +144,7 @@ export function useDistrictDTMDashboard() {
     } finally {
       setLoading(false);
       setProgress(null);
+      setLastSynced(new Date());
     }
   }, [dtmUser]);
 
@@ -155,5 +158,5 @@ export function useDistrictDTMDashboard() {
     fetchData();
   }, [fetchData]);
 
-  return { stats, loading, error, progress, retry } as UseDistrictDTMDashboardResult;
+  return { stats, loading, error, progress, retry, lastSynced } as UseDistrictDTMDashboardResult;
 }

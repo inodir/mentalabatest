@@ -370,8 +370,9 @@ export default function DTMUsers() {
     }
   }, [hasActiveFilter, allUsersLoaded, allUsersLoading, loadAllUsers]);
 
-  // Use allUsers when filter/search is active and loaded, otherwise current page
-  const sourceUsers = hasActiveFilter && allUsersLoaded ? allUsers : users;
+  // Use allUsers only when they are fully loaded, otherwise use the hook's 'users' 
+  // which now supports server-side search
+  const sourceUsers = allUsersLoaded ? allUsers : users;
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -533,11 +534,19 @@ export default function DTMUsers() {
 
         {/* Users Table */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-primary" />
-              Foydalanuvchilar ro'yxati
-            </CardTitle>
+          <CardHeader className="pb-3 px-6">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Award className="h-5 w-5 text-primary" />
+                Foydalanuvchilar ro'yxati
+              </CardTitle>
+              {loading && filters.searchTerm.trim() && (
+                <div className="flex items-center gap-2 text-[10px] font-medium text-muted-foreground animate-pulse bg-muted/50 px-2 py-1 rounded-full border border-border/40">
+                  <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                  Qidirilmoqda...
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {loading || (hasActiveFilter && allUsersLoading) ? (
@@ -563,7 +572,7 @@ export default function DTMUsers() {
                         </div>
                       </TableHead>
                       <TableHead
-                        className="cursor-pointer hover:bg-muted/50"
+                        className="cursor-pointer hover:bg-muted/50 hidden lg:table-cell"
                         onClick={() => handleSort("school_code")}
                       >
                         <div className="flex items-center gap-2">
@@ -572,14 +581,14 @@ export default function DTMUsers() {
                           <SortIndicator column="school_code" />
                         </div>
                       </TableHead>
-                      <TableHead>
+                      <TableHead className="hidden sm:table-cell">
                         <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4" />
                           Telefon
                         </div>
                       </TableHead>
                       <TableHead
-                        className="cursor-pointer hover:bg-muted/50 text-center"
+                        className="cursor-pointer hover:bg-muted/50 text-center hidden md:table-cell"
                         onClick={() => handleSort("has_result")}
                       >
                         <div className="flex items-center justify-center gap-2">
@@ -588,7 +597,7 @@ export default function DTMUsers() {
                           <SortIndicator column="has_result" />
                         </div>
                       </TableHead>
-                      <TableHead className="text-center">
+                      <TableHead className="text-center hidden lg:table-cell">
                         <div className="flex items-center justify-center gap-2">
                           <BookOpen className="h-4 w-4" />
                           Fan ballari
@@ -598,13 +607,13 @@ export default function DTMUsers() {
                         className="cursor-pointer hover:bg-muted/50 text-center"
                         onClick={() => handleSort("total_point")}
                       >
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-2 font-bold text-primary">
                           <Award className="h-4 w-4" />
                           Jami
                           <SortIndicator column="total_point" />
                         </div>
                       </TableHead>
-                      <TableHead className="text-center">
+                      <TableHead className="text-center hidden xl:table-cell">
                         <div className="flex items-center justify-center gap-2">
                           <Download className="h-4 w-4" />
                           Fayllar
@@ -632,7 +641,7 @@ export default function DTMUsers() {
                             key={user.id}
                             className={expandedUser === user.id ? "bg-muted/30" : ""}
                           >
-                            <TableCell className="text-muted-foreground font-mono text-xs">
+                            <TableCell className="hidden md:table-cell text-muted-foreground font-mono text-xs">
                               {page * limit + index + 1}
                             </TableCell>
                             <TableCell>
@@ -640,12 +649,20 @@ export default function DTMUsers() {
                                 <div className="flex-shrink-0 h-9 w-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center font-bold text-primary border border-primary/20 shadow-sm">
                                   {user.full_name ? user.full_name[0].toUpperCase() : "?"}
                                 </div>
-                                <div className="space-y-1">
-                                  <p className="font-semibold text-sm truncate max-w-[200px] text-foreground group-hover:text-primary transition-colors">
+                                <div className="space-y-1 min-w-0">
+                                  <p className="font-semibold text-sm truncate max-w-[150px] sm:max-w-[200px] text-foreground group-hover:text-primary transition-colors">
                                     {user.full_name || "—"}
                                   </p>
+                                  <div className="flex flex-col gap-1 md:hidden">
+                                     {user.school_code && (
+                                       <Badge variant="outline" className="w-fit text-[9px] h-4 px-1 py-0 border-border/40">
+                                         {user.school_code}
+                                       </Badge>
+                                     )}
+                                     {!user.has_result && <span className="text-[10px] text-red-500 font-bold uppercase tracking-tighter">Natija yo'q</span>}
+                                  </div>
                                   {user.district && (
-                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
                                       <span className="truncate max-w-[180px]">
                                         {user.district}
                                       </span>
@@ -800,8 +817,8 @@ export default function DTMUsers() {
               </div>
             )}
 
-            {/* Pagination */}
-            {pageInfo && totalPages > 1 && !hasActiveFilter && (
+            {/* Pagination - now always visible if multiple pages, even during search */}
+            {pageInfo && totalPages > 1 && (
               <div className="flex items-center justify-between mt-4 pt-4 border-t">
                 <p className="text-sm text-muted-foreground">
                   <Badge variant="outline">

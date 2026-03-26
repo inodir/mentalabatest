@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound";
 import SuperAdminLogin from "./pages/auth/SuperAdminLogin";
 import SchoolAdminLogin from "./pages/auth/SchoolAdminLogin";
 import DistrictAdminLogin from "./pages/auth/DistrictAdminLogin";
+import StudentLogin from "./pages/auth/StudentLogin";
 
 
 // Super Admin pages
@@ -35,6 +36,9 @@ import StudentHistory from "./pages/school/StudentHistory";
 import DistrictDashboard from "./pages/district/DistrictDashboard";
 import DistrictSchoolDetails from "./pages/district/DistrictSchoolDetails";
 import DistrictSchools from "./pages/district/DistrictSchools";
+
+// Student pages
+import StudentDashboard from "./pages/student/StudentDashboard";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +78,14 @@ function DistrictAdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Protected route wrapper for Student
+function StudentRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return <LoadingSpinner />;
+  if (!user) return <Navigate to="/student/login" replace />;
+  return <>{children}</>;
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -82,6 +94,7 @@ function AppRoutes() {
       <Route path="/super-admin/login" element={<SuperAdminLogin />} />
       <Route path="/school/login" element={<SchoolAdminLogin />} />
       <Route path="/district/login" element={<DistrictAdminLogin />} />
+      <Route path="/student/login" element={<StudentLogin />} />
 
       {/* Super Admin routes */}
       <Route path="/super-admin" element={<SuperAdminRoute><SuperAdminDashboard /></SuperAdminRoute>} />
@@ -105,6 +118,9 @@ function AppRoutes() {
        <Route path="/district" element={<DistrictAdminRoute><DistrictDashboard /></DistrictAdminRoute>} />
        <Route path="/district/schools" element={<DistrictAdminRoute><DistrictSchools /></DistrictAdminRoute>} />
        <Route path="/district/schools/:schoolId" element={<DistrictAdminRoute><DistrictSchoolDetails /></DistrictAdminRoute>} />
+       
+       {/* Student routes */}
+       <Route path="/student" element={<StudentRoute><StudentDashboard /></StudentRoute>} />
 
       {/* Catch-all */}
       <Route path="*" element={<NotFound />} />

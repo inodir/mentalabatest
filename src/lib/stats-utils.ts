@@ -49,6 +49,49 @@ export function normalizeGender(gender: any): 'male' | 'female' | 'other' {
 }
 
 /**
+ * Normalizes language strings into a standard format.
+ */
+export function normalizeLanguage(lang: any): 'uz' | 'ru' | 'other' {
+  if (!lang) return 'other';
+  const l = lang.toString().toLowerCase().trim().replace(/[‘’ʻʼ`‘´]/g, "'");
+  
+  if (l === 'uz' || l === 'uzbek' || l === "o'zbek" || l === "o'z" || l === 'o‘zbek') return 'uz';
+  if (l === 'ru' || l === 'rus' || l === 'russian' || l === 'русский') return 'ru';
+  
+  return 'other';
+}
+
+/**
+ * Normalizes region strings into a standard format.
+ */
+export function normalizeRegion(region: any): string {
+  if (!region) return "Noma'lum";
+  let r = region.toString().trim().replace(/[‘’ʻʼ`‘´]/g, "'");
+  
+  // Hand-standardized mapping for common variants
+  const map: Record<string, string> = {
+    "Toshkent sh.": "Toshkent shahri",
+    "Toshkent sh": "Toshkent shahri",
+    "Toshkent": "Toshkent viloyati", // Needs care, but usually means province if not 'sh'
+    "Sirdaryo": "Sirdaryo viloyati",
+    "Jizzax": "Jizzax viloyati",
+    "Samarqand": "Samarqand viloyati",
+    "Farg'ona": "Farg'ona viloyati",
+    "Namangan": "Namangan viloyati",
+    "Andijon": "Andijon viloyati",
+    "Qashqadaryo": "Qashqadaryo viloyati",
+    "Surxondaryo": "Surxondaryo viloyati",
+    "Xorazm": "Xorazm viloyati",
+    "Buxoro": "Buxoro viloyati",
+    "Navoiy": "Navoiy viloyati",
+    "Qoraqalpoq": "Qoraqalpog'iston Res.",
+    "Qoraqalpog'iston": "Qoraqalpog'iston Res.",
+  };
+
+  return map[r] || r;
+}
+
+/**
  * Generates score distribution data with a specified interval.
  */
 export function getScoreDistribution(
@@ -89,7 +132,8 @@ export function getScoreDistribution(
       const end = start + interval;
       return {
         label: `${start}${interval === 1 ? '' : `–${end}`}`,
-        soni: value,
+        range: `${start}${interval === 1 ? '' : `–${end}`}`,
+        count: value,
         min: start,
         max: end
       };
@@ -205,3 +249,14 @@ export function calculateDTMPrediction(score: number): { percent: number; status
     status 
   };
 }
+
+/**
+ * Shared Recharts Tooltip Style that respects CSS variables for themes.
+ */
+export const ChartTooltipStyle = {
+  backgroundColor: "hsl(var(--card))",
+  border: "1px solid hsl(var(--border))",
+  borderRadius: "12px",
+  fontSize: "12px",
+  boxShadow: "0 10px 15px -3px hsl(var(--glass-shadow)), 0 4px 6px -4px hsl(var(--glass-shadow))",
+};

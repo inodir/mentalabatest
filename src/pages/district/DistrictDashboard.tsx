@@ -16,54 +16,18 @@ import {
 import { PDFExportButton } from "@/components/ui/pdf-export-button";
 import { exportDistrictPDF } from "@/lib/exportPDF";
 import { ExcelExportButton } from "@/components/ui/excel-export-button";
-import { exportToExcel } from "@/lib/exportExcel"; // will use exportToExcel for simplicity, or add custom District helper
+import { exportToExcel } from "@/lib/exportExcel";
+import { Input } from "@/components/ui/input";
+import { ChartTooltipStyle } from "@/lib/stats-utils";
+import { SyncStatusIndicator } from "@/components/dashboard/SyncStatusIndicator";
 
 const PASS_LINE = 70;
 
-const ChartTooltipStyle = {
-  backgroundColor: "hsl(var(--card))",
-  border: "1px solid hsl(var(--border))",
-  borderRadius: "12px",
-  fontSize: "12px",
-};
 
-function KPI({ label, value, sub, icon: Icon, color, i }: {
-  label: string; value: string | number; sub?: string;
-  icon: React.ElementType; color: string; i: number;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: i * 0.06 }}
-    >
-      <Card className="rounded-2xl border-border/50">
-        <CardContent className="p-5 flex items-start gap-4">
-          <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${color}`}>
-            <Icon className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">{label}</p>
-            <p className="text-2xl font-bold leading-tight">{value}</p>
-            {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-3">
-      <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">{title}</h2>
-      {children}
-    </div>
-  );
-}
+import { StatsKPI, DashboardSection } from "@/components/dashboard/StatsKPI";
 
 export default function DistrictDashboard() {
-  const { stats, loading, error, retry } = useDistrictDTMDashboard();
+  const { stats, loading, error, retry, lastSynced, progress } = useDistrictDTMDashboard();
   const { dtmUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -121,72 +85,81 @@ export default function DistrictDashboard() {
             <h1 className="text-3xl font-bold tracking-tight">{districtName}</h1>
             <p className="text-muted-foreground mt-1">Tuman darajasidagi tahlil sahifasi</p>
           </div>
-          {!loading && schoolStats.length > 0 && (
-            <div className="flex items-center gap-2">
-              <ExcelExportButton
-                label="Excel yuklab olish"
-                filename={`${districtName}_Maktablar`}
-                onExport={() => {
-                  const data = schoolStats.map((s, idx) => ({
-                    "#": idx + 1,
-                    "Maktab": s.schoolName,
-                    "Kodi": s.schoolCode || "—",
-                    "O'quvchilar": s.totalStudents,
-                    "Topshirdi": s.studentsWithResults,
-                    "Foiz (%)": s.totalStudents > 0 ? `${Math.round((s.studentsWithResults/s.totalStudents)*100)}%` : "0%",
-                    "O'rtacha ball": s.averageScore.toFixed(1),
-                  }));
-                  return exportToExcel(data, `${districtName}_Maktablar`, "Maktablar");
-                }}
-              />
-              <PDFExportButton
-                label="PDF hisobot"
-                onExport={() => exportDistrictPDF({
-                  totalUsers: totalStudents,
-                  answeredUsers: submitted,
-                  testedPercent: parseFloat(submitPct),
-                  avgBall,
-                  passLine: PASS_LINE,
-                  adminName: dtmUser?.full_name,
-                  districtName,
-                  schools: schoolStats.map(s => ({
-                    id: Number(s.schoolId) || 0,
-                    name: s.schoolName,
-                    code: s.schoolCode,
-                    district: districtName,
-                    region: "—",
-                    registered_count: s.totalStudents,
-                    answered_count: s.studentsWithResults,
-                    tested_percent: s.totalStudents > 0 ? (s.studentsWithResults / s.totalStudents) * 100 : 0,
-                    avg_total_ball: s.averageScore,
-                  })),
-                })}
-              />
-            </div>
-          )}
+          
+          <div className="flex items-center gap-3 flex-wrap">
+            <SyncStatusIndicator 
+              progress={progress} 
+              loading={loading} 
+              lastSynced={lastSynced}
+              error={error}
+            />
+            {!loading && schoolStats.length > 0 && (
+              <div className="flex items-center gap-2">
+                <ExcelExportButton
+                  label="Excel yuklab olish"
+                  filename={`${districtName}_Maktablar`}
+                  onExport={() => {
+                    const data = schoolStats.map((s, idx) => ({
+                      "#": idx + 1,
+                      "Maktab": s.schoolName,
+                      "Kodi": s.schoolCode || "—",
+                      "O'quvchilar": s.totalStudents,
+                      "Topshirdi": s.studentsWithResults,
+                      "Foiz (%)": s.totalStudents > 0 ? `${Math.round((s.studentsWithResults/s.totalStudents)*100)}%` : "0%",
+                      "O'rtacha ball": s.averageScore.toFixed(1),
+                    }));
+                    return exportToExcel(data, `${districtName}_Maktablar`, "Maktablar");
+                  }}
+                />
+                <PDFExportButton
+                  label="PDF hisobot"
+                  onExport={() => exportDistrictPDF({
+                    totalUsers: totalStudents,
+                    answeredUsers: submitted,
+                    testedPercent: parseFloat(submitPct),
+                    avgBall,
+                    passLine: PASS_LINE,
+                    adminName: dtmUser?.full_name,
+                    districtName,
+                    schools: schoolStats.map(s => ({
+                      id: Number(s.schoolId) || 0,
+                      name: s.schoolName,
+                      code: s.schoolCode,
+                      district: districtName,
+                      region: "—",
+                      registered_count: s.totalStudents,
+                      answered_count: s.studentsWithResults,
+                      tested_percent: s.totalStudents > 0 ? (s.studentsWithResults / s.totalStudents) * 100 : 0,
+                      avg_total_ball: s.averageScore,
+                    })),
+                  })}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 1. Asosiy ko'rsatkichlar */}
-        <Section title="Asosiy ko'rsatkichlar">
+        <DashboardSection title="Asosiy ko'rsatkichlar">
           {loading ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {[...Array(4)].map((_, i) => (
-                <Card key={i} className="rounded-2xl"><CardContent className="p-5"><Skeleton className="h-14" /></CardContent></Card>
+                <Card key={i} className="rounded-2xl shadow-sm"><CardContent className="p-5"><Skeleton className="h-14" /></CardContent></Card>
               ))}
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <KPI i={0} label="Jami o'quvchilar" value={totalStudents.toLocaleString()} icon={Users} color="bg-blue-500/15 text-blue-600" />
-              <KPI i={1} label="Natijasi bor" value={submitted.toLocaleString()} sub={`${submitPct}%`} icon={CheckCircle} color="bg-green-500/15 text-green-600" />
-              <KPI i={2} label="Natija chiqmagan" value={notSub.toLocaleString()} icon={XCircle} color="bg-red-500/15 text-red-600" />
-              <KPI i={3} label="Maktablar soni" value={schoolStats.length} icon={School} color="bg-purple-500/15 text-purple-600" />
+              <StatsKPI index={0} label="Jami o'quvchilar" value={totalStudents.toLocaleString()} icon={Users} color="bg-blue-500/15 text-blue-600" />
+              <StatsKPI index={1} label="Natijasi bor" value={submitted.toLocaleString()} sub={`${submitPct}%`} icon={CheckCircle} color="bg-green-500/15 text-green-600" />
+              <StatsKPI index={2} label="Natija chiqmagan" value={notSub.toLocaleString()} icon={XCircle} color="bg-red-500/15 text-red-600" />
+              <StatsKPI index={3} label="Maktablar soni" value={schoolStats.length} icon={School} color="bg-purple-500/15 text-purple-600" />
             </div>
           )}
-        </Section>
+        </DashboardSection>
 
         {/* 2. Statistika Grafiklarchi */}
         {!loading && schoolStats.length > 0 && (
-          <Section title="Taqsimotlar">
+          <DashboardSection title="Taqsimotlar">
             <div className="grid gap-5 lg:grid-cols-3">
               <Card className="rounded-2xl lg:col-span-2">
                 <CardHeader className="pb-3">
@@ -230,21 +203,20 @@ export default function DistrictDashboard() {
                 </CardContent>
               </Card>
             </div>
-          </Section>
+          </DashboardSection>
         )}
 
         {/* 3. Maktablar ro'yxati */}
         {!loading && (
-          <Section title="Maktablar umumiy ro'yxati">
+          <DashboardSection title="Maktablar umumiy ro'yxati">
             <Card className="rounded-2xl">
               <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
                 <CardTitle className="text-sm font-medium">Barcha maktablar</CardTitle>
                 <div className="relative w-full max-w-64">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <input
-                    type="text"
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10" />
+                  <Input
                     placeholder="Maktab nomi yoki kodi..."
-                    className="w-full pl-9 pr-4 py-1.5 rounded-xl border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="pl-9 h-10 rounded-xl"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
@@ -288,7 +260,7 @@ export default function DistrictDashboard() {
                 </div>
               </CardContent>
             </Card>
-          </Section>
+          </DashboardSection>
         )}
 
         {loading && (

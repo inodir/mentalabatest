@@ -22,6 +22,7 @@ interface UseDTMDashboardResult {
   retry: () => void;
   settings: DTMApiSettings | null;
   loadedEntities: DTMUser[];
+  lastSynced: Date | undefined;
 }
 
 export function useDTMDashboard(): UseDTMDashboardResult {
@@ -32,6 +33,7 @@ export function useDTMDashboard(): UseDTMDashboardResult {
   const [progress, setProgress] = useState<{ loaded: number; total: number } | null>(null);
   const [settings, setSettings] = useState<DTMApiSettings | null>(null);
   const [loadedEntities, setLoadedEntities] = useState<DTMUser[]>([]);
+  const [lastSynced, setLastSynced] = useState<Date | undefined>(undefined);
 
   const fetchData = useCallback(async (currentMode: DashboardMode) => {
     setLoading(true);
@@ -81,6 +83,7 @@ export function useDTMDashboard(): UseDTMDashboardResult {
     } finally {
       setLoading(false);
       setProgress(null);
+      setLastSynced(new Date());
     }
   }, []);
 
@@ -106,5 +109,6 @@ export function useDTMDashboard(): UseDTMDashboardResult {
     retry,
     settings,
     loadedEntities,
+    lastSynced,
   };
 }

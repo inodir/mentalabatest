@@ -33,6 +33,8 @@ interface AuthContextType {
   signIn: (username: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
+  lastSynced: Date | null;
+  refreshing: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,6 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [dtmUser, setDtmUser] = useState<DTMUserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionWarning, setSessionWarning] = useState(false);
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const applyDTMUser = useCallback((userData: DTMUserData) => {
     setDtmUser(userData);
@@ -52,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setDistrict(userData.district);
     setSchoolId(userData.school?.code ?? null);
     setUser({ id: `dtm_${userData.id}` });
+    setLastSynced(new Date());
   }, []);
 
   const clearState = useCallback(() => {
@@ -139,6 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { accessToken } = getDTMTokens();
       if (accessToken) {
+        setRefreshing(true);
         const dtmData = await dtmFetchMe();
         if (dtmData) {
           applyDTMUser(dtmData);
@@ -146,12 +152,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       console.error("Profile refresh failed", err);
+    } finally {
+      setRefreshing(false);
     }
   }, [applyDTMUser]);
 
   return (
     <AuthContext.Provider
-      value={{ user, role, schoolId, district, loading, dtmUser, sessionWarning, setSessionWarning, signIn, signOut, refresh }}
+      value={{ user, role, schoolId, district, loading, dtmUser, sessionWarning, setSessionWarning, signIn, signOut, refresh, lastSynced, refreshing }}
     >
       {children}
     </AuthContext.Provider>

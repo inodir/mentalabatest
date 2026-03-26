@@ -173,14 +173,19 @@ export function normalizeUrl(url: string): string {
   return url.endsWith("/") ? url : `${url}/`;
 }
 
-// Fetch DTM users with pagination (using API key)
+// Fetch DTM users with pagination and optional search (using API key)
 export async function fetchDTMUsers(
   settings: DTMApiSettings,
   offset: number = 0,
-  limit: number = 50
+  limit: number = 50,
+  search: string = ""
 ): Promise<DTMResponse> {
   const baseUrl = normalizeUrl(settings.mainUrl);
-  const url = `${baseUrl}api/v1/dtm/users?offset=${offset}&limit=${limit}`;
+  let url = `${baseUrl}api/v1/dtm/users?offset=${offset}&limit=${limit}`;
+  
+  if (search.trim()) {
+    url += `&search=${encodeURIComponent(search.trim())}`;
+  }
 
   const response = await fetch(url, {
     method: "GET",
@@ -210,11 +215,16 @@ export async function fetchDTMUsers(
 export async function fetchDTMUsersWithToken(
   accessToken: string,
   offset: number = 0,
-  limit: number = 50
+  limit: number = 50,
+  search: string = ""
 ): Promise<DTMResponse> {
   const settings = getApiSettings();
   const baseUrl = settings ? normalizeUrl(settings.mainUrl) : DEFAULT_MAIN_URL;
-  const url = `${baseUrl}api/v1/dtm/users?offset=${offset}&limit=${limit}`;
+  let url = `${baseUrl}api/v1/dtm/users?offset=${offset}&limit=${limit}`;
+
+  if (search.trim()) {
+    url += `&search=${encodeURIComponent(search.trim())}`;
+  }
 
   const headers: Record<string, string> = {
     accept: "application/json",

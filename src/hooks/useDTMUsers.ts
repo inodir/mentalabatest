@@ -43,7 +43,7 @@ export function useDTMUsers(initialLimit: number = 50): UseDTMUsersResult {
   const [settings, setSettings] = useState<DTMApiSettings | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const fetchData = useCallback(async (currentPage: number, currentLimit: number) => {
+  const fetchData = useCallback(async (currentPage: number, currentLimit: number, currentSearch: string = "") => {
     setLoading(true);
     setError(null);
 
@@ -58,7 +58,7 @@ export function useDTMUsers(initialLimit: number = 50): UseDTMUsersResult {
 
     try {
       const offset = currentPage * currentLimit;
-      const response = await fetchDTMUsers(apiSettings, offset, currentLimit);
+      const response = await fetchDTMUsers(apiSettings, offset, currentLimit, currentSearch);
       setUsers(response.entities);
       setPageInfo(response.pageInfo);
     } catch (err) {
@@ -92,29 +92,29 @@ export function useDTMUsers(initialLimit: number = 50): UseDTMUsersResult {
     }
   }, [allUsersLoaded, allUsersLoading]);
 
+  // Handle pagination and search
   useEffect(() => {
-    fetchData(page, limit);
-  }, [page, limit, fetchData]);
+    const handler = setTimeout(() => {
+      fetchData(page, limit, searchTerm);
+    }, 400); // Debounce search
+
+    return () => clearTimeout(handler);
+  }, [page, limit, searchTerm, fetchData]);
+
+  // Reset to first page when search changes
+  useEffect(() => {
+    setPage(0);
+  }, [searchTerm]);
 
   const retry = useCallback(() => {
     setAllUsersLoaded(false);
     setAllUsers([]);
-    fetchData(page, limit);
-  }, [fetchData, page, limit]);
+    fetchData(page, limit, searchTerm);
+  }, [fetchData, page, limit, searchTerm]);
 
-  // Filter users by search term (client-side)
-  const filteredUsers = users.filter((user) => {
-    if (!searchTerm.trim()) return true;
-    const terms = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
-    const searchableText = [
-      user.full_name,
-      user.school_code,
-      user.phone,
-      user.bot_id,
-      user.chat_id,
-    ].filter(Boolean).join(" ").toLowerCase();
-    return terms.every((term) => searchableText.includes(term));
-  });
+  // When searchTerm is used, we use the server results (users)
+  // When no searchTerm, filteredUsers is same as users (current page)
+  const filteredUsers = users;
 
   return {
     users,
