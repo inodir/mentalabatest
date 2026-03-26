@@ -24,15 +24,23 @@ export function DetailedScoreChart({ scoreBands, baseEntities, pieData, title }:
   const [isScoreDialogOpen, setIsScoreDialogOpen] = useState(false);
   const [selectedScoreRange, setSelectedScoreRange] = useState<{ min: number; max: number } | null>(null);
 
+  const getStudentScore = (student: any) => student.total_point ?? student.dtm?.total_ball ?? null;
+  const hasStudentResult = (student: any) =>
+    student.has_result === true ||
+    student.dtm?.tested === true ||
+    student.dtm?.total_ball != null ||
+    Boolean(student.dtm?.result_file);
+
   const studentsInSelectedRange = useMemo(() => {
     if (!selectedScoreRange) return [];
     return baseEntities.filter(u => {
-      const p = u.total_point ?? 0;
-      return u.has_result && p >= selectedScoreRange.min && p < selectedScoreRange.max;
+      const score = getStudentScore(u);
+      if (!hasStudentResult(u) || score == null) return false;
+      return score >= selectedScoreRange.min && score < selectedScoreRange.max;
     });
   }, [baseEntities, selectedScoreRange]);
 
-  const handleBarClick = (data: any, index: number, event: any) => {
+  const handleBarClick = (data: any, event: any) => {
     if (event && (event.ctrlKey || event.metaKey) && data) {
       setSelectedScoreRange({ min: data.min, max: data.max });
       setIsScoreDialogOpen(true);
@@ -62,7 +70,6 @@ export function DetailedScoreChart({ scoreBands, baseEntities, pieData, title }:
                 <BarChart 
                   data={scoreBands} 
                   margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                  onClick={(data: any, index: number, event: any) => handleBarClick(data?.activePayload?.[0]?.payload, index, event)}
                 >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/40" />
                   <XAxis 
@@ -89,6 +96,7 @@ export function DetailedScoreChart({ scoreBands, baseEntities, pieData, title }:
                     isAnimationActive={true}
                     animationDuration={1500}
                     cursor="pointer"
+                    onClick={(data: any, index: number, event: any) => handleBarClick(data, event)}
                   >
                     {scoreBands.map((entry, index) => (
                       <Cell 
