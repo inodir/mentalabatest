@@ -257,6 +257,7 @@ export default function SuperAdminDashboard() {
   const genderData = [
     { name: "O'g'il", value: g_male,   fill: "hsl(210 100% 50%)" },
     { name: "Qiz",   value: g_female, fill: "hsl(330 100% 70%)" },
+    { name: "Boshqa", value: g_other,  fill: "hsl(0 0% 76%)"    },
   ].filter(d => d.value > 0);
 
   // Top schools by submission %

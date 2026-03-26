@@ -5,30 +5,43 @@
 export function normalizeGender(gender: any): 'male' | 'female' | 'other' {
   if (gender === undefined || gender === null) return 'other';
   
-  const g = gender.toString().toLowerCase().trim();
+  // Normalize string: lowercase, trim, and standardize apostrophes
+  let g = gender.toString().toLowerCase().trim();
+  
+  // Replace various Uzbek/English apostrophes with standard '
+  g = g.replace(/[‘’ʻʼ`‘´]/g, "'");
   
   // Male variations
-  if (
-    g === 'erkak' || 
-    g === 'male' || 
-    g === 'm' || 
-    g === "o'g'il" || 
-    g === "o'g`il" || 
-    g === "og'il" || 
-    g === "o'gil" || 
-    g === '1'
-  ) {
+  const maleTerms = [
+    'erkak', 
+    'male', 
+    'm', 
+    "o'g'il", 
+    "o'gil", 
+    "og'il", 
+    "o'g'ul", 
+    'ogil',
+    'oʻgʻil', // sometimes standard replaces might miss specific unicode
+    '1',
+    'o‘g‘il'
+  ];
+  
+  if (maleTerms.includes(g) || g.startsWith('o\'g')) {
     return 'male';
   }
   
   // Female variations
-  if (
-    g === 'ayol' || 
-    g === 'female' || 
-    g === 'f' || 
-    g === 'qiz' || 
-    g === '2'
-  ) {
+  const femaleTerms = [
+    'ayol', 
+    'female', 
+    'f', 
+    'qiz', 
+    '2',
+    'woman',
+    'girl'
+  ];
+  
+  if (femaleTerms.includes(g)) {
     return 'female';
   }
   
