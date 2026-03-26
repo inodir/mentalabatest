@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
-import { normalizeGender, getScoreDistribution } from "@/lib/stats-utils";
+import { normalizeGender, getScoreDistribution, getSubjectMastery, getRiskAnalytics, getTrendAnalysis, calculateDTMPrediction } from "@/lib/stats-utils";
 import { ScoreStudentsDialog } from "@/components/dashboard/ScoreStudentsDialog";
+import { PredictiveInsights } from "@/components/dashboard/PredictiveInsights";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -113,6 +114,10 @@ export default function SchoolDashboard() {
   const failed    = students.filter(u => u.dtm?.tested && ((u.dtm?.total_ball as number) ?? 0) > 0 && ((u.dtm?.total_ball as number) ?? 0) < PASS_LINE).length;
   const passPct   = submitted > 0 ? ((passed / submitted) * 100).toFixed(1) : "0";
 
+  const riskStats = useMemo(() => getRiskAnalytics(students, PASS_LINE), [students]);
+  const subjectMastery = useMemo(() => getSubjectMastery(students), [students]);
+  const trendAnalysis = useMemo(() => getTrendAnalysis(students), [students]);
+
   const [isScoreDialogOpen, setIsScoreDialogOpen] = useState(false);
   const [selectedScoreRange, setSelectedScoreRange] = useState<{ min: number; max: number } | null>(null);
 
@@ -156,9 +161,10 @@ export default function SchoolDashboard() {
     { name: "Boshqa", value: g_other,  fill: "hsl(0 0% 76%)"    },
   ].filter(d => d.value > 0);
 
-  // Subject mastery bars from dtmUser.stats
-  const subjectMastery = (dtmUser?.stats?.subject_mastery ?? []).slice(0, 8).map(s => ({
+  // Subject mastery aggregated (Updated to use subjectMastery)
+  const subjectStatsChart = subjectMastery.slice(0, 10).map(s => ({
     name: s.subject.length > 20 ? s.subject.slice(0, 20) + "…" : s.subject,
+    fullName: s.subject,
     mastery: Math.round(s.mastery_percent),
     avg: Math.round(s.avg_point * 10) / 10,
   }));
@@ -170,31 +176,23 @@ export default function SchoolDashboard() {
     .slice(0, 10);
 
   // Students under 70 who haven't submitted
-  const riskStudents = students.filter(u =>
-    !u.dtm?.tested || ((u.dtm?.total_ball as number) ?? 0) < PASS_LINE
-  ).slice(0, 10);
+  const riskList = students.filter(u =>
+    u.dtm?.tested && ((u.dtm?.total_ball as number) ?? 0) < PASS_LINE
+  ).sort((a, b) => ((a.dtm?.total_ball as number) ?? 0) - ((b.dtm?.total_ball as number) ?? 0)).slice(0, 10);
 
-  // Timeline analytics for School Dashboard
-  const timelineData: Record<string, number> = {};
-  const hourlyData: number[] = Array(24).fill(0);
-
+  // Hourly Faollik calculation
+  const hourlyData = Array(24).fill(0);
   students.forEach(u => {
-    const res = u.dtm as any;
-    if (res?.created_at) {
-      const date = new Date(res.created_at);
-      const dateStr = date.toISOString().split("T")[0];
-      timelineData[dateStr] = (timelineData[dateStr] || 0) + 1;
-      hourlyData[date.getHours()]++;
+    if (u.dtm?.created_at) {
+      hourlyData[new Date(u.dtm.created_at).getHours()]++;
     }
   });
 
-  const timelineChart = Object.entries(timelineData)
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([date, count]) => {
-      const parts = date.split("-");
-      return { date: `${parts[2]}/${parts[1]}`, count };
-    })
-    .slice(-12);
+  // Timeline analytics Grouping (Updated to use trendAnalysis)
+  const timelineChart = trendAnalysis.map(d => {
+    const parts = d.date.split("-");
+    return { date: `${parts[2]}/${parts[1]}`, count: d.total_submissions };
+  }).slice(-12);
 
   const hourlyChart = hourlyData.map((count, hour) => ({
     hour: `${hour}:00`,
@@ -285,28 +283,52 @@ export default function SchoolDashboard() {
           </CardContent>
         </Card>
 
-        {/* 1. Asosiy ko'rsatkichlar */}
-        <Section title="Asosiy ko'rsatkichlar">
-          {loading ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[...Array(4)].map((_, i) => (
-                <Card key={i} className="rounded-2xl"><CardContent className="p-5"><Skeleton className="h-14" /></CardContent></Card>
-              ))}
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <KPI i={0} label="Jami o'quvchilar" value={total.toLocaleString()} icon={Users} color="bg-blue-500/15 text-blue-600" />
-              <KPI i={1} label="Natijasi bor" value={submitted.toLocaleString()} sub={`${submitPct}%`} icon={CheckCircle} color="bg-green-500/15 text-green-600" />
-              <KPI i={2} label="Natija chiqmagan" value={notSub.toLocaleString()} icon={XCircle} color="bg-red-500/15 text-red-600" />
-              <KPI i={3} label={`${PASS_LINE}+ ball olganlar`} value={passed} sub={`${passPct}% topshirganlardan`} icon={Trophy} color="bg-yellow-500/15 text-yellow-600" />
-            </div>
-          )}
-          {!loading && avgBall > 0 && (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <KPI i={4} label="O'rtacha ball" value={`${avgBall.toFixed(1)} / 189`} icon={TrendingUp} color="bg-purple-500/15 text-purple-600" />
-            </div>
-          )}
-        </Section>
+        {/* 1. Asosiy ko'rsatkichlar & Bashorat */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-6">
+            <Section title="Asosiy ko'rsatkichlar">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <KPI i={0} label="Jami o'quvchilar" value={total.toLocaleString()} icon={Users} color="bg-blue-500/15 text-blue-600" />
+                <KPI i={1} label="Natijasi bor" value={submitted.toLocaleString()} sub={`${submitPct}%`} icon={CheckCircle} color="bg-green-500/15 text-green-600" />
+                <KPI i={2} label="Natija chiqmagan" value={notSub.toLocaleString()} icon={XCircle} color="bg-red-500/15 text-red-600" />
+                <KPI i={3} label="O'tish ko'rsatkichi" value={`${passPct}%`} sub={`${passed} o'quvchi`} icon={Trophy} color="bg-yellow-500/15 text-yellow-600" />
+              </div>
+            </Section>
+            
+            <PredictiveInsights 
+              score={avgBall} 
+              userName={schoolName} 
+              subjectMastery={subjectMastery.map(s => ({ subject: s.subject, mastery_percent: s.mastery_percent }))} 
+            />
+          </div>
+
+          <div className="space-y-6">
+            <Section title="Xavf guruhi">
+              <Card className="rounded-2xl border-red-500/20 bg-red-500/5 h-full">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2 text-red-600">
+                    <AlertTriangle className="h-4 w-4" /> Ko'proq e'tibor talab
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {riskList.length > 0 ? riskList.slice(0, 6).map(u => (
+                      <div key={u.id} className="flex items-center justify-between text-xs p-2.5 rounded-xl bg-background/50 border border-red-500/10 shadow-sm">
+                        <span className="truncate font-medium">{u.full_name}</span>
+                        <Badge variant="outline" className="text-red-600 border-red-500/20 font-bold">{u.dtm?.total_ball} ball</Badge>
+                      </div>
+                    )) : (
+                      <div className="text-center py-10">
+                        <CheckCircle className="h-8 w-8 text-emerald-500 mx-auto mb-2 opacity-20" />
+                        <p className="text-muted-foreground text-xs font-medium">Xavf guruhi aniqlanmadi</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </Section>
+          </div>
+        </div>
 
         {/* 1.5 Vaqt va faollik tahlili */}
         {!loading && timelineChart.length > 0 && (
@@ -486,7 +508,7 @@ export default function SchoolDashboard() {
               <CardContent className="pt-5">
                 <div className="h-[240px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={subjectMastery} layout="vertical" margin={{ left: 8, right: 50 }}>
+                    <BarChart data={subjectStatsChart} layout="vertical" margin={{ left: 8, right: 50 }}>
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border/40" />
                       <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} tickFormatter={v => `${v}%`} />
                       <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 9 }} />
@@ -496,7 +518,7 @@ export default function SchoolDashboard() {
                           name === "mastery" ? "Ko'nikma" : "O'rt. ball",
                         ]} />
                       <Bar dataKey="mastery" radius={[0, 6, 6, 0]} name="mastery">
-                        {subjectMastery.map((s, i) => (
+                        {subjectStatsChart.map((s, i) => (
                           <Cell key={i} fill={s.mastery >= 70 ? "hsl(142 71% 45%)" : s.mastery >= 40 ? "hsl(38 92% 50%)" : "hsl(0 72% 55%)"} />
                         ))}
                       </Bar>
@@ -557,19 +579,19 @@ export default function SchoolDashboard() {
         )}
 
         {/* 5. Diqqat talab o'quvchilar */}
-        {riskStudents.length > 0 && (
+        {riskList.length > 0 && (
           <Section title="Natija chiqmagan yoki past ball olgan o'quvchilar">
             <Card className="rounded-2xl border-orange-200 dark:border-orange-900/40">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-orange-500" />
                   Diqqat kerak bo'lgan o'quvchilar
-                  <Badge variant="destructive" className="ml-auto">{riskStudents.length} ta</Badge>
+                  <Badge variant="destructive" className="ml-auto">{riskList.length} ta</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {riskStudents.map((u, i) => {
+                  {riskList.map((u, i) => {
                     const ball = (u.dtm?.total_ball as number) ?? 0;
                     const tested = u.dtm?.tested ?? false;
                     return (

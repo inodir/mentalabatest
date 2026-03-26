@@ -25,7 +25,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useState, useMemo, useEffect } from "react";
-import { normalizeGender, getScoreDistribution } from "@/lib/stats-utils";
+import { normalizeGender, getScoreDistribution, getSubjectMastery, getRiskAnalytics, getRegionalRanking, getTrendAnalysis } from "@/lib/stats-utils";
 import { ScoreStudentsDialog } from "@/components/dashboard/ScoreStudentsDialog";
 
 import logsData from "@/data/security_logs.json";
@@ -210,6 +210,11 @@ export default function SuperAdminDashboard() {
   const failed     = baseEntities.filter(u => u.has_result && (u.total_point ?? 0) > 0 && (u.total_point ?? 0) < PASS_LINE).length;
   const passPct    = submitted > 0 ? ((passed / submitted) * 100).toFixed(1) : "0";
 
+  const riskStats = useMemo(() => getRiskAnalytics(baseEntities, PASS_LINE), [baseEntities]);
+  const regionalRanking = useMemo(() => getRegionalRanking(baseEntities), [baseEntities]);
+  const subjectMastery = useMemo(() => getSubjectMastery(baseEntities), [baseEntities]);
+  const trendAnalysis = useMemo(() => getTrendAnalysis(baseEntities), [baseEntities]);
+
   const [isScoreDialogOpen, setIsScoreDialogOpen] = useState(false);
   const [selectedScoreRange, setSelectedScoreRange] = useState<{ min: number; max: number } | null>(null);
 
@@ -366,33 +371,19 @@ export default function SuperAdminDashboard() {
     count: s.count,
   })).sort((a, b) => b.avg - a.avg).slice(0, 15); // Top 15 subjects
 
-  // Timeline analytics Grouping
-  const timelineData: Record<string, number> = {};
-  const hourlyData: number[] = Array(24).fill(0);
+  // Timeline analytics Grouping (Updated to use trendAnalysis)
+  const timelineChart = trendAnalysis.map(d => {
+    const parts = d.date.split("-");
+    return { date: `${parts[2]}/${parts[1]}`, count: d.total_submissions, avg: d.avg_point };
+  }).slice(-12);
 
-  baseEntities.forEach(u => {
-    const res = u.test_results as any;
-    if (res?.created_at) {
-      const date = new Date(res.created_at);
-      const dateStr = date.toISOString().split("T")[0]; // YYYY-MM-DD
-      timelineData[dateStr] = (timelineData[dateStr] || 0) + 1;
-      const hour = date.getHours();
-      hourlyData[hour]++;
-    }
-  });
-
-  const timelineChart = Object.entries(timelineData)
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([date, count]) => {
-      const parts = date.split("-");
-      return { date: `${parts[2]}/${parts[1]}`, count }; // DD/MM
-    })
-    .slice(-12); // Last 12 points
-
-  const hourlyChart = hourlyData.map((count, hour) => ({
-    hour: `${hour}:00`,
-    count
-  })).filter(h => h.count > 0 || h.hour === "12:00" || h.hour === "15:00");
+  const hourlyChart = Array(24).fill(0).map((_, hour) => {
+    const count = baseEntities.filter(u => {
+      if (!u.created_at) return false;
+      return new Date(u.created_at).getHours() === hour;
+    }).length;
+    return { hour: `${hour}:00`, count };
+  }).filter(h => h.count > 0 || h.hour === "12:00" || h.hour === "15:00");
 
   // ─── Real-Time Alert Banner State ────────────────────────────────
   const [currentAlertIndex, setCurrentAlertIndex] = useState(0);
@@ -636,7 +627,7 @@ export default function SuperAdminDashboard() {
             </div>
           ) : (
             <>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
               <KPI i={0} label="Jami ro'yxatdagi o'quvchilar" value={total.toLocaleString()} icon={Users}
                 color="bg-blue-500/15 text-blue-600" />
               <KPI i={1} label="Natijasi bor" value={submitted.toLocaleString()}
@@ -646,9 +637,13 @@ export default function SuperAdminDashboard() {
               <KPI i={3} label={`O'tish balli (${PASS_LINE}+) olganlar`}
                 value={isLive ? passed.toLocaleString() : "—"} sub={isLive ? `${passPct}% topshirganlardan` : ""}
                 icon={Trophy} color="bg-yellow-500/15 text-yellow-600" />
-              <KPI i={4} label="Barcha maktablar o'rtacha balli"
+              <KPI i={4} label="O'rtacha ball"
                 value={avgBall > 0 ? `${avgBall.toFixed(1)} / 189` : "—"}
                 icon={TrendingUp} color="bg-purple-500/15 text-purple-600" />
+              <KPI i={5} label="Xavf guruhi" 
+                value={isLive ? `${riskStats.riskCount} ta` : "—"} 
+                sub={isLive ? `${riskStats.riskPercent.toFixed(1)}% o'quvchi` : ""} 
+                icon={AlertTriangle} color="bg-red-500/15 text-red-600" />
             </div>
 
             {/* 🛡️ Xavfsizlik Quick Access Banner */}
@@ -807,9 +802,73 @@ export default function SuperAdminDashboard() {
           </Section>
         )}
 
+        {/* ── 2.2 Hududlar va Fanlar Tahlili ────────────────────────── */}
+        {isLive && mode === "accurate" && (
+          <Section title="Hududlar va Fanlar tahlili">
+            <div className="grid gap-5 lg:grid-cols-3">
+              {/* Regional Ranking */}
+              <Card className="rounded-2xl lg:col-span-2">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    Hududlar bo'yicha o'rtacha ball reytingi
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[250px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={regionalRanking} layout="vertical" margin={{ left: 20, right: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize: 10 }} domain={[0, 189]} />
+                        <YAxis dataKey="region" type="category" tick={{ fontSize: 10 }} width={100} />
+                        <Tooltip contentStyle={ChartTooltipStyle} />
+                        <Bar dataKey="avg_point" name="O'rtacha ball" radius={[0, 4, 4, 0]} barSize={20}>
+                          {regionalRanking.map((_, i) => (
+                            <Cell key={i} fill={`hsl(${210 + (i * 20)}, 80%, 55%)`} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Subject Mastery Overview */}
+              <Card className="rounded-2xl">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Award className="h-4 w-4 text-primary" />
+                    Fanlar o'zlashtirilishi (%)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {subjectMastery.slice(0, 6).map((s, i) => (
+                      <div key={i} className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="font-medium truncate max-w-[150px]">{s.subject}</span>
+                          <span className="text-muted-foreground">{s.mastery_percent.toFixed(1)}%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full ${s.mastery_percent > 70 ? 'bg-emerald-500' : s.mastery_percent > 40 ? 'bg-amber-500' : 'bg-red-500'}`}
+                            style={{ width: `${s.mastery_percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    <Button variant="ghost" size="sm" className="w-full text-[10px] h-7" onClick={() => navigate("/super-admin/subjects")}>
+                      Barcha fanlarni ko'rish
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </Section>
+        )}
+
         {/* ── 2.5 Vaqt va Faollik Tahlili ── */}
-        {mode === "accurate" && timelineChart.length > 0 && (
-          <Section title="Vaqt va faollik tahlili">
+        <Section title="Vaqt va faollik tahlili">
             <div className="grid gap-5 lg:grid-cols-2">
               {/* Daily LineChart */}
               <Card className="rounded-2xl">
@@ -858,7 +917,6 @@ export default function SuperAdminDashboard() {
               </Card>
             </div>
           </Section>
-        )}
 
         {/* 2.5 Fanlar kesimida tahlil */}
         {subjectAveragesAll.length > 0 && (
