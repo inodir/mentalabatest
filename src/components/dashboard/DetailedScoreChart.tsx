@@ -48,7 +48,7 @@ export function DetailedScoreChart({ scoreBands, baseEntities, pieData, title }:
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-primary" />
-                Ballar taqsimoti (3 ballik intervalda)
+                Ballar taqsimoti (2 ballik intervalda)
               </CardTitle>
               <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-background/50 px-2 py-1 rounded-md border border-border/40">
                 <MousePointerClick className="h-3 w-3" />

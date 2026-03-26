@@ -172,7 +172,7 @@ export default function SuperAdminDashboard() {
 
   // Score range bands  
   const scoreBands = useMemo(() => 
-    getScoreDistribution(baseEntities, 3, 189),
+    getScoreDistribution(baseEntities, 2, 189),
     [baseEntities]
   );
 
