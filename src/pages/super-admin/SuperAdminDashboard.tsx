@@ -25,6 +25,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useState, useMemo, useEffect } from "react";
+import { normalizeGender, getScoreDistribution } from "@/lib/stats-utils";
+import { ScoreStudentsDialog } from "@/components/dashboard/ScoreStudentsDialog";
 
 import logsData from "@/data/security_logs.json";
 
@@ -208,35 +210,30 @@ export default function SuperAdminDashboard() {
   const failed     = baseEntities.filter(u => u.has_result && (u.total_point ?? 0) > 0 && (u.total_point ?? 0) < PASS_LINE).length;
   const passPct    = submitted > 0 ? ((passed / submitted) * 100).toFixed(1) : "0";
 
-  // Score range bands  
-  const bands = [
-    { label: "0–10",    min: 0,   max: 10  },
-    { label: "10–20",   min: 10,  max: 20  },
-    { label: "20–30",   min: 20,  max: 30  },
-    { label: "30–40",   min: 30,  max: 40  },
-    { label: "40–50",   min: 40,  max: 50  },
-    { label: "50–60",   min: 50,  max: 60  },
-    { label: "60–70",   min: 60,  max: 70  },
-    { label: "70–80",   min: 70,  max: 80  },
-    { label: "80–90",   min: 80,  max: 90  },
-    { label: "90–100",  min: 90,  max: 100 },
-    { label: "100–110", min: 100, max: 110 },
-    { label: "110–120", min: 110, max: 120 },
-    { label: "120–130", min: 120, max: 130 },
-    { label: "130–140", min: 130, max: 140 },
-    { label: "140–150", min: 140, max: 150 },
-    { label: "150–160", min: 150, max: 160 },
-    { label: "160–170", min: 160, max: 170 },
-    { label: "170–180", min: 170, max: 180 },
-    { label: "180–189", min: 180, max: 190 },
-  ];
-  const scoreBands = bands.map(b => ({
-    label: b.label,
-    soni: baseEntities.filter(u => {
+  const [isScoreDialogOpen, setIsScoreDialogOpen] = useState(false);
+  const [selectedScoreRange, setSelectedScoreRange] = useState<{ min: number; max: number } | null>(null);
+
+  const studentsInSelectedRange = useMemo(() => {
+    if (!selectedScoreRange) return [];
+    return baseEntities.filter(u => {
       const p = u.total_point ?? 0;
-      return u.has_result && p >= b.min && p < b.max;
-    }).length,
-  }));
+      return u.has_result && p >= selectedScoreRange.min && p < selectedScoreRange.max;
+    });
+  }, [baseEntities, selectedScoreRange]);
+
+  const handleBarClick = (data: any, index: number, event: any) => {
+    // Both Recharts and standard mouse events might provide ctrlKey
+    if (event.ctrlKey || event.metaKey) {
+      setSelectedScoreRange({ min: data.min, max: data.max });
+      setIsScoreDialogOpen(true);
+    }
+  };
+
+  // Score range bands  
+  const scoreBands = useMemo(() => 
+    getScoreDistribution(baseEntities, 1, 189),
+    [baseEntities]
+  );
 
   // Language stats
   const l_uz = baseEntities.filter(u => u.language?.toLowerCase() === "uz" || u.language === "o'zbek").length;
@@ -244,14 +241,11 @@ export default function SuperAdminDashboard() {
   const l_other = baseEntities.length - l_uz - l_ru;
   
   // Gender stats
-  const g_male = baseEntities.filter(u => {
-    const g = (u.gender ?? (u.dtm as any)?.gender ?? u.Gender)?.toString().toLowerCase()?.trim();
-    return g === "erkak" || g === "male" || g === "m" || g === "o'g'il" || g === "o'g`il" || g === "1";
-  }).length;
-  const g_female = baseEntities.filter(u => {
-    const g = (u.gender ?? (u.dtm as any)?.gender ?? u.Gender)?.toString().toLowerCase()?.trim();
-    return g === "ayol" || g === "female" || g === "f" || g === "qiz" || g === "2";
-  }).length;
+  const maleUsers = baseEntities.filter(u => normalizeGender(u.gender ?? (u.dtm as any)?.gender ?? u.Gender) === 'male');
+  const femaleUsers = baseEntities.filter(u => normalizeGender(u.gender ?? (u.dtm as any)?.gender ?? u.Gender) === 'female');
+  
+  const g_male = maleUsers.length;
+  const g_female = femaleUsers.length;
   const g_other = baseEntities.length - g_male - g_female;
 
   const langData = [
@@ -694,17 +688,31 @@ export default function SuperAdminDashboard() {
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={scoreBands} margin={{ top: 8 }}>
                         <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" vertical={false} />
-                        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                        <XAxis 
+                          dataKey="label" 
+                          tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                          interval={19} 
+                          minTickGap={5}
+                        />
                         <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                         <Tooltip
                           contentStyle={ChartTooltipStyle}
-                          formatter={(v: number) => [`${v.toLocaleString()} o'quvchi`, "Soni"]}
+                          formatter={(v: number, name: string, props: any) => [
+                            `${v.toLocaleString()} o'quvchi`, 
+                            `${props.payload.min}-${props.payload.max} ball (Ctrl+Click ro'yxat uchun)`
+                          ]}
                         />
-                        <Bar dataKey="soni" radius={[6, 6, 0, 0]}>
+                        <Bar 
+                          dataKey="soni" 
+                          radius={[2, 2, 0, 0]}
+                          barSize={Math.max(2, 600 / scoreBands.length)}
+                          onClick={handleBarClick}
+                          cursor="pointer"
+                        >
                           {scoreBands.map((b, i) => (
                             <Cell
                                key={b.label}
-                               fill={i < 4 ? "hsl(0 72% 55%)" : i < 7 ? "hsl(38 92% 50%)" : "hsl(142 71% 45%)"}
+                               fill={b.min < 40 ? "hsl(0 72% 55%)" : b.min < 70 ? "hsl(38 92% 50%)" : "hsl(142 71% 45%)"}
                              />
                           ))}
                         </Bar>
@@ -1109,6 +1117,13 @@ export default function SuperAdminDashboard() {
         )}
 
       </div>
+
+      <ScoreStudentsDialog
+        isOpen={isScoreDialogOpen}
+        onClose={() => setIsScoreDialogOpen(false)}
+        students={studentsInSelectedRange}
+        scoreRange={selectedScoreRange}
+      />
     </AdminLayout>
   );
 }

@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { normalizeGender, getScoreDistribution } from "@/lib/stats-utils";
+import { ScoreStudentsDialog } from "@/components/dashboard/ScoreStudentsDialog";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -95,27 +97,39 @@ export default function SchoolDashboard() {
   const submitPct  = total > 0 ? ((submitted / total) * 100).toFixed(1) : "0";
   const avgBall    = stats?.averageScore ?? 0;
 
-  // Score bands
-  const bands = [
-    { label: "0–40",    min: 0,   max: 40  },
-    { label: "40–70",   min: 40,  max: 70  },
-    { label: "70–100",  min: 70,  max: 100 },
-    { label: "100–130", min: 100, max: 130 },
-    { label: "130–160", min: 130, max: 160 },
-    { label: "160–189", min: 160, max: 190 },
-  ];
-
-  const scoreBands = bands.map(b => ({
-    label: b.label,
-    soni: students.filter(u => {
-      const p = u.dtm?.total_ball as number ?? 0;
-      return u.dtm?.tested && p >= b.min && p < b.max;
-    }).length,
-  }));
+  // Score range bands  
+  const scoreBands = useMemo(() => 
+    getScoreDistribution(
+      students, 
+      1, 
+      189, 
+      u => (u.dtm?.total_ball as number) ?? null,
+      u => u.dtm?.tested ?? false
+    ),
+    [students]
+  );
 
   const passed    = students.filter(u => u.dtm?.tested && ((u.dtm?.total_ball as number) ?? 0) >= PASS_LINE).length;
   const failed    = students.filter(u => u.dtm?.tested && ((u.dtm?.total_ball as number) ?? 0) > 0 && ((u.dtm?.total_ball as number) ?? 0) < PASS_LINE).length;
   const passPct   = submitted > 0 ? ((passed / submitted) * 100).toFixed(1) : "0";
+
+  const [isScoreDialogOpen, setIsScoreDialogOpen] = useState(false);
+  const [selectedScoreRange, setSelectedScoreRange] = useState<{ min: number; max: number } | null>(null);
+
+  const studentsInSelectedRange = useMemo(() => {
+    if (!selectedScoreRange) return [];
+    return students.filter(u => {
+      const p = (u.dtm?.total_ball as number) ?? 0;
+      return u.dtm?.tested && p >= selectedScoreRange.min && p < selectedScoreRange.max;
+    });
+  }, [students, selectedScoreRange]);
+
+  const handleBarClick = (data: any, index: number, event: any) => {
+    if (event.ctrlKey || event.metaKey) {
+      setSelectedScoreRange({ min: data.min, max: data.max });
+      setIsScoreDialogOpen(true);
+    }
+  };
 
   // Language stats
   const l_uz = students.filter(u => u.language?.toLowerCase() === "uz" || u.language === "o'zbek").length;
@@ -123,8 +137,11 @@ export default function SchoolDashboard() {
   const l_other = students.length - l_uz - l_ru;
 
   // Gender stats
-  const g_male = students.filter(u => u.gender?.toLowerCase() === "erkak" || u.gender?.toLowerCase() === "male" || u.gender === "M").length;
-  const g_female = students.filter(u => u.gender?.toLowerCase() === "ayol" || u.gender?.toLowerCase() === "female" || u.gender === "F").length;
+  const maleStudents = students.filter(u => normalizeGender(u.gender) === 'male');
+  const femaleStudents = students.filter(u => normalizeGender(u.gender) === 'female');
+  
+  const g_male = maleStudents.length;
+  const g_female = femaleStudents.length;
   const g_other = students.length - g_male - g_female;
 
   const langData = [
@@ -353,19 +370,38 @@ export default function SchoolDashboard() {
                   <div className="h-[220px]">
                     {loading ? <Skeleton className="h-full" /> : (
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={scoreBands} margin={{ top: 8 }}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" vertical={false} />
-                          <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                          <YAxis tick={{ fontSize: 11 }} />
-                          <Tooltip contentStyle={ChartTooltipStyle}
-                            formatter={(v: number) => [`${v} o'quvchi`, "Soni"]} />
-                          <Bar dataKey="soni" radius={[6, 6, 0, 0]}>
-                            {scoreBands.map((b, i) => (
-                              <Cell key={b.label} fill={i < 2 ? "hsl(0 72% 55%)" : i === 2 ? "hsl(38 92% 50%)" : "hsl(142 71% 45%)"} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
+                            <BarChart data={scoreBands} margin={{ top: 8 }}>
+                              <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" vertical={false} />
+                              <XAxis 
+                                dataKey="label" 
+                                tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                                interval={19} 
+                                minTickGap={5}
+                              />
+                              <YAxis tick={{ fontSize: 11 }} />
+                              <Tooltip 
+                                contentStyle={ChartTooltipStyle}
+                                formatter={(v: number, name: string, props: any) => [
+                                  `${v} o'quvchi`, 
+                                  `${props.payload.min}-${props.payload.max} ball (Ctrl+Click ro'yxat uchun)`
+                                ]} 
+                              />
+                              <Bar 
+                                dataKey="soni" 
+                                radius={[2, 2, 0, 0]}
+                                barSize={Math.max(2, 600 / scoreBands.length)}
+                                onClick={handleBarClick}
+                                cursor="pointer"
+                              >
+                                {scoreBands.map((b, i) => (
+                                  <Cell 
+                                    key={b.label} 
+                                    fill={b.min < 40 ? "hsl(0 72% 55%)" : b.min < 70 ? "hsl(38 92% 50%)" : "hsl(142 71% 45%)"} 
+                                  />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
                     )}
                   </div>
                 </CardContent>
@@ -567,6 +603,13 @@ export default function SchoolDashboard() {
         )}
 
       </div>
+
+      <ScoreStudentsDialog
+        isOpen={isScoreDialogOpen}
+        onClose={() => setIsScoreDialogOpen(false)}
+        students={studentsInSelectedRange}
+        scoreRange={selectedScoreRange}
+      />
     </AdminLayout>
   );
 }
