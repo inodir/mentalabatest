@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,8 +15,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useSchoolDTMData } from "@/hooks/useSchoolDTMData";
+import { useSchoolStudents } from "@/hooks/useSchoolStudents";
 import { useShowResults } from "@/hooks/useShowResults";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   Search, 
   Download, 
@@ -29,17 +30,28 @@ import {
 } from "lucide-react";
 import type { DTMStudentItem } from "@/lib/dtm-auth";
 
+function hasStudentResult(student: DTMStudentItem) {
+  return Boolean(
+    student.dtm?.tested ||
+    student.dtm?.total_ball != null ||
+    student.dtm?.result_file ||
+    (student.dtm?.subjects?.length ?? 0) > 0
+  );
+}
+
 export default function TestResults() {
-  const { students: allStudents, loading, schoolCode } = useSchoolDTMData();
+  const { allStudents, loading } = useSchoolStudents();
   const { showResults } = useShowResults();
+  const { dtmUser } = useAuth();
+  const schoolCode = dtmUser?.school?.code ?? null;
   
   const [searchTerm, setSearchTerm] = useState("");
   const [minScore, setMinScore] = useState("");
   const [sortColumn, setSortColumn] = useState<string>("total_ball");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
-  // Filter only students who took the test
-  const testedStudents = allStudents.filter(s => s.dtm?.tested);
+  // Some API responses have incomplete `tested` flags even when score/file data exists.
+  const testedStudents = allStudents.filter(hasStudentResult);
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {

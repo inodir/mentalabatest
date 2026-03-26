@@ -12,7 +12,7 @@ import { useDTMDashboard } from "@/hooks/useDTMDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Users, CheckCircle, XCircle, TrendingUp, Settings, Shield, ShieldAlert,
-  RefreshCw, AlertCircle, Loader2, AlertTriangle, Trophy, MapPin, Clock, Award
+  RefreshCw, AlertCircle, Loader2, Trophy, MapPin, Clock, Award
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -23,7 +23,7 @@ import { exportSuperAdminPDF } from "@/lib/exportPDF";
 import { ExcelExportButton } from "@/components/ui/excel-export-button";
 import { exportSuperAdminExcel } from "@/lib/exportExcel";
 
-import { normalizeGender, getScoreDistribution, getSubjectMastery, getRiskAnalytics, getRegionalRanking, getTrendAnalysis } from "@/lib/stats-utils";
+import { normalizeGender, getScoreDistribution, getSubjectMastery, getRegionalRanking, getTrendAnalysis } from "@/lib/stats-utils";
 import { StatsKPI, DashboardSection } from "@/components/dashboard/StatsKPI";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DetailedScoreChart } from "@/components/dashboard/DetailedScoreChart";
@@ -166,7 +166,6 @@ export default function SuperAdminDashboard() {
   const failed     = baseEntities.filter(u => u.has_result && (u.total_point ?? 0) > 0 && (u.total_point ?? 0) < PASS_LINE).length;
   const passPct    = submitted > 0 ? ((passed / submitted) * 100).toFixed(1) : "0";
 
-  const riskStats = useMemo(() => getRiskAnalytics(baseEntities, PASS_LINE), [baseEntities]);
   const regionalRanking = useMemo(() => getRegionalRanking(baseEntities), [baseEntities]);
   const subjectMastery = useMemo(() => getSubjectMastery(baseEntities), [baseEntities]);
   const trendAnalysis = useMemo(() => getTrendAnalysis(baseEntities), [baseEntities]);
@@ -564,7 +563,7 @@ export default function SuperAdminDashboard() {
             </div>
           ) : (
             <>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               <StatsKPI index={0} label="Jami ro'yxatdagi o'quvchilar" value={total.toLocaleString()} icon={Users}
                 color="bg-blue-500/15 text-blue-600" />
               <StatsKPI index={1} label="Natijasi bor" value={submitted.toLocaleString()}
@@ -577,10 +576,6 @@ export default function SuperAdminDashboard() {
               <StatsKPI index={4} label="O'rtacha ball"
                 value={avgBall > 0 ? `${avgBall.toFixed(1)} / 189` : "—"}
                 icon={TrendingUp} color="bg-purple-500/15 text-purple-600" />
-              <StatsKPI index={5} label="Xavf guruhi" 
-                value={isLive ? `${riskStats.riskCount} ta` : "—"} 
-                sub={isLive ? `${riskStats.riskPercent.toFixed(1)}% o'quvchi` : ""} 
-                icon={AlertTriangle} color="bg-red-500/15 text-red-600" />
             </div>
 
             {/* 🛡️ Xavfsizlik Quick Access Banner */}
