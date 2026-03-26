@@ -65,7 +65,7 @@ export default function SchoolDashboard() {
   const scoreBands = useMemo(() => 
     getScoreDistribution(
       students, 
-      2, 
+      10, 
       189, 
       u => (u.dtm?.total_ball as number) ?? null,
       u => u.dtm?.tested ?? false
