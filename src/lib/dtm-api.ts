@@ -31,6 +31,7 @@ export interface DTMUser {
   total_point: number | null;
   test_file_url?: string;
   test_result_file_url?: string;
+  file_status?: boolean | null;
   created_at: string;
   dtm?: { tested: boolean; [key: string]: unknown };
   [key: string]: unknown;

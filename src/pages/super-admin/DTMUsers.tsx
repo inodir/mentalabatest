@@ -619,13 +619,16 @@ export default function DTMUsers() {
                           Fayllar
                         </div>
                       </TableHead>
+                      <TableHead className="text-center hidden xl:table-cell">
+                        Telegram
+                      </TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {sortedUsers.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
                           <div className="flex flex-col items-center gap-2">
                             <UsersIcon className="h-8 w-8 opacity-50" />
                              {filters.searchTerm || filters.schoolCode.length > 0 || filters.hasResult !== "all" || filters.groupName.length > 0
@@ -741,6 +744,17 @@ export default function DTMUsers() {
                                 )}
                               </div>
                             </TableCell>
+                            <TableCell className="text-center">
+                              {user.file_status === true ? (
+                                <Badge className="bg-green-500/15 text-green-600 border-green-500/30 rounded-full px-2.5 py-0.5 shadow-none">
+                                  True
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 shadow-none">
+                                  False
+                                </Badge>
+                              )}
+                            </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1">
                                 <TooltipProvider>
@@ -804,7 +818,7 @@ export default function DTMUsers() {
                           </TableRow>
                           {expandedUser === user.id && (
                             <TableRow>
-                              <TableCell colSpan={9} className="p-0">
+                              <TableCell colSpan={10} className="p-0">
                                 <UserDetailCard user={user} />
                               </TableCell>
                             </TableRow>
