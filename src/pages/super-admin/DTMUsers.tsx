@@ -48,9 +48,11 @@ import {
   Eye,
   Trash2,
   Loader2,
+  Send,
 } from "lucide-react";
 import { DTMUser, DTMTestResults, getApiSettings, deleteDTMUser } from "@/lib/dtm-api";
 import { exportCertificate } from "@/lib/exportCertificate";
+import { exportToExcel } from "@/lib/exportExcel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -332,6 +334,7 @@ export default function DTMUsers() {
     searchTerm: "",
     schoolCode: [],
     hasResult: "all",
+    hasTestFile: "all",
     groupName: [],
   });
 
@@ -361,7 +364,12 @@ export default function DTMUsers() {
   }, [deleteUser, retry]);
 
   // Check if any filter or search is active
-  const hasActiveFilter = filters.schoolCode.length > 0 || filters.hasResult !== "all" || filters.groupName.length > 0 || filters.searchTerm.trim().length > 0;
+  const hasActiveFilter =
+    filters.schoolCode.length > 0 ||
+    filters.hasResult !== "all" ||
+    filters.hasTestFile !== "all" ||
+    filters.groupName.length > 0 ||
+    filters.searchTerm.trim().length > 0;
 
   // Auto-load all users when a filter/search is activated
   useEffect(() => {
@@ -420,6 +428,36 @@ export default function DTMUsers() {
   });
 
   const totalPages = pageInfo ? Math.ceil(pageInfo.totalCount / limit) : 0;
+
+  const handleExportUsers = useCallback(() => {
+    if (sortedUsers.length === 0) {
+      toast.error("Eksport uchun foydalanuvchilar topilmadi");
+      return;
+    }
+
+    const exportRows = sortedUsers.map((user, index) => ({
+      "#": index + 1,
+      "F.I.O.": user.full_name || "—",
+      "Telefon": user.phone || "—",
+      "Maktab kodi": user.school_code || "—",
+      "Guruh": user.group_name || "—",
+      "Natijasi bor": user.has_result ? "Ha" : "Yo'q",
+      "Test fayli bor": user.test_file_url ? "Ha" : "Yo'q",
+      "Natija fayli bor": user.test_result_file_url ? "Ha" : "Yo'q",
+      "Telegram status": user.file_status === true ? "True" : "False",
+      "Jami ball": user.total_point ?? "—",
+      "Yaratilgan sana": user.created_at ? new Date(user.created_at).toLocaleString("uz-UZ") : "—",
+      "Test fayli URL": user.test_file_url || "—",
+      "Natija fayli URL": user.test_result_file_url || "—",
+    }));
+
+    const ok = exportToExcel(exportRows, "DTM_Foydalanuvchilar", "Foydalanuvchilar");
+    if (ok) {
+      toast.success(`${exportRows.length} ta foydalanuvchi eksport qilindi`);
+    } else {
+      toast.error("Eksportda xatolik yuz berdi");
+    }
+  }, [sortedUsers]);
 
   const SortIndicator = ({ column }: { column: string }) => (
     sortColumn === column ? (
@@ -507,6 +545,10 @@ export default function DTMUsers() {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleExportUsers} disabled={sortedUsers.length === 0 || (hasActiveFilter && allUsersLoading)}>
+              <Download className="mr-2 h-4 w-4" />
+              Eksport
+            </Button>
             <RegisterUserDialog onUserCreated={retry} allSchools={allSchools} />
             <SyncSchoolsDialog />
             <Button variant="outline" size="icon" onClick={retry} disabled={loading}>
@@ -619,8 +661,11 @@ export default function DTMUsers() {
                           Fayllar
                         </div>
                       </TableHead>
-                      <TableHead className="text-center hidden xl:table-cell">
-                        Telegram
+                      <TableHead className="text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <Send className="h-4 w-4" />
+                          Telegram
+                        </div>
                       </TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
@@ -746,12 +791,14 @@ export default function DTMUsers() {
                             </TableCell>
                             <TableCell className="text-center">
                               {user.file_status === true ? (
-                                <Badge className="bg-green-500/15 text-green-600 border-green-500/30 rounded-full px-2.5 py-0.5 shadow-none">
-                                  True
+                                <Badge className="bg-green-500/15 text-green-600 border-green-500/30 gap-1 rounded-full px-2.5 py-0.5 shadow-none">
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  Yuborilgan
                                 </Badge>
                               ) : (
-                                <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 shadow-none">
-                                  False
+                                <Badge variant="secondary" className="gap-1 rounded-full px-2.5 py-0.5 shadow-none">
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  Yuborilmagan
                                 </Badge>
                               )}
                             </TableCell>

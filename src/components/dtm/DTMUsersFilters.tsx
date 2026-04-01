@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, School, CheckCircle2, Filter, X, Users } from "lucide-react";
+import { Search, School, CheckCircle2, Filter, X, Users, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MultiSelect } from "@/components/ui/multi-select";
 
@@ -19,6 +19,7 @@ export interface DTMFilters {
   searchTerm: string;
   schoolCode: string[];
   hasResult: string;
+  hasTestFile: string;
   groupName: string[];
 }
 
@@ -70,6 +71,7 @@ export function DTMUsersFilters({
       searchTerm: "",
       schoolCode: [],
       hasResult: "all",
+      hasTestFile: "all",
       groupName: [],
     });
   };
@@ -77,6 +79,7 @@ export function DTMUsersFilters({
   const activeFiltersCount = [
     filters.schoolCode.length > 0,
     filters.hasResult !== "all",
+    filters.hasTestFile !== "all",
     filters.groupName.length > 0,
   ].filter(Boolean).length;
 
@@ -146,6 +149,20 @@ export function DTMUsersFilters({
             </SelectContent>
           </Select>
 
+          <Select value={filters.hasTestFile} onValueChange={(v) => updateFilter("hasTestFile", v)}>
+            <SelectTrigger className="w-[170px]">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                <SelectValue placeholder="Test fayli" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Test fayli: barchasi</SelectItem>
+              <SelectItem value="true">Test fayli bor</SelectItem>
+              <SelectItem value="false">Test fayli yo'q</SelectItem>
+            </SelectContent>
+          </Select>
+
           {/* Group name filter */}
           {allGroupNames.length > 0 && (
             <MultiSelect
@@ -200,6 +217,11 @@ export function filterDTMUsers(users: DTMUser[], filters: DTMFilters): DTMUser[]
     if (filters.hasResult !== "all") {
       const hasResult = filters.hasResult === "true";
       if (user.has_result !== hasResult) return false;
+    }
+
+    if (filters.hasTestFile !== "all") {
+      const hasTestFile = filters.hasTestFile === "true";
+      if (Boolean(user.test_file_url) !== hasTestFile) return false;
     }
 
     // Group name filter
