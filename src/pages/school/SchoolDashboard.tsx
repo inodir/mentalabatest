@@ -1,16 +1,13 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { normalizeGender, getScoreDistribution, getSubjectMastery, getRiskAnalytics, getTrendAnalysis } from "@/lib/stats-utils";
 import { PredictiveInsights } from "@/components/dashboard/PredictiveInsights";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { useSchoolDTMData } from "@/hooks/useSchoolDTMData";
 import { useAuth } from "@/hooks/useAuth";
-import { Users, CheckCircle, XCircle, Trophy, TrendingUp, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Users, CheckCircle, XCircle, Trophy, TrendingUp } from "lucide-react";
 
 import { PDFExportButton } from "@/components/ui/pdf-export-button";
 import { exportSchoolPDF } from "@/lib/exportPDF";
@@ -18,7 +15,6 @@ import { ExcelExportButton } from "@/components/ui/excel-export-button";
 import { exportStudentsExcel } from "@/lib/exportExcel";
 
 import { StatsKPI, DashboardSection } from "@/components/dashboard/StatsKPI";
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DetailedScoreChart } from "@/components/dashboard/DetailedScoreChart";
 import { SchoolTargetBanner } from "@/components/dashboard/SchoolTargetBanner";
 import { SchoolTopStudents } from "@/components/dashboard/SchoolTopStudents";
@@ -34,7 +30,6 @@ export default function SchoolDashboard() {
   const { dtmUser, refresh, lastSynced, refreshing } = useAuth();
   const { stats, loading, schoolCode, students } = useSchoolDTMData();
 
-  const [autoRefresh, setAutoRefresh] = useState(false);
   const [targetPct, setTargetPct] = useState<number>(() => {
     const saved = localStorage.getItem(`targetPct_${schoolCode || "default"}`);
     return saved ? parseInt(saved, 10) : 80;
@@ -44,14 +39,6 @@ export default function SchoolDashboard() {
     setTargetPct(val);
     localStorage.setItem(`targetPct_${schoolCode || "default"}`, val.toString());
   };
-
-  useEffect(() => {
-    if (!autoRefresh) return;
-    const timer = setInterval(() => {
-      refresh();
-    }, 60000); // 60 sec Refresh
-    return () => clearInterval(timer);
-  }, [autoRefresh, refresh]);
 
   const schoolName = dtmUser?.school?.name || dtmUser?.full_name || "Maktab";
 
@@ -149,11 +136,6 @@ export default function SchoolDashboard() {
               lastSynced={lastSynced}
               error={null}
             />
-
-            <div className="flex items-center gap-2 glass-card rounded-full px-4 py-2 border border-border/40">
-              <Label htmlFor="refresh-toggle" className="text-xs font-semibold">Avto-yangilash</Label>
-              <Switch id="refresh-toggle" checked={autoRefresh} onCheckedChange={setAutoRefresh} />
-            </div>
 
             {!loading && stats && (
               <div className="flex items-center gap-2">

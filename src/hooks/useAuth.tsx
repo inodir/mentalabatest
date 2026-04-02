@@ -10,7 +10,7 @@ import {
 import { startInactivityWatch, stopInactivityWatch } from "@/lib/security";
 
 type AppRole = "super_admin" | "school_admin" | "district_admin" | null;
-const AUTO_REFRESH_MS = 10 * 60 * 1000;
+const AUTO_REFRESH_MS = 2 * 60 * 1000;
 
 function mapDTMRole(role: DTMUserData["role"]): AppRole {
   switch (role) {

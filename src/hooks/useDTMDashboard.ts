@@ -11,7 +11,7 @@ import {
 
 export type DashboardMode = "fast" | "accurate";
 export type DashboardError = "NO_CONFIG" | "API_KEY_INVALID" | "NETWORK_ERROR" | "INVALID_URL" | null;
-const AUTO_REFRESH_MS = 10 * 60 * 1000;
+const AUTO_REFRESH_MS = 2 * 60 * 1000;
 
 interface UseDTMDashboardResult {
   stats: DashboardStats | null;
@@ -30,7 +30,7 @@ export function useDTMDashboard(): UseDTMDashboardResult {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<DashboardError>(null);
-  const [mode, setMode] = useState<DashboardMode>("fast");
+  const [mode, setMode] = useState<DashboardMode>("accurate");
   const [progress, setProgress] = useState<{ loaded: number; total: number } | null>(null);
   const [settings, setSettings] = useState<DTMApiSettings | null>(null);
   const [loadedEntities, setLoadedEntities] = useState<DTMUser[]>([]);

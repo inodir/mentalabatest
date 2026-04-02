@@ -5,8 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDTMDashboard } from "@/hooks/useDTMDashboard";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,7 +23,6 @@ import { exportSuperAdminExcel } from "@/lib/exportExcel";
 
 import { normalizeGender, getScoreDistribution, getSubjectMastery, getRegionalRanking, getTrendAnalysis } from "@/lib/stats-utils";
 import { StatsKPI, DashboardSection } from "@/components/dashboard/StatsKPI";
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DetailedScoreChart } from "@/components/dashboard/DetailedScoreChart";
 import { SubjectMasterySection } from "@/components/dashboard/SubjectMasterySection";
 import { RegionalRankingSection } from "@/components/dashboard/RegionalRankingSection";
@@ -101,16 +98,6 @@ export default function SuperAdminDashboard() {
       avg_total_ball: s.answered_count > 0 ? s.totalBall / s.answered_count : 0,
     }));
   }, [filteredEntities, mode, dtmUser?.schools, loadedEntities.length]);
-
-  const [autoRefresh, setAutoRefresh] = useState(false);
-
-  useEffect(() => {
-    if (!autoRefresh) return;
-    const timer = setInterval(() => {
-      retry();
-    }, 60000); // 60 sec Refresh
-    return () => clearInterval(timer);
-  }, [autoRefresh, retry]);
 
   // ─── Error State ───────────────────────────────────────────────────
   if (error) {
@@ -426,25 +413,6 @@ export default function SuperAdminDashboard() {
             {stats?.isApproximate && !loading && (
               <Badge variant="secondary" className="rounded-full">Taxminiy</Badge>
             )}
-
-            <div className="flex items-center gap-2 glass-card rounded-full px-4 py-2">
-              <Label htmlFor="mode-toggle" className="text-xs font-medium">Aniq ma'lumot</Label>
-              <Switch
-                id="mode-toggle"
-                checked={mode === "accurate"}
-                onCheckedChange={c => setMode(c ? "accurate" : "fast")}
-                disabled={loading}
-              />
-            </div>
-
-            <div className="flex items-center gap-2 glass-card rounded-full px-4 py-2">
-              <Label htmlFor="refresh-toggle" className="text-xs font-medium">Avto-yangilash</Label>
-              <Switch
-                id="refresh-toggle"
-                checked={autoRefresh}
-                onCheckedChange={setAutoRefresh}
-              />
-            </div>
 
             {!loading && stats && (
               <>

@@ -9,7 +9,7 @@ import {
 } from "@/lib/dtm-api";
 
 export type UsersError = "NO_CONFIG" | "API_KEY_INVALID" | "NETWORK_ERROR" | null;
-const AUTO_REFRESH_MS = 10 * 60 * 1000;
+const AUTO_REFRESH_MS = 2 * 60 * 1000;
 
 interface UseDTMUsersResult {
   users: DTMUser[];
