@@ -233,6 +233,14 @@ const UserDetailCard = ({ user }: { user: DTMUser }) => {
               </code>
             </div>
           )}
+          {user.chat_id && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="text-xs">Chat ID:</span>
+              <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono select-all">
+                {user.chat_id}
+              </code>
+            </div>
+          )}
           {user.phone && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Phone className="h-3 w-3" />
