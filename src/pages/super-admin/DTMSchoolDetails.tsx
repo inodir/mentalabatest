@@ -142,9 +142,10 @@ export default function DTMSchoolDetails() {
   };
 
   const handleExportRegisteredCSV = () => {
-    const headers = ["F.I.O.", "Telefon", "Guruh", "Tuman", "Ro'yxatdan o'tgan sana"];
+    const headers = ["F.I.O.", "Document code", "Telefon", "Guruh", "Tuman", "Ro'yxatdan o'tgan sana"];
     const rows = filteredRegistered.map((u) => [
       u.full_name,
+      u.document_code || "",
       u.phone || "",
       u.group_name || "—",
       u.district || "",
@@ -437,6 +438,7 @@ export default function DTMSchoolDetails() {
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
                       <TableHead className="w-10 text-center">#</TableHead>
                       <TableHead>F.I.O.</TableHead>
+                      <TableHead>Document code</TableHead>
                       <TableHead>Telefon</TableHead>
                       <TableHead>Guruh</TableHead>
                       <TableHead>Tuman</TableHead>
@@ -448,14 +450,14 @@ export default function DTMSchoolDetails() {
                     {loading ? (
                       Array.from({ length: 6 }).map((_, i) => (
                         <TableRow key={i}>
-                          {Array.from({ length: 5 }).map((_, j) => (
+                          {Array.from({ length: 7 }).map((_, j) => (
                             <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
                           ))}
                         </TableRow>
                       ))
                     ) : filteredRegistered.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="py-16 text-center">
+                        <TableCell colSpan={7} className="py-16 text-center">
                           <Users className="mx-auto h-10 w-10 text-muted-foreground/40" />
                           <p className="mt-3 text-sm text-muted-foreground">O'quvchilar topilmadi</p>
                         </TableCell>
@@ -466,6 +468,7 @@ export default function DTMSchoolDetails() {
                         <TableRow key={user.id}>
                           <TableCell className="text-center text-muted-foreground text-xs">{idx + 1}</TableCell>
                           <TableCell className="font-medium">{user.full_name}</TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground">{user.document_code || "—"}</TableCell>
                           <TableCell className="text-muted-foreground">{user.phone || "—"}</TableCell>
                           <TableCell>
                             <Badge variant="outline">{user.group_name || "—"}</Badge>

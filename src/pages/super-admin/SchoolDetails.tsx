@@ -154,9 +154,10 @@ export default function SchoolDetails() {
 
   // CSV exports
   const handleExportRegisteredCSV = () => {
-    const headers = ["F.I.O.", "Telefon", "Tuman", "Ro'yxatdan o'tgan sana"];
+    const headers = ["F.I.O.", "Document code", "Telefon", "Tuman", "Ro'yxatdan o'tgan sana"];
     const rows = filteredRegistered.map((u) => [
       u.full_name,
+      u.document_code || "",
       u.phone || "",
       u.district || "",
       format(new Date(u.created_at), "dd.MM.yyyy"),
@@ -381,6 +382,7 @@ export default function SchoolDetails() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>F.I.O.</TableHead>
+                    <TableHead>Document code</TableHead>
                     <TableHead>Telefon</TableHead>
                     <TableHead>Tuman</TableHead>
                     <TableHead>Sana</TableHead>
@@ -390,14 +392,14 @@ export default function SchoolDetails() {
                 <TableBody>
                   {dtmLoading ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8">
+                      <TableCell colSpan={6} className="text-center py-8">
                         <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                       </TableCell>
                     </TableRow>
                   ) : filteredRegistered.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={5}
+                        colSpan={6}
                         className="text-center py-8 text-muted-foreground"
                       >
                         O'quvchilar topilmadi
@@ -408,6 +410,9 @@ export default function SchoolDetails() {
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">
                           {user.full_name}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {user.document_code || "—"}
                         </TableCell>
                         <TableCell>{user.phone || "—"}</TableCell>
                         <TableCell>{user.district || "—"}</TableCell>
