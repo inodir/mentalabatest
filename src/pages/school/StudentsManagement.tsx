@@ -180,6 +180,7 @@ export default function StudentsManagement() {
                 <TableHead className="w-12">#</TableHead>
                 <TableHead className="w-10"></TableHead>
                 <TableHead>F.I.O.</TableHead>
+                <TableHead>Document code</TableHead>
                 <TableHead>Guruh</TableHead>
                 <TableHead>Jinsi</TableHead>
                 <TableHead>Til</TableHead>
@@ -198,7 +199,7 @@ export default function StudentsManagement() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={showResults ? 12 : 8} className="py-10 text-center">
+                  <TableCell colSpan={showResults ? 13 : 9} className="py-10 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <Loader2 className="h-6 w-6 animate-spin" />
                       <span className="text-sm text-muted-foreground">
@@ -209,7 +210,7 @@ export default function StudentsManagement() {
                 </TableRow>
               ) : displayStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={showResults ? 12 : 8} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={showResults ? 13 : 9} className="py-10 text-center text-muted-foreground">
                     {hasFilters ? "Qidiruv bo'yicha o'quvchi topilmadi" : "O'quvchilar topilmadi"}
                   </TableCell>
                 </TableRow>
@@ -237,6 +238,11 @@ export default function StudentsManagement() {
                           </Button>
                         </TableCell>
                         <TableCell className="font-medium whitespace-nowrap">{student.full_name}</TableCell>
+                        <TableCell>
+                          <code className="rounded bg-muted px-2 py-1 text-xs font-mono">
+                            {student.document_code || "—"}
+                          </code>
+                        </TableCell>
                         <TableCell><Badge variant="outline">{student.group_name}</Badge></TableCell>
                         <TableCell>{formatGender(student.gender)}</TableCell>
                         <TableCell>{formatLang(student.language)}</TableCell>
@@ -308,7 +314,7 @@ export default function StudentsManagement() {
                       </TableRow>
                       {isExpanded && (
                         <TableRow key={`detail-${student.id}`} className="bg-muted/20 hover:bg-muted/30">
-                          <TableCell colSpan={showResults ? 12 : 8} className="py-4 px-6">
+                          <TableCell colSpan={showResults ? 13 : 9} className="py-4 px-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                               {/* ID */}
                               <div className="space-y-1">

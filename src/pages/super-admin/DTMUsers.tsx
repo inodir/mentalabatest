@@ -704,6 +704,11 @@ export default function DTMUsers() {
                                         {user.school_code}
                                       </Badge>
                                     )}
+                                    {user.document_code && (
+                                      <Badge variant="outline" className="w-fit text-[9px] h-4 px-1 py-0 border-border/40">
+                                        {user.document_code}
+                                      </Badge>
+                                    )}
                                     {user.phone && (
                                       <span className="text-[11px] text-muted-foreground truncate max-w-[120px]">
                                         {user.phone}

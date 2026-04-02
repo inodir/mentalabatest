@@ -105,10 +105,11 @@ export default function TestResults() {
     sortedResults.forEach(s => s.dtm?.subjects?.forEach(sub => subjectNames.add(sub.subject_name)));
     const subjectList = [...subjectNames];
 
-    const headers = ["#", "F.I.O.", "Telefon", ...subjectList, "Jami ball"];
+    const headers = ["#", "F.I.O.", "Document code", "Telefon", ...subjectList, "Jami ball"];
     const rows = sortedResults.map((s, i) => [
       i + 1,
       s.full_name,
+      s.document_code || "-",
       s.phone || "-",
       ...subjectList.map(name => {
         const sub = s.dtm?.subjects?.find(x => x.subject_name === name);
@@ -273,6 +274,7 @@ export default function TestResults() {
                                 F.I.O. {getSortIcon("full_name")}
                               </div>
                             </TableHead>
+                            <TableHead>Document code</TableHead>
                             <TableHead>Telefon</TableHead>
                             <TableHead>Fanlar</TableHead>
                             <TableHead 
@@ -294,6 +296,11 @@ export default function TestResults() {
                               </TableCell>
                               <TableCell className="font-medium">
                                 {student.full_name}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
+                                <code className="rounded bg-muted px-2 py-1 text-xs font-mono">
+                                  {student.document_code || "-"}
+                                </code>
                               </TableCell>
                               <TableCell className="text-muted-foreground">
                                 {student.phone || "-"}
