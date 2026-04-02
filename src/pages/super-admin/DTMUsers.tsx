@@ -301,7 +301,16 @@ const UserDetailCard = ({ user }: { user: DTMUser }) => {
           <div className="flex items-center gap-2 text-sm">
             <Calendar className="h-3 w-3 text-muted-foreground" />
             <span className="text-xs">
-              {user.created_at ? new Date(user.created_at).toLocaleDateString("uz-UZ") : "—"}
+              {user.created_at
+                ? new Date(user.created_at).toLocaleString("uz-UZ", {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  })
+                : "—"}
             </span>
           </div>
         </div>
@@ -606,13 +615,13 @@ export default function DTMUsers() {
                 ))}
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[50px]">#</TableHead>
                       <TableHead
-                        className="cursor-pointer hover:bg-muted/50 min-w-[200px]"
+                        className="cursor-pointer hover:bg-muted/50"
                         onClick={() => handleSort("full_name")}
                       >
                         <div className="flex items-center gap-2">
@@ -622,35 +631,13 @@ export default function DTMUsers() {
                         </div>
                       </TableHead>
                       <TableHead
-                        className="cursor-pointer hover:bg-muted/50 hidden lg:table-cell"
-                        onClick={() => handleSort("school_code")}
-                      >
-                        <div className="flex items-center gap-2">
-                          <School className="h-4 w-4" />
-                          Maktab
-                          <SortIndicator column="school_code" />
-                        </div>
-                      </TableHead>
-                      <TableHead className="hidden sm:table-cell">
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4" />
-                          Telefon
-                        </div>
-                      </TableHead>
-                      <TableHead
-                        className="cursor-pointer hover:bg-muted/50 text-center hidden md:table-cell"
+                        className="cursor-pointer hover:bg-muted/50 text-center"
                         onClick={() => handleSort("has_result")}
                       >
                         <div className="flex items-center justify-center gap-2">
                           <CheckCircle2 className="h-4 w-4" />
                           Holat
                           <SortIndicator column="has_result" />
-                        </div>
-                      </TableHead>
-                      <TableHead className="text-center hidden lg:table-cell">
-                        <div className="flex items-center justify-center gap-2">
-                          <BookOpen className="h-4 w-4" />
-                          Fan ballari
                         </div>
                       </TableHead>
                       <TableHead
@@ -663,16 +650,10 @@ export default function DTMUsers() {
                           <SortIndicator column="total_point" />
                         </div>
                       </TableHead>
-                      <TableHead className="text-center hidden xl:table-cell">
-                        <div className="flex items-center justify-center gap-2">
-                          <Download className="h-4 w-4" />
-                          Fayllar
-                        </div>
-                      </TableHead>
                       <TableHead className="text-center">
                         <div className="flex items-center justify-center gap-2">
-                          <Send className="h-4 w-4" />
-                          Telegram
+                          <FileText className="h-4 w-4" />
+                          Statuslar
                         </div>
                       </TableHead>
                       <TableHead className="w-[50px]"></TableHead>
@@ -681,7 +662,7 @@ export default function DTMUsers() {
                   <TableBody>
                     {sortedUsers.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                           <div className="flex flex-col items-center gap-2">
                             <UsersIcon className="h-8 w-8 opacity-50" />
                              {filters.searchTerm || filters.schoolCode.length > 0 || filters.hasResult !== "all" || filters.groupName.length > 0
@@ -706,16 +687,20 @@ export default function DTMUsers() {
                                   {user.full_name ? user.full_name[0].toUpperCase() : "?"}
                                 </div>
                                 <div className="space-y-1 min-w-0">
-                                  <p className="font-semibold text-sm truncate max-w-[150px] sm:max-w-[200px] text-foreground group-hover:text-primary transition-colors">
+                                  <p className="font-semibold text-sm truncate max-w-[140px] sm:max-w-[220px] text-foreground group-hover:text-primary transition-colors">
                                     {user.full_name || "—"}
                                   </p>
-                                  <div className="flex flex-col gap-1 md:hidden">
-                                     {user.school_code && (
-                                       <Badge variant="outline" className="w-fit text-[9px] h-4 px-1 py-0 border-border/40">
-                                         {user.school_code}
-                                       </Badge>
-                                     )}
-                                     {!user.has_result && <span className="text-[10px] text-red-500 font-bold uppercase tracking-tighter">Natija yo'q</span>}
+                                  <div className="flex flex-wrap items-center gap-1">
+                                    {user.school_code && (
+                                      <Badge variant="outline" className="w-fit text-[9px] h-4 px-1 py-0 border-border/40">
+                                        {user.school_code}
+                                      </Badge>
+                                    )}
+                                    {user.phone && (
+                                      <span className="text-[11px] text-muted-foreground truncate max-w-[120px]">
+                                        {user.phone}
+                                      </span>
+                                    )}
                                   </div>
                                   {user.district && (
                                     <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
@@ -726,24 +711,6 @@ export default function DTMUsers() {
                                   )}
                                 </div>
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="font-mono rounded-lg bg-background/50 border-border/60 hover:bg-background">
-                                {user.school_code || "—"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {user.phone ? (
-                                <a
-                                  href={`tel:${user.phone}`}
-                                  className="inline-flex items-center gap-1 text-primary hover:underline text-sm font-medium"
-                                >
-                                  <Phone className="h-3 w-3" />
-                                  {user.phone}
-                                </a>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
                             </TableCell>
                             <TableCell className="text-center">
                               {user.has_result ? (
@@ -757,9 +724,6 @@ export default function DTMUsers() {
                                   Yo'q
                                 </Badge>
                               )}
-                            </TableCell>
-                            <TableCell>
-                              <TestResultsScores testResults={user.test_results} />
                             </TableCell>
                             <TableCell className="text-center">
                               {user.total_point != null ? (
@@ -780,35 +744,20 @@ export default function DTMUsers() {
                                 <span className="text-muted-foreground">—</span>
                               )}
                             </TableCell>
-                            <TableCell>
-                              <div className="flex items-center justify-center gap-1.5">
-                                <FileButton 
-                                  url={user.test_file_url} 
-                                  type="test" 
-                                  label="Test faylini yuklab olish" 
-                                />
-                                <FileButton 
-                                  url={user.test_result_file_url} 
-                                  type="result" 
-                                  label="Natija faylini yuklab olish" 
-                                />
-                                {!user.test_file_url && !user.test_result_file_url && (
-                                  <span className="text-muted-foreground text-xs">—</span>
-                                )}
-                              </div>
-                            </TableCell>
                             <TableCell className="text-center">
-                              {user.file_status === true ? (
-                                <Badge className="bg-green-500/15 text-green-600 border-green-500/30 gap-1 rounded-full px-2.5 py-0.5 shadow-none">
-                                  <CheckCircle2 className="h-3.5 w-3.5" />
-                                  Yuborilgan
+                              <div className="flex flex-col items-center gap-1">
+                                <Badge variant={user.test_file_url ? "default" : "secondary"} className="h-5 rounded-full px-2 text-[10px] shadow-none">
+                                  Test {user.test_file_url ? "bor" : "yo'q"}
                                 </Badge>
-                              ) : (
-                                <Badge variant="secondary" className="gap-1 rounded-full px-2.5 py-0.5 shadow-none">
-                                  <XCircle className="h-3.5 w-3.5" />
-                                  Yuborilmagan
+                                <Badge className={cn(
+                                  "h-5 rounded-full px-2 text-[10px] shadow-none",
+                                  user.file_status === true
+                                    ? "bg-green-500/15 text-green-600 border-green-500/30"
+                                    : "bg-muted text-muted-foreground border-border"
+                                )}>
+                                  Tg {user.file_status === true ? "ok" : "yo'q"}
                                 </Badge>
-                              )}
+                              </div>
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1">
@@ -873,7 +822,7 @@ export default function DTMUsers() {
                           </TableRow>
                           {expandedUser === user.id && (
                             <TableRow>
-                              <TableCell colSpan={10} className="p-0">
+                              <TableCell colSpan={6} className="p-0">
                                 <UserDetailCard user={user} />
                               </TableCell>
                             </TableRow>
