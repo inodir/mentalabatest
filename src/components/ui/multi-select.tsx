@@ -77,7 +77,7 @@ export function MultiSelect({
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[240px] p-0" align="start">
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[240px] p-0" align="start">
         <Command>
           <CommandInput placeholder={placeholder} className="h-8 text-xs" />
           <CommandList className="max-h-[200px]">
@@ -100,7 +100,7 @@ export function MultiSelect({
                     >
                       {isSelected && <Check className="h-2.5 w-2.5" />}
                     </div>
-                    <span className="truncate flex-1">{option.label}</span>
+                    <span className="flex-1 break-words leading-snug">{option.label}</span>
                   </CommandItem>
                 );
               })}

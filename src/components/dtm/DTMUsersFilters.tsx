@@ -171,7 +171,7 @@ export function DTMUsersFilters({
               onChange={(v: any) => updateFilter("groupName", v)}
               placeholder="Guruhlar"
               icon={Users}
-              className="w-[180px]"
+              className="w-[260px]"
             />
           )}
 

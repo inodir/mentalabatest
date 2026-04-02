@@ -334,11 +334,6 @@ export default function DTMUsers() {
     (dtmUser?.schools || []).map((s) => ({ code: s.code, name: s.name, region: s.region, district: s.district })),
     [dtmUser?.schools]
   );
-  const allGroupNames = useMemo(() => {
-    const set = new Set<string>();
-    (dtmUser?.students?.items ?? []).forEach((s) => { if (s.group_name) set.add(s.group_name); });
-    return [...set].sort();
-  }, [dtmUser?.students?.items]);
   const {
     users,
     pageInfo,
@@ -354,6 +349,15 @@ export default function DTMUsers() {
     loadAllUsers,
     allUsersLoaded,
   } = useDTMUsers(50);
+
+  const allGroupNames = useMemo(() => {
+    const set = new Set<string>();
+    [...users, ...allUsers, ...(dtmUser?.students?.items ?? [])].forEach((student) => {
+      const groupName = student.group_name?.trim();
+      if (groupName) set.add(groupName);
+    });
+    return [...set].sort((a, b) => a.localeCompare(b, "uz"));
+  }, [users, allUsers, dtmUser?.students?.items]);
 
   const [filters, setFilters] = useState<DTMFilters>({
     searchTerm: "",
@@ -402,6 +406,12 @@ export default function DTMUsers() {
       loadAllUsers();
     }
   }, [hasActiveFilter, allUsersLoaded, allUsersLoading, loadAllUsers]);
+
+  useEffect(() => {
+    if (!allUsersLoaded && !allUsersLoading) {
+      loadAllUsers();
+    }
+  }, [allUsersLoaded, allUsersLoading, loadAllUsers]);
 
   // Use allUsers only when they are fully loaded, otherwise use the hook's 'users' 
   // which now supports server-side search
