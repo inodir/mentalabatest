@@ -11,6 +11,7 @@ import {
 
 export type DashboardMode = "fast" | "accurate";
 export type DashboardError = "NO_CONFIG" | "API_KEY_INVALID" | "NETWORK_ERROR" | "INVALID_URL" | null;
+const AUTO_REFRESH_MS = 10 * 60 * 1000;
 
 interface UseDTMDashboardResult {
   stats: DashboardStats | null;
@@ -90,6 +91,16 @@ export function useDTMDashboard(): UseDTMDashboardResult {
   useEffect(() => {
     fetchData(mode);
   }, [mode, fetchData]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchData(mode);
+      }
+    }, AUTO_REFRESH_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [fetchData, mode]);
 
   const retry = useCallback(() => {
     fetchData(mode);

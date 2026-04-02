@@ -4,7 +4,7 @@ const LOGIN_ATTEMPTS_KEY = "login_attempts";
 const LOCKOUT_KEY = "login_lockout_until";
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 5 * 60 * 1000; // 5 minutes
-const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+const INACTIVITY_TIMEOUT_MS = 2 * 24 * 60 * 60 * 1000; // 2 days
 
 // --- Rate Limiting ---
 
@@ -83,7 +83,7 @@ let inactivityWarningTimer: ReturnType<typeof setTimeout> | null = null;
 let onInactivityLogout: (() => void) | null = null;
 let onInactivityWarning: (() => void) | null = null;
 
-const WARNING_TIMEOUT_MS = INACTIVITY_TIMEOUT_MS - (2 * 60 * 1000); // 13 minutes (2 min warning)
+const WARNING_TIMEOUT_MS = INACTIVITY_TIMEOUT_MS - (15 * 60 * 1000); // 15 min warning before logout
 
 const ACTIVITY_EVENTS: (keyof WindowEventMap)[] = [
   "mousedown", "mousemove", "keydown", "scroll", "touchstart", "click",

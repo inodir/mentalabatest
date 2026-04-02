@@ -9,6 +9,7 @@ import {
 } from "@/lib/dtm-api";
 
 export type UsersError = "NO_CONFIG" | "API_KEY_INVALID" | "NETWORK_ERROR" | null;
+const AUTO_REFRESH_MS = 10 * 60 * 1000;
 
 interface UseDTMUsersResult {
   users: DTMUser[];
@@ -100,6 +101,16 @@ export function useDTMUsers(initialLimit: number = 50): UseDTMUsersResult {
 
     return () => clearTimeout(handler);
   }, [page, limit, searchTerm, fetchData]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchData(page, limit, searchTerm);
+      }
+    }, AUTO_REFRESH_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [fetchData, page, limit, searchTerm]);
 
   // Reset to first page when search changes
   useEffect(() => {
