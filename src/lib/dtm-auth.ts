@@ -64,6 +64,7 @@ export interface DTMStudentTestInfo {
 export interface DTMStudentItem {
   id: number;
   bot_id: string;
+  document_code?: string;
   phone: string;
   full_name: string;
   school_code: string;

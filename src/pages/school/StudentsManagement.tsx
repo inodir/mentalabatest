@@ -332,6 +332,11 @@ export default function StudentsManagement() {
                                 <span className="text-xs text-muted-foreground">Bot ID</span>
                                 <p className="font-medium">{student.bot_id || "—"}</p>
                               </div>
+                              {/* Document code */}
+                              <div className="space-y-1">
+                                <span className="text-xs text-muted-foreground">Document code</span>
+                                <p className="font-medium">{student.document_code || "—"}</p>
+                              </div>
                               {/* Phone */}
                               <div className="space-y-1">
                                 <span className="text-xs text-muted-foreground">Telefon</span>

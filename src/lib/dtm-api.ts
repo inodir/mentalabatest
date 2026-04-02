@@ -16,6 +16,7 @@ export interface DTMTestResults {
 export interface DTMUser {
   id: number;
   full_name: string;
+  document_code?: string;
   chat_id?: string;
   bot_id?: string;
   has_result: boolean;
