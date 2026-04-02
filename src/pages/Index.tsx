@@ -14,9 +14,6 @@ export default function Index() {
             <span className="text-xl font-bold">Mentalaba.uz</span>
           </div>
           <nav className="flex items-center gap-4">
-            <Link to="/public">
-              <Button variant="ghost">Public statistika</Button>
-            </Link>
             <Link to="/district/login">
               <Button variant="ghost">Tuman kirish</Button>
             </Link>
@@ -39,12 +36,6 @@ export default function Index() {
             testlarni boshqaring va natijalarni kuzating.
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link to="/public">
-              <Button size="lg" variant="outline" className="min-w-[200px]">
-                <BarChart3 className="mr-2 h-5 w-5" />
-                Public statistika
-              </Button>
-            </Link>
             <Link to="/district/login">
               <Button size="lg" className="min-w-[200px] bg-indigo-600 hover:bg-indigo-700">
                 <GraduationCap className="mr-2 h-5 w-5" />
