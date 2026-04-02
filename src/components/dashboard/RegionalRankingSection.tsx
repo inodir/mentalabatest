@@ -25,30 +25,36 @@ export function RegionalRankingSection({ data }: RegionalRankingSectionProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-6">
-        <div className="h-[250px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} layout="vertical" margin={{ left: 20, right: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 10, fontWeight: 500 }} domain={[0, 189]} />
-              <YAxis 
-                dataKey="region" 
-                type="category" 
-                tick={{ fontSize: 10, fontWeight: 500 }} 
-                width={100} 
-                className="text-muted-foreground"
-              />
-              <Tooltip 
-                contentStyle={ChartTooltipStyle}
-                cursor={{ fill: 'hsl(var(--primary) / 0.05)' }}
-              />
-              <Bar dataKey="avg_point" name="O'rtacha ball" radius={[0, 4, 4, 0]} barSize={20}>
-                {data.map((_, i) => (
-                  <Cell key={i} fill={`hsl(var(--primary) / ${1 - (i * 0.05)})`} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {data.length === 0 ? (
+          <div className="h-[250px] w-full flex items-center justify-center text-sm text-muted-foreground">
+            Hududlar bo'yicha yetarli natija topilmadi
+          </div>
+        ) : (
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data} layout="vertical" margin={{ left: 20, right: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10, fontWeight: 500 }} domain={[0, 189]} />
+                <YAxis 
+                  dataKey="region" 
+                  type="category" 
+                  tick={{ fontSize: 10, fontWeight: 500 }} 
+                  width={100} 
+                  className="text-muted-foreground"
+                />
+                <Tooltip 
+                  contentStyle={ChartTooltipStyle}
+                  cursor={{ fill: 'hsl(var(--primary) / 0.05)' }}
+                />
+                <Bar dataKey="avg_point" name="O'rtacha ball" radius={[0, 4, 4, 0]} barSize={20}>
+                  {data.map((_, i) => (
+                    <Cell key={i} fill={`hsl(var(--primary) / ${1 - (i * 0.05)})`} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -29,30 +29,36 @@ export function GenderLanguageSection({ genderData, langData }: GenderLanguageSe
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4 flex flex-col items-center">
-            <div className="h-[220px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Tooltip contentStyle={ChartTooltipStyle} />
-                  <Pie
-                    data={genderData}
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={8}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {genderData.map((entry, index) => (
-                      <Cell key={index} fill={entry.fill} className="hover:opacity-80 transition-opacity" />
-                    ))}
-                  </Pie>
-                  <Legend 
-                    iconType="circle" 
-                    iconSize={8} 
-                    wrapperStyle={{ fontSize: "11px", fontWeight: 600, paddingTop: "10px" }} 
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            {genderData.length === 0 ? (
+              <div className="h-[220px] w-full flex items-center justify-center text-sm text-muted-foreground">
+                Jins bo'yicha ma'lumot topilmadi
+              </div>
+            ) : (
+              <div className="h-[220px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Tooltip contentStyle={ChartTooltipStyle} />
+                    <Pie
+                      data={genderData}
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={8}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {genderData.map((entry, index) => (
+                        <Cell key={index} fill={entry.fill} className="hover:opacity-80 transition-opacity" />
+                      ))}
+                    </Pie>
+                    <Legend 
+                      iconType="circle" 
+                      iconSize={8} 
+                      wrapperStyle={{ fontSize: "11px", fontWeight: 600, paddingTop: "10px" }} 
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -65,30 +71,36 @@ export function GenderLanguageSection({ genderData, langData }: GenderLanguageSe
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4 flex flex-col items-center">
-            <div className="h-[220px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Tooltip contentStyle={ChartTooltipStyle} />
-                  <Pie
-                    data={langData}
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={8}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {langData.map((entry, index) => (
-                      <Cell key={index} fill={entry.fill} className="hover:opacity-80 transition-opacity" />
-                    ))}
-                  </Pie>
-                  <Legend 
-                    iconType="circle" 
-                    iconSize={8} 
-                    wrapperStyle={{ fontSize: "11px", fontWeight: 600, paddingTop: "10px" }} 
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            {langData.length === 0 ? (
+              <div className="h-[220px] w-full flex items-center justify-center text-sm text-muted-foreground">
+                Test tili bo'yicha ma'lumot topilmadi
+              </div>
+            ) : (
+              <div className="h-[220px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Tooltip contentStyle={ChartTooltipStyle} />
+                    <Pie
+                      data={langData}
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={8}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {langData.map((entry, index) => (
+                        <Cell key={index} fill={entry.fill} className="hover:opacity-80 transition-opacity" />
+                      ))}
+                    </Pie>
+                    <Legend 
+                      iconType="circle" 
+                      iconSize={8} 
+                      wrapperStyle={{ fontSize: "11px", fontWeight: 600, paddingTop: "10px" }} 
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

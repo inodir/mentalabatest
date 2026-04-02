@@ -10,6 +10,7 @@ interface DetailedScoreChartProps {
   baseEntities: any[];
   pieData: any[];
   title: string;
+  allowStudentPeek?: boolean;
 }
 
 const ChartTooltipStyle = {
@@ -20,7 +21,7 @@ const ChartTooltipStyle = {
   boxShadow: "0 4px 16px rgba(0,0,0,.08)",
 };
 
-export function DetailedScoreChart({ scoreBands, baseEntities, pieData, title }: DetailedScoreChartProps) {
+export function DetailedScoreChart({ scoreBands, baseEntities, pieData, title, allowStudentPeek = true }: DetailedScoreChartProps) {
   const [isScoreDialogOpen, setIsScoreDialogOpen] = useState(false);
   const [selectedScoreRange, setSelectedScoreRange] = useState<{ min: number; max: number } | null>(null);
 
@@ -41,6 +42,7 @@ export function DetailedScoreChart({ scoreBands, baseEntities, pieData, title }:
   }, [baseEntities, selectedScoreRange]);
 
   const handleBarClick = (data: any, event: any) => {
+    if (!allowStudentPeek) return;
     if (event && (event.ctrlKey || event.metaKey) && data) {
       setSelectedScoreRange({ min: data.min, max: data.max });
       setIsScoreDialogOpen(true);
@@ -58,10 +60,12 @@ export function DetailedScoreChart({ scoreBands, baseEntities, pieData, title }:
                 <TrendingUp className="h-4 w-4 text-primary" />
                 Ballar taqsimoti (10 ballik intervalda)
               </CardTitle>
-              <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-background/50 px-2 py-1 rounded-md border border-border/40">
-                <MousePointerClick className="h-3 w-3" />
-                Ctrl + Click: Ro'yxat
-              </div>
+              {allowStudentPeek && (
+                <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-background/50 px-2 py-1 rounded-md border border-border/40">
+                  <MousePointerClick className="h-3 w-3" />
+                  Ctrl + Click: Ro'yxat
+                </div>
+              )}
             </div>
           </CardHeader>
           <CardContent className="pt-6">
@@ -157,12 +161,14 @@ export function DetailedScoreChart({ scoreBands, baseEntities, pieData, title }:
         </Card>
       </div>
 
-      <ScoreStudentsDialog
-        isOpen={isScoreDialogOpen}
-        onClose={() => setIsScoreDialogOpen(false)}
-        students={studentsInSelectedRange}
-        scoreRange={selectedScoreRange}
-      />
+      {allowStudentPeek && (
+        <ScoreStudentsDialog
+          isOpen={isScoreDialogOpen}
+          onClose={() => setIsScoreDialogOpen(false)}
+          students={studentsInSelectedRange}
+          scoreRange={selectedScoreRange}
+        />
+      )}
     </DashboardSection>
   );
 }

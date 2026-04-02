@@ -6,9 +6,10 @@ import { DashboardSection } from "./StatsKPI";
 
 interface SubjectMasterySectionProps {
   data: any[];
+  allSubjectsPath?: string;
 }
 
-export function SubjectMasterySection({ data }: SubjectMasterySectionProps) {
+export function SubjectMasterySection({ data, allSubjectsPath }: SubjectMasterySectionProps) {
   const navigate = useNavigate();
 
   return (
@@ -43,14 +44,16 @@ export function SubjectMasterySection({ data }: SubjectMasterySectionProps) {
                 </div>
               </div>
             ))}
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full text-[10px] font-black uppercase tracking-widest h-9 border border-border/40 hover:bg-secondary rounded-xl mt-2" 
-              onClick={() => navigate("/super-admin/subjects")}
-            >
-              Barcha fanlarni ko'rish
-            </Button>
+            {allSubjectsPath && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full text-[10px] font-black uppercase tracking-widest h-9 border border-border/40 hover:bg-secondary rounded-xl mt-2" 
+                onClick={() => navigate(allSubjectsPath)}
+              >
+                Barcha fanlarni ko'rish
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

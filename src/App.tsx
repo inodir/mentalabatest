@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import PublicStatistics from "./pages/public/PublicStatistics";
 
 // Auth pages
 import SuperAdminLogin from "./pages/auth/SuperAdminLogin";
@@ -91,6 +92,8 @@ function AppRoutes() {
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<Index />} />
+      <Route path="/public" element={<PublicStatistics />} />
+      <Route path="/statistics" element={<Navigate to="/public" replace />} />
       <Route path="/super-admin/login" element={<SuperAdminLogin />} />
       <Route path="/school/login" element={<SchoolAdminLogin />} />
       <Route path="/district/login" element={<DistrictAdminLogin />} />

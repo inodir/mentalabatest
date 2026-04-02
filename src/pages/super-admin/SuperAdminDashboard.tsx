@@ -22,7 +22,7 @@ import { exportSuperAdminPDF } from "@/lib/exportPDF";
 import { ExcelExportButton } from "@/components/ui/excel-export-button";
 import { exportSuperAdminExcel } from "@/lib/exportExcel";
 
-import { normalizeGender, getScoreDistribution, getSubjectMastery, getRegionalRanking, getTrendAnalysis } from "@/lib/stats-utils";
+import { normalizeGender, normalizeLanguage, hasDTMResult, getUserTotalPoint, getScoreDistribution, getSubjectMastery, getRegionalRanking, getTrendAnalysis } from "@/lib/stats-utils";
 import { StatsKPI, DashboardSection } from "@/components/dashboard/StatsKPI";
 import { DetailedScoreChart } from "@/components/dashboard/DetailedScoreChart";
 import { SubjectMasterySection } from "@/components/dashboard/SubjectMasterySection";
@@ -142,16 +142,16 @@ export default function SuperAdminDashboard() {
   const baseEntities = mode === "accurate" ? filteredEntities : loadedEntities;
   
   const total        = mode === "accurate" ? baseEntities.length : (stats?.totalUsers ?? 0);
-  const submitted    = mode === "accurate" ? baseEntities.filter(u => u.has_result).length : (stats?.resultUsersCount ?? 0);
+  const submitted    = mode === "accurate" ? baseEntities.filter(u => hasDTMResult(u)).length : (stats?.resultUsersCount ?? 0);
   const notSubmitted = total - submitted;
   const submitPct    = total > 0 ? ((submitted / total) * 100).toFixed(1) : "0";
   
   const avgBall = mode === "accurate" && submitted > 0 
-    ? baseEntities.reduce((sum, u) => sum + (u.total_point ?? 0), 0) / submitted 
+    ? baseEntities.reduce((sum, u) => sum + (getUserTotalPoint(u) ?? 0), 0) / submitted 
     : (stats?.averageTotalPoint ?? 0);
 
-  const passed     = baseEntities.filter(u => u.has_result && (u.total_point ?? 0) >= PASS_LINE).length;
-  const failed     = baseEntities.filter(u => u.has_result && (u.total_point ?? 0) > 0 && (u.total_point ?? 0) < PASS_LINE).length;
+  const passed     = baseEntities.filter(u => hasDTMResult(u) && (getUserTotalPoint(u) ?? 0) >= PASS_LINE).length;
+  const failed     = baseEntities.filter(u => hasDTMResult(u) && (getUserTotalPoint(u) ?? 0) > 0 && (getUserTotalPoint(u) ?? 0) < PASS_LINE).length;
   const passPct    = submitted > 0 ? ((passed / submitted) * 100).toFixed(1) : "0";
 
   const regionalRanking = useMemo(() => getRegionalRanking(baseEntities), [baseEntities]);
@@ -165,8 +165,8 @@ export default function SuperAdminDashboard() {
   );
 
   // Language stats
-  const l_uz = baseEntities.filter(u => u.language?.toLowerCase() === "uz" || u.language === "o'zbek").length;
-  const l_ru = baseEntities.filter(u => u.language?.toLowerCase() === "ru" || u.language === "rus").length;
+  const l_uz = baseEntities.filter(u => normalizeLanguage(u.language ?? u.dtm?.language ?? u.Language) === "uz").length;
+  const l_ru = baseEntities.filter(u => normalizeLanguage(u.language ?? u.dtm?.language ?? u.Language) === "ru").length;
   const l_other = baseEntities.length - l_uz - l_ru;
   
   // Gender stats
@@ -360,7 +360,7 @@ export default function SuperAdminDashboard() {
     { name: "Natija chiqmagan",           value: notSubmitted, fill: "hsl(215 16% 65%)" },
   ].filter(d => d.value > 0);
 
-  const isLive = !loading && loadedEntities.length > 0;
+  const isLive = !loading && baseEntities.length > 0;
 
   return (
     <AdminLayout variant="super">

@@ -62,6 +62,53 @@ export function normalizeLanguage(lang: any): 'uz' | 'ru' | 'other' {
 }
 
 /**
+ * Detects whether a user has any usable test result, regardless of which backend flag is populated.
+ */
+export function hasDTMResult(user: any): boolean {
+  if (!user) return false;
+
+  if (user.has_result === true) return true;
+  if (user.dtm?.tested === true) return true;
+  if (user.total_point !== null && user.total_point !== undefined) return true;
+  if (user.dtm?.total_ball !== null && user.dtm?.total_ball !== undefined) return true;
+  if (user.test_file_url || user.test_result_file_url || user.dtm?.result_file) return true;
+
+  const subjects = user.dtm?.subjects;
+  if (Array.isArray(subjects) && subjects.length > 0) return true;
+
+  const testResults = user.test_results;
+  if (!testResults) return false;
+
+  if (Array.isArray(testResults.mandatory) && testResults.mandatory.length > 0) return true;
+  if (testResults.primary || testResults.secondary) return true;
+
+  return false;
+}
+
+/**
+ * Returns the user's total score from any supported payload shape.
+ */
+export function getUserTotalPoint(user: any): number | null {
+  if (!user) return null;
+
+  if (user.total_point !== null && user.total_point !== undefined) {
+    return Number(user.total_point);
+  }
+
+  if (user.dtm?.total_ball !== null && user.dtm?.total_ball !== undefined) {
+    return Number(user.dtm.total_ball);
+  }
+
+  const mandatory = Array.isArray(user.test_results?.mandatory) ? user.test_results.mandatory : [];
+  const mandatoryTotal = mandatory.reduce((sum: number, item: any) => sum + (Number(item?.point) || 0), 0);
+  const primary = Number(user.test_results?.primary?.point) || 0;
+  const secondary = Number(user.test_results?.secondary?.point) || 0;
+  const computed = mandatoryTotal + primary + secondary;
+
+  return computed > 0 ? computed : null;
+}
+
+/**
  * Normalizes region strings into a standard format.
  */
 export function normalizeRegion(region: any): string {
@@ -98,8 +145,8 @@ export function getScoreDistribution(
   users: any[], 
   interval: number = 1, 
   maxScore: number = 189,
-  getPoint: (user: any) => number | null = (u) => u.total_point ?? (u.dtm?.total_ball as number) ?? null,
-  hasResult: (user: any) => boolean = (u) => u.has_result ?? u.dtm?.tested ?? false
+  getPoint: (user: any) => number | null = (u) => getUserTotalPoint(u),
+  hasResult: (user: any) => boolean = (u) => hasDTMResult(u)
 ) {
   const distribution: Record<number, number> = {};
   
@@ -147,6 +194,7 @@ export function getSubjectMastery(entities: any[]) {
   const subjectStats: Record<string, { sum: number; count: number; max: number }> = {};
   
   entities.forEach(u => {
+    if (!hasDTMResult(u)) return;
     const res = u.test_results;
     if (!res) return;
     
@@ -176,8 +224,11 @@ export function getSubjectMastery(entities: any[]) {
  * Identifies students at risk (scoring below threshold).
  */
 export function getRiskAnalytics(entities: any[], passLine: number = 70) {
-  const testedUsers = entities.filter(u => u.has_result && (u.total_point ?? 0) > 0);
-  const riskUsers = testedUsers.filter(u => (u.total_point ?? 0) < passLine);
+  const testedUsers = entities.filter(u => {
+    const point = getUserTotalPoint(u) ?? 0;
+    return hasDTMResult(u) && point > 0;
+  });
+  const riskUsers = testedUsers.filter(u => (getUserTotalPoint(u) ?? 0) < passLine);
   
   return {
     totalTested: testedUsers.length,
@@ -194,10 +245,12 @@ export function getRegionalRanking(entities: any[]) {
   const regionStats: Record<string, { sum: number; count: number }> = {};
   
   entities.forEach(u => {
-    if (!u.region || !u.has_result) return;
-    if (!regionStats[u.region]) regionStats[u.region] = { sum: 0, count: 0 };
-    regionStats[u.region].sum += (u.total_point ?? 0);
-    regionStats[u.region].count++;
+    const point = getUserTotalPoint(u);
+    const region = normalizeRegion(u.region ?? u.Region);
+    if (!region || !hasDTMResult(u) || point === null) return;
+    if (!regionStats[region]) regionStats[region] = { sum: 0, count: 0 };
+    regionStats[region].sum += point;
+    regionStats[region].count++;
   });
   
   return Object.entries(regionStats)
@@ -216,10 +269,11 @@ export function getTrendAnalysis(entities: any[]) {
   const dayStats: Record<string, { sum: number; count: number }> = {};
   
   entities.forEach(u => {
-    if (!u.created_at || !u.has_result) return;
+    const point = getUserTotalPoint(u);
+    if (!u.created_at || !hasDTMResult(u) || point === null) return;
     const date = u.created_at.split('T')[0];
     if (!dayStats[date]) dayStats[date] = { sum: 0, count: 0 };
-    dayStats[date].sum += (u.total_point ?? 0);
+    dayStats[date].sum += point;
     dayStats[date].count++;
   });
   
