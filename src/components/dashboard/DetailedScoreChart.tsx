@@ -4,6 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { TrendingUp, MousePointerClick, Trophy, Info } from "lucide-react";
 import { ScoreStudentsDialog } from "./ScoreStudentsDialog";
 import { DashboardSection } from "./StatsKPI";
+import { getUserTotalPoint, hasDTMResult } from "@/lib/stats-utils";
 
 interface DetailedScoreChartProps {
   scoreBands: any[];
@@ -25,18 +26,11 @@ export function DetailedScoreChart({ scoreBands, baseEntities, pieData, title, a
   const [isScoreDialogOpen, setIsScoreDialogOpen] = useState(false);
   const [selectedScoreRange, setSelectedScoreRange] = useState<{ min: number; max: number } | null>(null);
 
-  const getStudentScore = (student: any) => student.total_point ?? student.dtm?.total_ball ?? null;
-  const hasStudentResult = (student: any) =>
-    student.has_result === true ||
-    student.dtm?.tested === true ||
-    student.dtm?.total_ball != null ||
-    Boolean(student.dtm?.result_file);
-
   const studentsInSelectedRange = useMemo(() => {
     if (!selectedScoreRange) return [];
     return baseEntities.filter(u => {
-      const score = getStudentScore(u);
-      if (!hasStudentResult(u) || score == null) return false;
+      const score = getUserTotalPoint(u);
+      if (!hasDTMResult(u) || score == null) return false;
       return score >= selectedScoreRange.min && score < selectedScoreRange.max;
     });
   }, [baseEntities, selectedScoreRange]);

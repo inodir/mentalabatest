@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import type { DTMStudentItem } from "@/lib/dtm-auth";
+import { getUserTotalPoint, hasDTMResult } from "@/lib/stats-utils";
 
 export interface SchoolDTMStats {
   totalStudents: number;
@@ -16,10 +17,12 @@ export function useSchoolDTMData() {
   const students: DTMStudentItem[] = dtmUser?.students?.items ?? [];
   const schoolCode = dtmUser?.school?.code ?? null;
 
-  const studentsWithResults = students.filter(s => s.dtm?.tested);
-  const studentsWithScores = students.filter(s => s.dtm?.total_ball != null);
+  const studentsWithResults = students.filter((student) => hasDTMResult(student));
+  const studentsWithScores = students
+    .map((student) => getUserTotalPoint(student))
+    .filter((point): point is number => point !== null);
   const avgScore = studentsWithScores.length > 0
-    ? Math.round(studentsWithScores.reduce((sum, s) => sum + (s.dtm!.total_ball ?? 0), 0) / studentsWithScores.length)
+    ? Math.round(studentsWithScores.reduce((sum, point) => sum + point, 0) / studentsWithScores.length)
     : 0;
 
   const stats: SchoolDTMStats = {

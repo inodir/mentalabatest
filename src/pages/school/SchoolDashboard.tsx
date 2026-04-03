@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { normalizeGender, getScoreDistribution, getSubjectMastery, getRiskAnalytics, getTrendAnalysis } from "@/lib/stats-utils";
+import { normalizeGender, getScoreDistribution, getSubjectMastery, getRiskAnalytics, getTrendAnalysis, getUserTotalPoint, hasDTMResult } from "@/lib/stats-utils";
 import { PredictiveInsights } from "@/components/dashboard/PredictiveInsights";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +23,7 @@ import { GenderLanguageSection } from "@/components/dashboard/GenderLanguageSect
 import { TimeAnalyticsSection } from "@/components/dashboard/TimeAnalyticsSection";
 import { SubjectMasterySection } from "@/components/dashboard/SubjectMasterySection";
 import { SyncStatusIndicator } from "@/components/dashboard/SyncStatusIndicator";
+import { DataHealthSection } from "@/components/dashboard/DataHealthSection";
 
 const PASS_LINE = 70;
 
@@ -47,21 +48,21 @@ export default function SchoolDashboard() {
   const notSub     = stats?.studentsWithoutResults ?? 0;
   const submitPct  = total > 0 ? ((submitted / total) * 100).toFixed(1) : "0";
   const avgBall    = stats?.averageScore ?? 0;
+  const bestBall   = useMemo(() => students.reduce((best, student) => Math.max(best, getUserTotalPoint(student) ?? 0), 0), [students]);
+  const groupsCount = useMemo(() => new Set(students.map((student) => student.group_name).filter(Boolean)).size, [students]);
 
   // Score range bands  
   const scoreBands = useMemo(() => 
     getScoreDistribution(
       students, 
       10, 
-      189, 
-      u => (u.dtm?.total_ball as number) ?? null,
-      u => u.dtm?.tested ?? false
+      189
     ),
     [students]
   );
 
-  const passed    = students.filter(u => u.dtm?.tested && ((u.dtm?.total_ball as number) ?? 0) >= PASS_LINE).length;
-  const failed    = students.filter(u => u.dtm?.tested && ((u.dtm?.total_ball as number) ?? 0) > 0 && ((u.dtm?.total_ball as number) ?? 0) < PASS_LINE).length;
+  const passed    = students.filter(u => hasDTMResult(u) && (getUserTotalPoint(u) ?? 0) >= PASS_LINE).length;
+  const failed    = students.filter(u => hasDTMResult(u) && (getUserTotalPoint(u) ?? 0) > 0 && (getUserTotalPoint(u) ?? 0) < PASS_LINE).length;
   const passPct   = submitted > 0 ? ((passed / submitted) * 100).toFixed(1) : "0";
 
   const riskStats = useMemo(() => getRiskAnalytics(students, PASS_LINE), [students]);
@@ -90,14 +91,14 @@ export default function SchoolDashboard() {
 
   // Top 10 students by score
   const topStudents = useMemo(() => [...students]
-    .filter(u => u.dtm?.tested && ((u.dtm?.total_ball as number) ?? 0) > 0)
-    .sort((a, b) => ((b.dtm?.total_ball as number) ?? 0) - ((a.dtm?.total_ball as number) ?? 0))
+    .filter(u => hasDTMResult(u) && (getUserTotalPoint(u) ?? 0) > 0)
+    .sort((a, b) => (getUserTotalPoint(b) ?? 0) - (getUserTotalPoint(a) ?? 0))
     .slice(0, 10), [students]);
 
   // Students under 70 
   const riskList = useMemo(() => students.filter(u =>
-    u.dtm?.tested && ((u.dtm?.total_ball as number) ?? 0) < PASS_LINE
-  ).sort((a, b) => ((a.dtm?.total_ball as number) ?? 0) - ((b.dtm?.total_ball as number) ?? 0)), [students]);
+    hasDTMResult(u) && (getUserTotalPoint(u) ?? 0) < PASS_LINE
+  ).sort((a, b) => (getUserTotalPoint(a) ?? 0) - (getUserTotalPoint(b) ?? 0)), [students]);
 
   // Timeline analytics
   const timelineChart = trendAnalysis.map(d => {
@@ -106,7 +107,10 @@ export default function SchoolDashboard() {
   }).slice(-12);
 
   const hourlyChart = Array(24).fill(0).map((_, hour) => {
-    const count = students.filter(u => u.dtm?.created_at && new Date(u.dtm.created_at).getHours() === hour).length;
+    const count = students.filter(u => {
+      const createdAt = u.dtm?.created_at ?? u.created_at;
+      return createdAt ? new Date(createdAt).getHours() === hour : false;
+    }).length;
     return { hour: `${hour}:00`, count };
   }).filter(h => h.count > 0 || h.hour === "12:00" || h.hour === "16:00");
 
@@ -172,11 +176,13 @@ export default function SchoolDashboard() {
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
             <DashboardSection title="Asosiy ko'rsatkichlar">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 <StatsKPI index={0} label="Jami o'quvchilar" value={total.toLocaleString()} icon={Users} color="bg-blue-500/15 text-blue-600" />
                 <StatsKPI index={1} label="Natijasi bor" value={submitted.toLocaleString()} sub={`${submitPct}%`} icon={CheckCircle} color="bg-green-500/15 text-green-600" />
                 <StatsKPI index={2} label="Natija chiqmagan" value={notSub.toLocaleString()} sub={`${(100 - parseFloat(submitPct)).toFixed(1)}%`} icon={XCircle} color="bg-red-500/15 text-red-600" />
                 <StatsKPI index={3} label="O'tish ko'rsatkichi" value={`${passPct}%`} sub={`${passed} o'quvchi`} icon={Trophy} color="bg-yellow-500/15 text-yellow-600" />
+                <StatsKPI index={4} label="O'rtacha ball" value={avgBall > 0 ? `${avgBall.toFixed(1)} / 189` : "—"} icon={TrendingUp} color="bg-purple-500/15 text-purple-600" />
+                <StatsKPI index={5} label="Eng yuqori ball" value={bestBall > 0 ? `${bestBall}` : "—"} sub={`${groupsCount} ta guruh`} icon={TrendingUp} color="bg-cyan-500/15 text-cyan-600" />
               </div>
             </DashboardSection>
             
@@ -209,6 +215,8 @@ export default function SchoolDashboard() {
               <SubjectMasterySection data={subjectMastery} />
               <SchoolTopStudents students={topStudents} />
             </div>
+
+            <DataHealthSection users={students} />
           </>
         )}
 

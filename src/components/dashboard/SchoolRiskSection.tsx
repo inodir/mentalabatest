@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, FileText, CheckCircle } from "lucide-react";
 import { DashboardSection } from "./StatsKPI";
+import { getUserTotalPoint, hasDTMResult } from "@/lib/stats-utils";
 
 interface SchoolRiskSectionProps {
   riskList: any[];
@@ -22,8 +23,8 @@ export function SchoolRiskSection({ riskList, passLine }: SchoolRiskSectionProps
         <CardContent className="pt-6 flex-1">
           <div className="space-y-2.5">
             {riskList.length > 0 ? riskList.map((u, i) => {
-              const ball = (u.dtm?.total_ball as number) ?? 0;
-              const tested = u.dtm?.tested ?? false;
+              const ball = getUserTotalPoint(u) ?? 0;
+              const tested = hasDTMResult(u);
               return (
                 <div key={u.id || i} className="flex items-center gap-3 rounded-xl border border-orange-200/40 dark:border-orange-900/20 p-3 bg-background/50 hover:bg-orange-50/20 transition-colors">
                   <FileText className="h-4 w-4 text-orange-400 shrink-0" />

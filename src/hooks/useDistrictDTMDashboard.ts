@@ -5,6 +5,7 @@ import {
   DTMUser,
 } from "@/lib/dtm-api";
 import { useAuth } from "@/hooks/useAuth";
+import { getUserTotalPoint, hasDTMResult } from "@/lib/stats-utils";
 
 export interface DistrictSchoolDTMStats {
   schoolId: string;
@@ -12,6 +13,9 @@ export interface DistrictSchoolDTMStats {
   schoolCode: string;
   totalStudents: number;
   studentsWithResults: number;
+  studentsWithoutResults: number;
+  passCount: number;
+  testedPercent: number;
   averageScore: number;
 }
 
@@ -22,6 +26,7 @@ export interface DistrictDTMStats {
   totalSchools: number;
   averageScore: number;
   recentUsers: DTMUser[];
+  students: DTMUser[];
   schoolStats: DistrictSchoolDTMStats[];
   isApproximate: boolean;
 }
@@ -64,6 +69,7 @@ export function useDistrictDTMDashboard() {
         totalSchools: 0,
         averageScore: 0,
         recentUsers: [],
+        students: [],
         schoolStats: [],
         isApproximate: false,
       });
@@ -97,11 +103,14 @@ export function useDistrictDTMDashboard() {
       // Per-school stats
       const schoolStats: DistrictSchoolDTMStats[] = schools.map((school) => {
         const students = districtStudents.filter((u) => u.school_code === school.code);
-        const withResults = students.filter((u) => u.has_result);
-        const withPoints = students.filter((u) => u.total_point != null);
+        const withResults = students.filter((u) => hasDTMResult(u));
+        const withPoints = students
+          .map((student) => getUserTotalPoint(student))
+          .filter((point): point is number => point !== null);
         const avg = withPoints.length > 0
-          ? Math.round(withPoints.reduce((s, u) => s + (u.total_point || 0), 0) / withPoints.length)
+          ? Math.round(withPoints.reduce((sum, point) => sum + point, 0) / withPoints.length)
           : 0;
+        const passCount = students.filter((student) => (getUserTotalPoint(student) ?? 0) >= 70).length;
 
         return {
           schoolId: String(school.id),
@@ -109,15 +118,20 @@ export function useDistrictDTMDashboard() {
           schoolCode: school.code,
           totalStudents: students.length,
           studentsWithResults: withResults.length,
+          studentsWithoutResults: students.length - withResults.length,
+          passCount,
+          testedPercent: students.length > 0 ? (withResults.length / students.length) * 100 : 0,
           averageScore: avg,
         };
       });
 
       // Aggregated stats
-      const withResults = districtStudents.filter((u) => u.has_result);
-      const withPoints = districtStudents.filter((u) => u.total_point != null);
+      const withResults = districtStudents.filter((u) => hasDTMResult(u));
+      const withPoints = districtStudents
+        .map((student) => getUserTotalPoint(student))
+        .filter((point): point is number => point !== null);
       const avgScore = withPoints.length > 0
-        ? Math.round(withPoints.reduce((s, u) => s + (u.total_point || 0), 0) / withPoints.length)
+        ? Math.round(withPoints.reduce((sum, point) => sum + point, 0) / withPoints.length)
         : 0;
 
       const recentUsers = [...districtStudents]
@@ -131,6 +145,7 @@ export function useDistrictDTMDashboard() {
         totalSchools: schools.length,
         averageScore: avgScore,
         recentUsers,
+        students: districtStudents,
         schoolStats,
         isApproximate: false,
       });

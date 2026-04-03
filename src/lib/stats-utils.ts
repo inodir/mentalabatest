@@ -210,17 +210,30 @@ export function getSubjectMastery(entities: any[]) {
   
   entities.forEach(u => {
     if (!hasDTMResult(u)) return;
-    const res = u.test_results;
-    if (!res) return;
-    
+
     const processSubject = (name: string, point: number, max: number) => {
       if (!name || name.toLowerCase() === "noma'lum") return;
       if (!subjectStats[name]) subjectStats[name] = { sum: 0, count: 0, max };
       subjectStats[name].sum += point;
       subjectStats[name].count++;
     };
-    
-    res.mandatory?.forEach((m: any) => processSubject(m.name, m.point, 11.4)); // Each mandatory is ~11.4 max on 189 scale (some variation)
+
+    const subjects = Array.isArray(u.dtm?.subjects) ? u.dtm.subjects : [];
+    if (subjects.length > 0) {
+      subjects.forEach((subject: any) => {
+        processSubject(
+          subject.subject_name,
+          Number(subject.earned_ball) || 0,
+          Number(subject.max_ball) || 1
+        );
+      });
+      return;
+    }
+
+    const res = u.test_results;
+    if (!res) return;
+
+    res.mandatory?.forEach((m: any) => processSubject(m.name, m.point, 11.4));
     if (res.primary) processSubject(res.primary.name, res.primary.point, 93);
     if (res.secondary) processSubject(res.secondary.name, res.secondary.point, 63);
   });
@@ -249,7 +262,9 @@ export function getRiskAnalytics(entities: any[], passLine: number = 70) {
     totalTested: testedUsers.length,
     riskCount: riskUsers.length,
     riskPercent: testedUsers.length > 0 ? (riskUsers.length / testedUsers.length) * 100 : 0,
-    riskUsers: riskUsers.sort((a, b) => (a.total_point ?? 0) - (b.total_point ?? 0)).slice(0, 10)
+    riskUsers: riskUsers
+      .sort((a, b) => (getUserTotalPoint(a) ?? 0) - (getUserTotalPoint(b) ?? 0))
+      .slice(0, 10)
   };
 }
 
@@ -285,8 +300,9 @@ export function getTrendAnalysis(entities: any[]) {
   
   entities.forEach(u => {
     const point = getUserTotalPoint(u);
-    if (!u.created_at || !hasDTMResult(u) || point === null) return;
-    const date = u.created_at.split('T')[0];
+    const createdAt = u.dtm?.created_at ?? u.created_at;
+    if (!createdAt || !hasDTMResult(u) || point === null) return;
+    const date = String(createdAt).split('T')[0];
     if (!dayStats[date]) dayStats[date] = { sum: 0, count: 0 };
     dayStats[date].sum += point;
     dayStats[date].count++;

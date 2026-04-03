@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Trophy } from "lucide-react";
 import { exportCertificate } from "@/lib/exportCertificate";
 import { DashboardSection } from "./StatsKPI";
+import { getUserTotalPoint } from "@/lib/stats-utils";
 
 interface SchoolTopStudentsProps {
   students: any[];
@@ -23,7 +24,7 @@ export function SchoolTopStudents({ students }: SchoolTopStudentsProps) {
         <CardContent className="pt-6">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
             {students.map((u, i) => {
-              const ball = (u.dtm?.total_ball as number) ?? 0;
+              const ball = getUserTotalPoint(u) ?? 0;
               return (
                 <div key={u.id} className="flex items-center gap-3 rounded-2xl border border-border/40 p-3 bg-background/50 hover:bg-muted/30 transition-colors duration-200">
                   <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black
