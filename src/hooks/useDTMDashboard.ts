@@ -13,6 +13,12 @@ export type DashboardMode = "fast" | "accurate";
 export type DashboardError = "NO_CONFIG" | "API_KEY_INVALID" | "NETWORK_ERROR" | "INVALID_URL" | null;
 const AUTO_REFRESH_MS = 2 * 60 * 1000;
 
+interface UseDTMDashboardOptions {
+  initialMode?: DashboardMode;
+  autoRefresh?: boolean;
+  autoRefreshMs?: number;
+}
+
 interface UseDTMDashboardResult {
   stats: DashboardStats | null;
   loading: boolean;
@@ -26,11 +32,16 @@ interface UseDTMDashboardResult {
   lastSynced: Date | undefined;
 }
 
-export function useDTMDashboard(): UseDTMDashboardResult {
+export function useDTMDashboard(options: UseDTMDashboardOptions = {}): UseDTMDashboardResult {
+  const {
+    initialMode = "accurate",
+    autoRefresh = true,
+    autoRefreshMs = AUTO_REFRESH_MS,
+  } = options;
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<DashboardError>(null);
-  const [mode, setMode] = useState<DashboardMode>("accurate");
+  const [mode, setMode] = useState<DashboardMode>(initialMode);
   const [progress, setProgress] = useState<{ loaded: number; total: number } | null>(null);
   const [settings, setSettings] = useState<DTMApiSettings | null>(null);
   const [loadedEntities, setLoadedEntities] = useState<DTMUser[]>([]);
@@ -93,14 +104,16 @@ export function useDTMDashboard(): UseDTMDashboardResult {
   }, [mode, fetchData]);
 
   useEffect(() => {
+    if (!autoRefresh) return;
+
     const intervalId = window.setInterval(() => {
       if (document.visibilityState === "visible") {
         fetchData(mode);
       }
-    }, AUTO_REFRESH_MS);
+    }, autoRefreshMs);
 
     return () => window.clearInterval(intervalId);
-  }, [fetchData, mode]);
+  }, [autoRefresh, autoRefreshMs, fetchData, mode]);
 
   const retry = useCallback(() => {
     fetchData(mode);

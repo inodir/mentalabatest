@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDTMDashboard } from "@/hooks/useDTMDashboard";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,9 +43,13 @@ const PASS_LINE = 70;
 
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
-  const { stats, loading, error, mode, setMode, progress, retry, loadedEntities, lastSynced } = useDTMDashboard();
   const { dtmUser } = useAuth();
 
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const { stats, loading, error, mode, setMode, progress, retry, loadedEntities, lastSynced } = useDTMDashboard({
+    initialMode: "accurate",
+    autoRefresh,
+  });
   const [selectedRegion, setSelectedRegion] = useState<string>("all");
   const [selectedDistrict, setSelectedDistrict] = useState<string>("all");
 
@@ -410,6 +415,29 @@ export default function SuperAdminDashboard() {
               lastSynced={lastSynced}
               error={error}
             />
+
+            <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-card/70 px-3 py-2">
+              <Label htmlFor="super-accurate-mode" className="text-xs font-medium">
+                Aniq rejim
+              </Label>
+              <Switch
+                id="super-accurate-mode"
+                checked={mode === "accurate"}
+                onCheckedChange={(checked) => setMode(checked ? "accurate" : "fast")}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-card/70 px-3 py-2">
+              <Label htmlFor="super-auto-refresh" className="text-xs font-medium">
+                Avtomatik yangilash
+              </Label>
+              <Switch
+                id="super-auto-refresh"
+                checked={autoRefresh}
+                onCheckedChange={setAutoRefresh}
+              />
+            </div>
 
             {stats?.isApproximate && !loading && (
               <Badge variant="secondary" className="rounded-full">Taxminiy</Badge>
