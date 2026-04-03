@@ -107,6 +107,10 @@ export default {
         "slide-in": "slide-in 0.3s ease-out",
         "scale-in": "scale-in 0.2s ease-out",
       },
+      fontFamily: {
+        sans: ["Inter", "sans-serif"],
+        display: ["Outfit", "sans-serif"],
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],

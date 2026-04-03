@@ -106,30 +106,68 @@ export default function SuperAdminDashboard() {
     }));
   }, [filteredEntities, mode, dtmUser?.schools, loadedEntities.length]);
 
-  // ─── Computed values (must be before any early return) ─────────────
+  // ─── Error State ───────────────────────────────────────────────────
+  if (error) {
+    return (
+      <AdminLayout variant="super">
+        <div className="space-y-6">
+          <h1 className="text-3xl font-bold">Bosh sahifa</h1>
+          <Card className="rounded-2xl border-destructive/30">
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center gap-4">
+              <AlertCircle className="h-12 w-12 text-destructive" />
+              <div>
+                <p className="font-semibold text-lg">
+                  {error === "NO_CONFIG" && "API sozlanmagan"}
+                  {error === "API_KEY_INVALID" && "API kaliti noto'g'ri"}
+                  {error === "NETWORK_ERROR" && "Tarmoq xatosi"}
+                </p>
+                <p className="text-muted-foreground text-sm mt-1">
+                  {error === "NO_CONFIG" && "Sozlamalar sahifasidan API kalitini kiriting"}
+                  {error === "API_KEY_INVALID" && "API kaliti noto'g'ri yoki muddati o'tgan"}
+                  {error === "NETWORK_ERROR" && "Internet aloqani tekshiring"}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {error !== "NO_CONFIG" && (
+                  <Button variant="outline" onClick={retry} className="rounded-xl">
+                    <RefreshCw className="mr-2 h-4 w-4" /> Qayta urinish
+                  </Button>
+                )}
+                <Button onClick={() => navigate("/super-admin/settings")} className="rounded-xl">
+                  <Settings className="mr-2 h-4 w-4" /> Sozlamalar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  // ─── Computed values ───────────────────────────────────────────────
   const baseEntities = mode === "accurate" ? filteredEntities : loadedEntities;
   
-  const total        = !error ? (mode === "accurate" ? baseEntities.length : (stats?.totalUsers ?? 0)) : 0;
-  const submitted    = !error ? (mode === "accurate" ? baseEntities.filter(u => hasDTMResult(u)).length : (stats?.resultUsersCount ?? 0)) : 0;
+  const total        = mode === "accurate" ? baseEntities.length : (stats?.totalUsers ?? 0);
+  const submitted    = mode === "accurate" ? baseEntities.filter(u => hasDTMResult(u)).length : (stats?.resultUsersCount ?? 0);
   const notSubmitted = total - submitted;
   const submitPct    = total > 0 ? ((submitted / total) * 100).toFixed(1) : "0";
   
-  const avgBall = !error && mode === "accurate" && submitted > 0 
+  const avgBall = mode === "accurate" && submitted > 0 
     ? baseEntities.reduce((sum, u) => sum + (getUserTotalPoint(u) ?? 0), 0) / submitted 
     : (stats?.averageTotalPoint ?? 0);
 
-  const passed     = !error ? baseEntities.filter(u => hasDTMResult(u) && (getUserTotalPoint(u) ?? 0) >= PASS_LINE).length : 0;
-  const failed     = !error ? baseEntities.filter(u => hasDTMResult(u) && (getUserTotalPoint(u) ?? 0) > 0 && (getUserTotalPoint(u) ?? 0) < PASS_LINE).length : 0;
+  const passed     = baseEntities.filter(u => hasDTMResult(u) && (getUserTotalPoint(u) ?? 0) >= PASS_LINE).length;
+  const failed     = baseEntities.filter(u => hasDTMResult(u) && (getUserTotalPoint(u) ?? 0) > 0 && (getUserTotalPoint(u) ?? 0) < PASS_LINE).length;
   const passPct    = submitted > 0 ? ((passed / submitted) * 100).toFixed(1) : "0";
 
-  const regionalRanking = useMemo(() => error ? [] : getRegionalRanking(baseEntities), [baseEntities, error]);
-  const subjectMastery = useMemo(() => error ? [] : getSubjectMastery(baseEntities), [baseEntities, error]);
-  const trendAnalysis = useMemo(() => error ? [] : getTrendAnalysis(baseEntities), [baseEntities, error]);
+  const regionalRanking = useMemo(() => getRegionalRanking(baseEntities), [baseEntities]);
+  const subjectMastery = useMemo(() => getSubjectMastery(baseEntities), [baseEntities]);
+  const trendAnalysis = useMemo(() => getTrendAnalysis(baseEntities), [baseEntities]);
 
   // Score range bands  
   const scoreBands = useMemo(() => 
-    error ? [] : getScoreDistribution(baseEntities, 10, 189),
-    [baseEntities, error]
+    getScoreDistribution(baseEntities, 10, 189),
+    [baseEntities]
   );
 
   // Language stats
@@ -329,44 +367,6 @@ export default function SuperAdminDashboard() {
   ].filter(d => d.value > 0);
 
   const isLive = !loading && baseEntities.length > 0;
-
-  // ─── Error State ───────────────────────────────────────────────────
-  if (error) {
-    return (
-      <AdminLayout variant="super">
-        <div className="space-y-6">
-          <h1 className="text-3xl font-bold">Bosh sahifa</h1>
-          <Card className="rounded-2xl border-destructive/30">
-            <CardContent className="flex flex-col items-center justify-center py-16 text-center gap-4">
-              <AlertCircle className="h-12 w-12 text-destructive" />
-              <div>
-                <p className="font-semibold text-lg">
-                  {error === "NO_CONFIG" && "API sozlanmagan"}
-                  {error === "API_KEY_INVALID" && "API kaliti noto'g'ri"}
-                  {error === "NETWORK_ERROR" && "Tarmoq xatosi"}
-                </p>
-                <p className="text-muted-foreground text-sm mt-1">
-                  {error === "NO_CONFIG" && "Sozlamalar sahifasidan API kalitini kiriting"}
-                  {error === "API_KEY_INVALID" && "API kaliti noto'g'ri yoki muddati o'tgan"}
-                  {error === "NETWORK_ERROR" && "Internet aloqani tekshiring"}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                {error !== "NO_CONFIG" && (
-                  <Button variant="outline" onClick={retry} className="rounded-xl">
-                    <RefreshCw className="mr-2 h-4 w-4" /> Qayta urinish
-                  </Button>
-                )}
-                <Button onClick={() => navigate("/super-admin/settings")} className="rounded-xl">
-                  <Settings className="mr-2 h-4 w-4" /> Sozlamalar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </AdminLayout>
-    );
-  }
 
   return (
     <AdminLayout variant="super">
