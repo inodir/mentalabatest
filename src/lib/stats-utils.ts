@@ -67,20 +67,33 @@ export function normalizeLanguage(lang: any): 'uz' | 'ru' | 'other' {
 export function hasDTMResult(user: any): boolean {
   if (!user) return false;
 
-  if (user.has_result === true) return true;
   if (user.dtm?.tested === true) return true;
-  if (user.total_point !== null && user.total_point !== undefined) return true;
-  if (user.dtm?.total_ball !== null && user.dtm?.total_ball !== undefined) return true;
-  if (user.test_file_url || user.test_result_file_url || user.dtm?.result_file) return true;
+  if (getUserTotalPoint(user) !== null) return true;
+  if (user.test_result_file_url || user.dtm?.result_file) return true;
 
-  const subjects = user.dtm?.subjects;
-  if (Array.isArray(subjects) && subjects.length > 0) return true;
+  const subjects = Array.isArray(user.dtm?.subjects) ? user.dtm.subjects : [];
+  if (
+    subjects.some(
+      (subject: any) =>
+        Number(subject?.earned_ball ?? subject?.point ?? subject?.percent ?? 0) > 0
+    )
+  ) {
+    return true;
+  }
 
   const testResults = user.test_results;
   if (!testResults) return false;
 
-  if (Array.isArray(testResults.mandatory) && testResults.mandatory.length > 0) return true;
-  if (testResults.primary || testResults.secondary) return true;
+  if (
+    Array.isArray(testResults.mandatory) &&
+    testResults.mandatory.some((item: any) => Number(item?.point) > 0)
+  ) {
+    return true;
+  }
+
+  if (Number(testResults.primary?.point) > 0 || Number(testResults.secondary?.point) > 0) {
+    return true;
+  }
 
   return false;
 }
@@ -91,21 +104,23 @@ export function hasDTMResult(user: any): boolean {
 export function getUserTotalPoint(user: any): number | null {
   if (!user) return null;
 
-  if (user.total_point !== null && user.total_point !== undefined) {
-    return Number(user.total_point);
-  }
-
-  if (user.dtm?.total_ball !== null && user.dtm?.total_ball !== undefined) {
-    return Number(user.dtm.total_ball);
-  }
-
   const mandatory = Array.isArray(user.test_results?.mandatory) ? user.test_results.mandatory : [];
   const mandatoryTotal = mandatory.reduce((sum: number, item: any) => sum + (Number(item?.point) || 0), 0);
   const primary = Number(user.test_results?.primary?.point) || 0;
   const secondary = Number(user.test_results?.secondary?.point) || 0;
   const computed = mandatoryTotal + primary + secondary;
 
-  return computed > 0 ? computed : null;
+  const candidates = [
+    Number(user.dtm?.total_ball),
+    Number(user.total_point),
+    computed,
+  ].filter((value) => Number.isFinite(value) && value > 0);
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  return Math.max(...candidates);
 }
 
 /**

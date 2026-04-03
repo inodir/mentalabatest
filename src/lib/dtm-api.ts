@@ -1,4 +1,6 @@
 // DTM API Client Helper
+import { getUserTotalPoint, hasDTMResult } from "@/lib/stats-utils";
+
 const DEFAULT_MAIN_URL = import.meta.env.VITE_DTM_API_URL || "https://dtmpaperreaderapi.mentalaba.uz/";
 const ENV_API_KEY = import.meta.env.VITE_DTM_API_KEY || "";
 
@@ -312,17 +314,17 @@ export function calculateStats(
   totalCount: number,
   isApproximate: boolean
 ): DashboardStats {
-  const resultUsers = entities.filter((u) => u.has_result);
-  const noResultUsers = entities.filter((u) => !u.has_result);
+  const resultUsers = entities.filter((u) => hasDTMResult(u));
+  const noResultUsers = entities.filter((u) => !hasDTMResult(u));
   const uniqueSchools = new Set(entities.map((u) => u.school_code).filter(Boolean));
   
-  const usersWithPoints = entities.filter(
-    (u) => u.total_point !== null && u.total_point !== undefined
-  );
+  const usersWithPoints = entities
+    .map((u) => getUserTotalPoint(u))
+    .filter((point): point is number => point !== null);
   const avgPoint =
     usersWithPoints.length > 0
       ? Math.round(
-          usersWithPoints.reduce((sum, u) => sum + (u.total_point || 0), 0) /
+          usersWithPoints.reduce((sum, point) => sum + point, 0) /
             usersWithPoints.length
         )
       : 0;

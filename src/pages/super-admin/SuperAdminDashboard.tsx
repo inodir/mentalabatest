@@ -91,9 +91,10 @@ export default function SuperAdminDashboard() {
         registered_count: 0, answered_count: 0, totalBall: 0,
       };
       curr.registered_count++;
-      if (u.has_result) {
+      const totalPoint = getUserTotalPoint(u);
+      if (hasDTMResult(u) && totalPoint !== null) {
         curr.answered_count++;
-        curr.totalBall += (u.total_point ?? 0);
+        curr.totalBall += totalPoint;
       }
       map.set(code, curr);
     });
