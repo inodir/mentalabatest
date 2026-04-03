@@ -368,41 +368,6 @@ export default function SuperAdminDashboard() {
     );
   }
 
-  // Districts ranking
-  const districtsRanked = (dtmUser?.districts ?? [])
-    .filter(d => selectedRegion === "all" || d.region === selectedRegion)
-    .map(d => ({
-      name: d.district.length > 18 ? d.district.slice(0, 18) + "…" : d.district,
-      pct: d.tested_percent,
-      registered: d.registered_count,
-      answered: d.answered_count,
-    }))
-    .sort((a, b) => b.pct - a.pct)
-    .slice(0, 12);
-
-  // Alert schools — low submission or low avg
-  const alertSchools = (aggregSchools)
-    .filter(s => (s.registered_count ?? 0) >= 10)
-    .map(s => ({
-      name: s.name,
-      district: s.district ?? "—",
-      registered: s.registered_count ?? 0,
-      answered: s.answered_count ?? 0,
-      pct: s.tested_percent ?? 0,
-      avg: s.avg_total_ball ?? 0,
-    }))
-    .filter(s => s.pct < 40 || (s.avg > 0 && s.avg < PASS_LINE))
-    .sort((a, b) => a.pct - b.pct)
-    .slice(0, 15);
-
-  const pieData = [
-    { name: `O'tdi (≥${PASS_LINE})`, value: passed,     fill: "hsl(142 71% 45%)" },
-    { name: "O'tmadi",               value: failed,     fill: "hsl(0 72% 55%)"   },
-    { name: "Natija chiqmagan",           value: notSubmitted, fill: "hsl(215 16% 65%)" },
-  ].filter(d => d.value > 0);
-
-  const isLive = !loading && baseEntities.length > 0;
-
   return (
     <AdminLayout variant="super">
       {/* 🚨 Live Security & Activity Ticker Alert */}
