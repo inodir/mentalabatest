@@ -13,6 +13,11 @@ export default defineConfig(({ mode }) => ({
     },
     allowedHosts: ["exam.statistics.uz"],
   },
+  preview: {
+    host: "::",
+    port: 8080,
+    allowedHosts: ["exam.statistics.uz"],
+  },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
     alias: {
